@@ -1,0 +1,9 @@
+# Upstream Semaphore UI source clone (maintained as a separate repository)
+/semaphore/
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Temporary spreadsheet inspection artifacts
+*.inspect.ndjson
