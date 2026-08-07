@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 class SemaphoreProjectSmokeTest {
 
   @Test
-  @DisplayName("Owner can build and clean up the core project resource chain")
+  @DisplayName("Owner can execute and clean up the core project workflow")
   void ownerCanCreateAndReadProject(ApiSteps api) {
     api.semaphore().health();
     api.semaphore().invalidLoginIsRejected();
@@ -31,6 +31,9 @@ class SemaphoreProjectSmokeTest {
     var inventory = api.semaphore().createStaticInventory(created.id(), key.id());
     var template =
         api.semaphore().createAnsibleTemplate(created.id(), repository.id(), inventory.id());
+    var startedTask = api.semaphore().startTask(created.id(), template.id());
+    var completedTask = api.semaphore().waitUntilTaskSucceeds(created.id(), startedTask.id());
+    var output = api.semaphore().getTaskOutput(created.id(), completedTask.id());
 
     assertThat(created.id()).isPositive();
     assertThat(saved.id()).isEqualTo(created.id());
@@ -41,5 +44,13 @@ class SemaphoreProjectSmokeTest {
     assertThat(inventory.sshKeyId()).isEqualTo(key.id());
     assertThat(template.repositoryId()).isEqualTo(repository.id());
     assertThat(template.inventoryId()).isEqualTo(inventory.id());
+    assertThat(completedTask.status()).isEqualTo("success");
+    assertThat(completedTask.templateId()).isEqualTo(template.id());
+    assertThat(completedTask.commitHash()).isNotBlank();
+    assertThat(output).isNotEmpty();
+    assertThat(output).allMatch(line -> line.taskId() == completedTask.id());
+    assertThat(output)
+        .extracting(line -> line.output())
+        .anyMatch(line -> line.contains("semaphore-bookwright-smoke-ok"));
   }
 }

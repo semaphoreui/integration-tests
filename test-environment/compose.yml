@@ -1,6 +1,23 @@
 name: semaphore-test
 
 services:
+  fixture-init:
+    image: semaphoreui/semaphore:v2.19.7
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        cp -R /source/. /repository/
+        git -C /repository init -b main
+        git -C /repository config user.name "Semaphore Test Fixture"
+        git -C /repository config user.email "fixture@localhost"
+        git -C /repository add .
+        git -C /repository diff --cached --quiet || git -C /repository commit -m "Prepare safe smoke fixture"
+        chown -R 1001:0 /repository
+    volumes:
+      - fixture-repository:/repository
+      - ./fixtures/ansible:/source:ro
+
   semaphore:
     image: semaphoreui/semaphore:v2.19.7
     ports:
@@ -15,7 +32,12 @@ services:
       SEMAPHORE_ACCESS_KEY_ENCRYPTION: IlRqgrrO5Gp27MlWakDX1xVrPv4jhoUx+ARY+qGyDxQ=
     volumes:
       - semaphore-data:/var/lib/semaphore
+      - fixture-repository:/fixtures/ansible:ro
     restart: unless-stopped
+    depends_on:
+      fixture-init:
+        condition: service_completed_successfully
 
 volumes:
   semaphore-data:
+  fixture-repository:

@@ -32,10 +32,13 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 Тест проверяет health, неверный и корректный login, создаёт изолированный проект и основную цепочку ресурсов:
 
 ```text
-project → access key → repository → inventory → task template
+project → access key → local Git repository → inventory → task template
+→ task execution → success status → output marker
 ```
 
 После теста Bookwright LIFO cleanup удаляет данные в обратном порядке.
+
+Ansible-код берётся только из доверенного fixture `test-environment/fixtures/ansible/smoke.yml`, упакованного Compose в локальный read-only Git volume. Внешний код при smoke-запуске не исполняется.
 
 Полный набор инфраструктурных self-tests Bookwright и продуктовых тестов Semaphore:
 

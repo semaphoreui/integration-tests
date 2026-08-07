@@ -29,6 +29,8 @@
 | Cleanup временного проекта | Проект удалён | `204` | Pass |
 | Bookwright `SemaphoreProjectSmokeTest` | Полный Java API smoke | Pass | Pass |
 | Создание core resource chain | Key, repository, inventory и template связаны корректно | Pass | Pass |
+| Выполнение доверенного playbook | Task достигает `success` | Pass | Pass |
+| Проверка task output | Найден маркер `semaphore-bookwright-smoke-ok` | Pass | Pass |
 
 Полный локальный прогон инфраструктурных self-tests Bookwright вместе с Semaphore smoke завершён успешно.
 
@@ -46,7 +48,7 @@
 
 Карта API первого сквозного сценария подготовлена в `api-map.md`. Базовый независимый API smoke реализован. Следующий шаг — расширить его ресурсами проекта:
 
-1. собственный доверенный Git fixture с безопасным Ansible playbook;
-2. task lifecycle и output;
-3. проверка отсутствия секретов в output;
-4. гарантированный cleanup task и зависимых ресурсов.
+1. негативные сценарии Git clone и branch/ref;
+2. проверка отсутствия секретов в output;
+3. schedule для созданного template;
+4. RBAC и изоляция проектов.

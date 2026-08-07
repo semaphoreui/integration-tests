@@ -12,13 +12,18 @@ import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
 import io.bookwright.api.model.semaphore.Repository;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
+import io.bookwright.api.model.semaphore.Task;
+import io.bookwright.api.model.semaphore.TaskOutput;
+import io.bookwright.api.model.semaphore.TaskRequest;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.TemplateRequest;
 import io.bookwright.config.MainConfig;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
+import io.bookwright.util.Waits;
 import io.qameta.allure.Step;
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 public class SemaphoreApiSteps {
@@ -109,7 +114,7 @@ public class SemaphoreApiSteps {
                 new RepositoryRequest(
                     "bookwright-demo-repository-" + UUID.randomUUID(),
                     projectId,
-                    "https://github.com/semaphoreui/semaphore-demo.git",
+                    "file:///fixtures/ansible",
                     "main",
                     keyId)),
             201,
@@ -152,7 +157,7 @@ public class SemaphoreApiSteps {
                     inventoryId,
                     repositoryId,
                     0,
-                    "build.yml",
+                    "smoke.yml",
                     "ansible",
                     "")),
             201,
@@ -161,5 +166,47 @@ public class SemaphoreApiSteps {
         "Delete Semaphore task template " + template.id(),
         () -> Calls.expectStatus(api.deleteTemplate(projectId, template.id()), 204));
     return template;
+  }
+
+  @Step("Start Semaphore task from template {templateId}")
+  public Task startTask(long projectId, long templateId) {
+    Task task =
+        Calls.body(api.startTask(projectId, new TaskRequest(templateId)), 201, "started task");
+    teardown.push(
+        "Delete Semaphore task " + task.id(),
+        () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
+    return task;
+  }
+
+  @Step("Wait for Semaphore task {taskId} to succeed")
+  public Task waitUntilTaskSucceeds(long projectId, long taskId) {
+    final Task[] completed = new Task[1];
+    Waits.awaitSlow("Semaphore task %d reaches terminal status".formatted(taskId))
+        .until(
+            () -> {
+              Task current = Calls.body(api.getTask(projectId, taskId), 200, "task status");
+              if ("error".equals(current.status()) || "stopped".equals(current.status())) {
+                String diagnostic =
+                    Calls.body(api.getTaskOutput(projectId, taskId), 200, "failed task output")
+                        .stream()
+                        .map(TaskOutput::output)
+                        .reduce((left, right) -> left + System.lineSeparator() + right)
+                        .orElse("<empty output>");
+                throw new IllegalStateException(
+                    "Task %d finished with status %s. Output:%n%s"
+                        .formatted(taskId, current.status(), diagnostic));
+              }
+              if ("success".equals(current.status())) {
+                completed[0] = current;
+                return true;
+              }
+              return false;
+            });
+    return completed[0];
+  }
+
+  @Step("Get output of Semaphore task {taskId}")
+  public List<TaskOutput> getTaskOutput(long projectId, long taskId) {
+    return Calls.body(api.getTaskOutput(projectId, taskId), 200, "task output");
   }
 }

@@ -10,8 +10,12 @@ import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
 import io.bookwright.api.model.semaphore.Repository;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
+import io.bookwright.api.model.semaphore.Task;
+import io.bookwright.api.model.semaphore.TaskOutput;
+import io.bookwright.api.model.semaphore.TaskRequest;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.TemplateRequest;
+import java.util.List;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -68,4 +72,17 @@ public interface SemaphoreApi {
 
   @DELETE("project/{projectId}/templates/{templateId}")
   Call<Void> deleteTemplate(@Path("projectId") long projectId, @Path("templateId") long templateId);
+
+  @POST("project/{projectId}/tasks")
+  Call<Task> startTask(@Path("projectId") long projectId, @Body TaskRequest request);
+
+  @GET("project/{projectId}/tasks/{taskId}")
+  Call<Task> getTask(@Path("projectId") long projectId, @Path("taskId") long taskId);
+
+  @GET("project/{projectId}/tasks/{taskId}/output")
+  Call<List<TaskOutput>> getTaskOutput(
+      @Path("projectId") long projectId, @Path("taskId") long taskId);
+
+  @DELETE("project/{projectId}/tasks/{taskId}")
+  Call<Void> deleteTask(@Path("projectId") long projectId, @Path("taskId") long taskId);
 }

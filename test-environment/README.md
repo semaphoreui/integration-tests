@@ -1,6 +1,6 @@
 # Локальное тестовое окружение
 
-Минимальный стенд Semaphore UI `v2.19.7` с SQLite.
+Минимальный стенд Semaphore UI `v2.19.7` с SQLite и локальным доверенным Git fixture.
 
 ## Запуск
 
@@ -27,6 +27,8 @@ docker compose -f test-environment/compose.yml down
 ```
 
 SQLite хранится в именованном Docker volume и сохраняется между перезапусками.
+
+Compose-сервис `fixture-init` создаёт отдельный Git repository из `fixtures/ansible`. Он монтируется в Semaphore read-only и используется для безопасной проверки task lifecycle.
 
 ## Быстрая проверка
 
