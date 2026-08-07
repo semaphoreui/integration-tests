@@ -4,9 +4,8 @@ import lombok.experimental.UtilityClass;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * Creates the shared JUnit store namespaces. Store keys live next to the fixture or lifecycle
- * component that owns the corresponding state, so this class does not become a domain registry.
- * Class scope holds reusable resources; method scope remains isolated per test.
+ * Creates class- and method-scoped JUnit namespaces. State keys belong to the extension or storage
+ * component that owns the corresponding value.
  */
 @UtilityClass
 public class NamespaceRegistry {

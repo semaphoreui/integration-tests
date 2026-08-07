@@ -7,4 +7,11 @@ public record UserRequest(
     String password,
     boolean alert,
     boolean admin,
-    boolean external) {}
+    boolean external) {
+
+  @Override
+  public String toString() {
+    return "UserRequest[name=%s, username=%s, email=%s, password=[REDACTED], alert=%s, admin=%s, external=%s]"
+        .formatted(name, username, email, alert, admin, external);
+  }
+}

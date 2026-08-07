@@ -14,7 +14,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 /** Resolves user identity before parameter resolution creates an authenticated browser context. */
 public class UserFixtureExtension implements BeforeEachCallback {
 
-  public static final String STORE_KEY = "testUser";
+  static final String TEST_USER_KEY = "testUser";
 
   @Override
   public void beforeEach(ExtensionContext context) {
@@ -34,7 +34,18 @@ public class UserFixtureExtension implements BeforeEachCallback {
         Allure.step(
             "Fixture: provide %s user".formatted(fixture.value().name().toLowerCase()),
             () -> createUser(fixture.value(), api, context));
-    NamespaceRegistry.methodStore(context).put(STORE_KEY, user);
+    NamespaceRegistry.methodStore(context).put(TEST_USER_KEY, user);
+  }
+
+  public static java.util.Optional<TestUser> find(ExtensionContext context) {
+    return java.util.Optional.ofNullable(
+        NamespaceRegistry.methodStore(context).get(TEST_USER_KEY, TestUser.class));
+  }
+
+  public static TestUser require(ExtensionContext context) {
+    return find(context)
+        .orElseThrow(
+            () -> new IllegalStateException("TestUser requires @UserFixture on the test or class"));
   }
 
   private TestUser createUser(UserFixtureMode mode, ApiSteps api, ExtensionContext context) {
@@ -42,7 +53,7 @@ public class UserFixtureExtension implements BeforeEachCallback {
       UserCredentials credentials =
           new UserCredentials(
               Configs.main().localExistingUserEmail(), Configs.main().localExistingUserPassword());
-      UserSession session = api.users().login(credentials);
+      UserSession session = api.local().auth().login(credentials);
       return new TestUser(mode, credentials, session.user(), session);
     }
 
@@ -50,9 +61,9 @@ public class UserFixtureExtension implements BeforeEachCallback {
     UserRegistration registration = data.user();
     UserCredentials credentials =
         new UserCredentials(registration.email(), registration.password());
-    UserProfile profile = api.users().register(registration);
-    UserSession session = api.users().login(credentials);
-    api.users().registerCleanup(session);
+    UserProfile profile = api.local().users().register(registration);
+    UserSession session = api.local().auth().login(credentials);
+    api.local().users().registerCleanup(session);
     return new TestUser(mode, credentials, profile, session);
   }
 }

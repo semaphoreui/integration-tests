@@ -1,6 +1,6 @@
 # Semaphore UI test automation
 
-Тестовый проект для [Semaphore UI](https://github.com/semaphoreui/semaphore), построенный на основе Bookwright.
+Тестовый проект для [Semaphore UI](https://github.com/semaphoreui/semaphore), построенный на основе [Bookwright v1.4.0](https://github.com/dantro86/bookwright/releases/tag/v1.4.0) (`b30d7e6`).
 
 ## Стек
 
@@ -13,6 +13,8 @@
 - AssertJ;
 - Allure;
 - Awaitility.
+
+Framework адаптирован под Semaphore с сохранением архитектуры Bookwright v1.4.0: API и steps разделены как `target/domain`, сценарные данные принадлежат typed fixtures, а состояние preconditions читается только через typed `TestStore`.
 
 ## Локальный стенд
 

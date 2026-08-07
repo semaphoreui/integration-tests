@@ -3,21 +3,20 @@ package io.bookwright.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import io.bookwright.api.AuthApi;
-import io.bookwright.api.BookingApi;
-import io.bookwright.api.LocalBookingApi;
-import io.bookwright.api.LocalUserApi;
+import com.google.inject.name.Named;
 import io.bookwright.api.RetrofitFactory;
-import io.bookwright.api.semaphore.SemaphoreAccessKeysApi;
-import io.bookwright.api.semaphore.SemaphoreAuthApi;
-import io.bookwright.api.semaphore.SemaphoreInventoriesApi;
-import io.bookwright.api.semaphore.SemaphoreProjectsApi;
-import io.bookwright.api.semaphore.SemaphoreRepositoriesApi;
-import io.bookwright.api.semaphore.SemaphoreSchedulesApi;
-import io.bookwright.api.semaphore.SemaphoreSystemApi;
-import io.bookwright.api.semaphore.SemaphoreTasksApi;
-import io.bookwright.api.semaphore.SemaphoreTemplatesApi;
-import io.bookwright.api.semaphore.SemaphoreUsersApi;
+import io.bookwright.api.local.users.UsersApi;
+import io.bookwright.api.restfulbooker.health.HealthApi;
+import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
+import io.bookwright.api.semaphore.auth.SemaphoreAuthApi;
+import io.bookwright.api.semaphore.inventories.SemaphoreInventoriesApi;
+import io.bookwright.api.semaphore.projects.SemaphoreProjectsApi;
+import io.bookwright.api.semaphore.repositories.SemaphoreRepositoriesApi;
+import io.bookwright.api.semaphore.schedules.SemaphoreSchedulesApi;
+import io.bookwright.api.semaphore.system.SemaphoreSystemApi;
+import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
+import io.bookwright.api.semaphore.templates.SemaphoreTemplatesApi;
+import io.bookwright.api.semaphore.users.SemaphoreUsersApi;
 import io.bookwright.config.Configs;
 import io.bookwright.config.MainConfig;
 import io.bookwright.teardown.TeardownStorage;
@@ -35,96 +34,125 @@ public class ApiModule extends AbstractModule {
   protected void configure() {
     bind(MainConfig.class).toInstance(Configs.main());
     bind(TeardownStorage.class).toInstance(teardownStorage);
-    bind(io.bookwright.steps.AuthApiSteps.class).in(Singleton.class);
+    bind(io.bookwright.steps.restfulbooker.auth.AuthSteps.class).in(Singleton.class);
   }
 
   @Provides
   @Singleton
-  Retrofit retrofit(MainConfig config) {
+  @Named("restfulBooker")
+  Retrofit restfulBookerRetrofit(MainConfig config) {
     return RetrofitFactory.create(config.apiBaseUrl());
   }
 
   @Provides
   @Singleton
-  AuthApi authApi(Retrofit retrofit) {
-    return retrofit.create(AuthApi.class);
+  @Named("local")
+  Retrofit localRetrofit(MainConfig config) {
+    return RetrofitFactory.create(config.localBookingBaseUrl());
   }
 
   @Provides
   @Singleton
-  SemaphoreSystemApi semaphoreSystemApi(Retrofit retrofit) {
+  @Named("semaphore")
+  Retrofit semaphoreRetrofit(MainConfig config) {
+    return RetrofitFactory.create(config.apiBaseUrl());
+  }
+
+  @Provides
+  @Singleton
+  io.bookwright.api.restfulbooker.auth.AuthApi restfulBookerAuthApi(
+      @Named("restfulBooker") Retrofit retrofit) {
+    return retrofit.create(io.bookwright.api.restfulbooker.auth.AuthApi.class);
+  }
+
+  @Provides
+  @Singleton
+  HealthApi healthApi(@Named("restfulBooker") Retrofit retrofit) {
+    return retrofit.create(HealthApi.class);
+  }
+
+  @Provides
+  @Singleton
+  io.bookwright.api.restfulbooker.bookings.BookingsApi restfulBookerBookingsApi(
+      @Named("restfulBooker") Retrofit retrofit) {
+    return retrofit.create(io.bookwright.api.restfulbooker.bookings.BookingsApi.class);
+  }
+
+  @Provides
+  @Singleton
+  io.bookwright.api.local.auth.AuthApi localAuthApi(@Named("local") Retrofit retrofit) {
+    return retrofit.create(io.bookwright.api.local.auth.AuthApi.class);
+  }
+
+  @Provides
+  @Singleton
+  UsersApi usersApi(@Named("local") Retrofit retrofit) {
+    return retrofit.create(UsersApi.class);
+  }
+
+  @Provides
+  @Singleton
+  io.bookwright.api.local.bookings.BookingsApi localBookingsApi(@Named("local") Retrofit retrofit) {
+    return retrofit.create(io.bookwright.api.local.bookings.BookingsApi.class);
+  }
+
+  @Provides
+  @Singleton
+  SemaphoreSystemApi semaphoreSystemApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreSystemApi.class);
   }
 
   @Provides
   @Singleton
-  SemaphoreAuthApi semaphoreAuthApi(Retrofit retrofit) {
+  SemaphoreAuthApi semaphoreAuthApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreAuthApi.class);
   }
 
   @Provides
   @Singleton
-  SemaphoreProjectsApi semaphoreProjectsApi(Retrofit retrofit) {
+  SemaphoreProjectsApi semaphoreProjectsApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreProjectsApi.class);
   }
 
   @Provides
   @Singleton
-  SemaphoreAccessKeysApi semaphoreAccessKeysApi(Retrofit retrofit) {
+  SemaphoreAccessKeysApi semaphoreAccessKeysApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreAccessKeysApi.class);
   }
 
   @Provides
   @Singleton
-  SemaphoreRepositoriesApi semaphoreRepositoriesApi(Retrofit retrofit) {
+  SemaphoreRepositoriesApi semaphoreRepositoriesApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreRepositoriesApi.class);
   }
 
   @Provides
   @Singleton
-  SemaphoreInventoriesApi semaphoreInventoriesApi(Retrofit retrofit) {
+  SemaphoreInventoriesApi semaphoreInventoriesApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreInventoriesApi.class);
   }
 
   @Provides
   @Singleton
-  SemaphoreTemplatesApi semaphoreTemplatesApi(Retrofit retrofit) {
+  SemaphoreTemplatesApi semaphoreTemplatesApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreTemplatesApi.class);
   }
 
   @Provides
   @Singleton
-  SemaphoreTasksApi semaphoreTasksApi(Retrofit retrofit) {
+  SemaphoreTasksApi semaphoreTasksApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreTasksApi.class);
   }
 
   @Provides
   @Singleton
-  SemaphoreSchedulesApi semaphoreSchedulesApi(Retrofit retrofit) {
+  SemaphoreSchedulesApi semaphoreSchedulesApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreSchedulesApi.class);
   }
 
   @Provides
   @Singleton
-  SemaphoreUsersApi semaphoreUsersApi(Retrofit retrofit) {
+  SemaphoreUsersApi semaphoreUsersApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreUsersApi.class);
-  }
-
-  @Provides
-  @Singleton
-  BookingApi bookingApi(Retrofit retrofit) {
-    return retrofit.create(BookingApi.class);
-  }
-
-  @Provides
-  @Singleton
-  LocalBookingApi localBookingApi(MainConfig config) {
-    return RetrofitFactory.create(config.localBookingBaseUrl()).create(LocalBookingApi.class);
-  }
-
-  @Provides
-  @Singleton
-  LocalUserApi localUserApi(MainConfig config) {
-    return RetrofitFactory.create(config.localBookingBaseUrl()).create(LocalUserApi.class);
   }
 }

@@ -6,6 +6,10 @@ import com.google.inject.Module;
 import io.bookwright.di.ApiModule;
 import io.bookwright.di.DbModule;
 import io.bookwright.di.UiModule;
+import io.bookwright.fixtures.database.HotelDatabaseFixtures;
+import io.bookwright.fixtures.local.LocalUserFixtures;
+import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.steps.DbSteps;
 import io.bookwright.steps.UiSteps;
@@ -29,7 +33,13 @@ public class StepsParameterResolver implements ParameterResolver {
   public boolean supportsParameter(
       ParameterContext parameterContext, ExtensionContext extensionContext) {
     Class<?> type = parameterContext.getParameter().getType();
-    return type == TestStore.class || type == TestUser.class || SUPPORTED.contains(type);
+    return type == TestStore.class
+        || type == TestUser.class
+        || type == SauceDemoFixtures.class
+        || type == LocalUserFixtures.class
+        || type == HotelDatabaseFixtures.class
+        || type == SemaphoreFixtures.class
+        || SUPPORTED.contains(type);
   }
 
   @Override
@@ -39,14 +49,21 @@ public class StepsParameterResolver implements ParameterResolver {
     if (type == TestStore.class) {
       return new TestStore(extensionContext);
     }
+    if (type == SauceDemoFixtures.class) {
+      return SauceDemoFixtures.from(io.bookwright.config.Configs.main());
+    }
+    if (type == LocalUserFixtures.class) {
+      return LocalUserFixtures.from(io.bookwright.config.Configs.main());
+    }
+    if (type == HotelDatabaseFixtures.class) {
+      return HotelDatabaseFixtures.seeded();
+    }
+    if (type == SemaphoreFixtures.class) {
+      return SemaphoreFixtures.from(
+          io.bookwright.config.Configs.main(), TestDataExtension.getOrCreate(extensionContext));
+    }
     if (type == TestUser.class) {
-      TestUser user =
-          NamespaceRegistry.methodStore(extensionContext)
-              .get(UserFixtureExtension.STORE_KEY, TestUser.class);
-      if (user == null) {
-        throw new IllegalStateException("TestUser requires @UserFixture on the test or class");
-      }
-      return user;
+      return UserFixtureExtension.require(extensionContext);
     }
     if (type == UiSteps.class) {
       // Fresh browser context per UI test; closed when the method store closes

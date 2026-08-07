@@ -11,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
  */
 public class TeardownStorage {
 
-  public static final String STORE_KEY = "teardownStorage";
+  private static final String STORE_KEY = "teardownStorage";
 
   public record TeardownAction(String name, Runnable action) {}
 
