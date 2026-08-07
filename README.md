@@ -34,6 +34,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 ```text
 project → access key → local Git repository → inventory → task template
 → task execution → success status → output marker
+→ inactive cron schedule → schedule verification
 ```
 
 После теста Bookwright LIFO cleanup удаляет данные в обратном порядке.

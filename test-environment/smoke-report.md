@@ -31,6 +31,7 @@
 | Создание core resource chain | Key, repository, inventory и template связаны корректно | Pass | Pass |
 | Выполнение доверенного playbook | Task достигает `success` | Pass | Pass |
 | Проверка task output | Найден маркер `semaphore-bookwright-smoke-ok` | Pass | Pass |
+| Неактивный cron schedule | Create/get/list и связь с template | Pass | Pass |
 
 Полный локальный прогон инфраструктурных self-tests Bookwright вместе с Semaphore smoke завершён успешно.
 
@@ -48,7 +49,7 @@
 
 Карта API первого сквозного сценария подготовлена в `api-map.md`. Базовый независимый API smoke реализован. Следующий шаг — расширить его ресурсами проекта:
 
-1. негативные сценарии Git clone и branch/ref;
-2. проверка отсутствия секретов в output;
-3. schedule для созданного template;
-4. RBAC и изоляция проектов.
+1. отдельная API-сессия второго пользователя;
+2. RBAC и изоляция проектов;
+3. негативные сценарии Git clone и branch/ref;
+4. проверка отсутствия секретов в output.

@@ -10,6 +10,8 @@ import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
 import io.bookwright.api.model.semaphore.Repository;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
+import io.bookwright.api.model.semaphore.Schedule;
+import io.bookwright.api.model.semaphore.ScheduleRequest;
 import io.bookwright.api.model.semaphore.Task;
 import io.bookwright.api.model.semaphore.TaskOutput;
 import io.bookwright.api.model.semaphore.TaskRequest;
@@ -85,4 +87,17 @@ public interface SemaphoreApi {
 
   @DELETE("project/{projectId}/tasks/{taskId}")
   Call<Void> deleteTask(@Path("projectId") long projectId, @Path("taskId") long taskId);
+
+  @POST("project/{projectId}/schedules")
+  Call<Schedule> createSchedule(@Path("projectId") long projectId, @Body ScheduleRequest request);
+
+  @GET("project/{projectId}/schedules")
+  Call<List<Schedule>> getSchedules(@Path("projectId") long projectId);
+
+  @GET("project/{projectId}/schedules/{scheduleId}")
+  Call<Schedule> getSchedule(
+      @Path("projectId") long projectId, @Path("scheduleId") long scheduleId);
+
+  @DELETE("project/{projectId}/schedules/{scheduleId}")
+  Call<Void> deleteSchedule(@Path("projectId") long projectId, @Path("scheduleId") long scheduleId);
 }

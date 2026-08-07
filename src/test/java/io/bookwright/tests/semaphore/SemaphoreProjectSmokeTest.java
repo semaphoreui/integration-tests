@@ -34,6 +34,9 @@ class SemaphoreProjectSmokeTest {
     var startedTask = api.semaphore().startTask(created.id(), template.id());
     var completedTask = api.semaphore().waitUntilTaskSucceeds(created.id(), startedTask.id());
     var output = api.semaphore().getTaskOutput(created.id(), completedTask.id());
+    var schedule = api.semaphore().createInactiveSchedule(created.id(), template.id());
+    var savedSchedule = api.semaphore().getSchedule(created.id(), schedule.id());
+    var schedules = api.semaphore().getSchedules(created.id());
 
     assertThat(created.id()).isPositive();
     assertThat(saved.id()).isEqualTo(created.id());
@@ -52,5 +55,9 @@ class SemaphoreProjectSmokeTest {
     assertThat(output)
         .extracting(line -> line.output())
         .anyMatch(line -> line.contains("semaphore-bookwright-smoke-ok"));
+    assertThat(savedSchedule.templateId()).isEqualTo(template.id());
+    assertThat(savedSchedule.cronFormat()).isEqualTo("0 0 * * *");
+    assertThat(savedSchedule.active()).isFalse();
+    assertThat(schedules).extracting(item -> item.id()).contains(schedule.id());
   }
 }

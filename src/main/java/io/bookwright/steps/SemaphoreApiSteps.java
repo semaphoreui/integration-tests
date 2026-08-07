@@ -12,6 +12,8 @@ import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
 import io.bookwright.api.model.semaphore.Repository;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
+import io.bookwright.api.model.semaphore.Schedule;
+import io.bookwright.api.model.semaphore.ScheduleRequest;
 import io.bookwright.api.model.semaphore.Task;
 import io.bookwright.api.model.semaphore.TaskOutput;
 import io.bookwright.api.model.semaphore.TaskRequest;
@@ -208,5 +210,36 @@ public class SemaphoreApiSteps {
   @Step("Get output of Semaphore task {taskId}")
   public List<TaskOutput> getTaskOutput(long projectId, long taskId) {
     return Calls.body(api.getTaskOutput(projectId, taskId), 200, "task output");
+  }
+
+  @Step("Create inactive cron schedule for Semaphore template {templateId}")
+  public Schedule createInactiveSchedule(long projectId, long templateId) {
+    Schedule schedule =
+        Calls.body(
+            api.createSchedule(
+                projectId,
+                new ScheduleRequest(
+                    "bookwright-nightly-schedule-" + UUID.randomUUID(),
+                    projectId,
+                    templateId,
+                    "0 0 * * *",
+                    false,
+                    "")),
+            201,
+            "created schedule");
+    teardown.push(
+        "Delete Semaphore schedule " + schedule.id(),
+        () -> Calls.expectStatus(api.deleteSchedule(projectId, schedule.id()), 204));
+    return schedule;
+  }
+
+  @Step("Get Semaphore schedule {scheduleId}")
+  public Schedule getSchedule(long projectId, long scheduleId) {
+    return Calls.body(api.getSchedule(projectId, scheduleId), 200, "schedule");
+  }
+
+  @Step("List schedules in Semaphore project {projectId}")
+  public List<Schedule> getSchedules(long projectId) {
+    return Calls.body(api.getSchedules(projectId), 200, "schedules");
   }
 }
