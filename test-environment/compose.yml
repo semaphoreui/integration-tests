@@ -1,0 +1,21 @@
+name: semaphore-test
+
+services:
+  semaphore:
+    image: semaphoreui/semaphore:v2.19.7
+    ports:
+      - "3000:3000"
+    environment:
+      SEMAPHORE_DB_DIALECT: sqlite
+      SEMAPHORE_DB_PATH: /var/lib/semaphore
+      SEMAPHORE_ADMIN: admin
+      SEMAPHORE_ADMIN_PASSWORD: test-password
+      SEMAPHORE_ADMIN_NAME: Test Admin
+      SEMAPHORE_ADMIN_EMAIL: admin@localhost
+      SEMAPHORE_ACCESS_KEY_ENCRYPTION: IlRqgrrO5Gp27MlWakDX1xVrPv4jhoUx+ARY+qGyDxQ=
+    volumes:
+      - semaphore-data:/var/lib/semaphore
+    restart: unless-stopped
+
+volumes:
+  semaphore-data:

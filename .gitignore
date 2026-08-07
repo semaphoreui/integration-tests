@@ -7,3 +7,12 @@
 
 # Temporary spreadsheet inspection artifacts
 *.inspect.ndjson
+
+# Java / Gradle test framework
+.gradle/
+build/
+.idea/
+*.iml
+allure-results/
+logs/
+tmp/
