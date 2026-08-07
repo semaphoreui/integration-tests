@@ -25,7 +25,12 @@ class StateOwnershipArchitectureTest {
                 .filter(method -> Modifier.isPublic(method.getModifiers()))
                 .map(Method::getName))
         .containsExactlyInAnyOrder(
-            "authSession", "testUser", "testData", "booking", "semaphoreRbacUser")
+            "authSession",
+            "testUser",
+            "testData",
+            "booking",
+            "semaphoreRbacUser",
+            "semaphoreProject")
         .doesNotContain("get", "put", "getRequired");
   }
 

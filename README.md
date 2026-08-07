@@ -43,6 +43,8 @@ project → access key → local Git repository → inventory → task template
 
 После теста Bookwright LIFO cleanup удаляет проектные данные в обратном порядке. Для RBAC используется один стабильный fixture-пользователь `bookwright-rbac-guest`: повторные запуски переиспользуют его, потому что Semaphore v2.19.7 не позволяет удалить пользователя после создания login-сессии.
 
+Отдельный security smoke создаёт `login_password` access key с уникальным маркером, использует его как inventory credential при выполнении задачи и проверяет отсутствие plaintext в create/get/list API, структурированном и raw task output, Allure и JUnit artifacts.
+
 Ansible-код берётся только из доверенного fixture `test-environment/fixtures/ansible/smoke.yml`, упакованного Compose в локальный read-only Git volume. Внешний код при smoke-запуске не исполняется.
 
 Полный набор инфраструктурных self-tests Bookwright и продуктовых тестов Semaphore:

@@ -9,6 +9,7 @@ import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.bookwright.util.Waits;
 import io.qameta.allure.Step;
+import java.io.IOException;
 import java.util.List;
 
 public class TaskSteps {
@@ -30,6 +31,11 @@ public class TaskSteps {
         "Delete Semaphore task " + task.id(),
         () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
     return task;
+  }
+
+  @Step("Start Semaphore task from template {templateId} and wait for success")
+  public Task startAndWait(long projectId, long templateId) {
+    return waitUntilTaskSucceeds(projectId, startTask(projectId, templateId).id());
   }
 
   @Step("Wait for Semaphore task {taskId} to succeed")
@@ -57,5 +63,26 @@ public class TaskSteps {
   @Step("Get output of Semaphore task {taskId}")
   public List<TaskOutput> getTaskOutput(long projectId, long taskId) {
     return Calls.body(api.getTaskOutput(projectId, taskId), 200, "task output");
+  }
+
+  @Step("Get structured output text of Semaphore task {taskId}")
+  public String getTaskOutputText(long projectId, long taskId) {
+    return getTaskOutput(projectId, taskId).stream()
+        .map(TaskOutput::output)
+        .reduce((left, right) -> left + System.lineSeparator() + right)
+        .orElse("");
+  }
+
+  @Step("Get raw output of Semaphore task {taskId}")
+  public String getTaskRawOutput(long projectId, long taskId) {
+    var response = Calls.expectStatus(api.getTaskRawOutput(projectId, taskId), 200);
+    try (var body = response.body()) {
+      if (body == null) {
+        throw new IllegalStateException("Raw task output response body was empty");
+      }
+      return body.string();
+    } catch (IOException error) {
+      throw new IllegalStateException("Could not read raw task output", error);
+    }
   }
 }

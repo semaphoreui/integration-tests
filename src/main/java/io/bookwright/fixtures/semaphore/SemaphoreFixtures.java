@@ -2,6 +2,7 @@ package io.bookwright.fixtures.semaphore;
 
 import io.bookwright.api.model.semaphore.AccessKeyRequest;
 import io.bookwright.api.model.semaphore.InventoryRequest;
+import io.bookwright.api.model.semaphore.LoginPasswordRequest;
 import io.bookwright.api.model.semaphore.LoginRequest;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
@@ -18,6 +19,7 @@ public record SemaphoreFixtures(
     LoginRequest invalidLogin,
     Projects projects,
     AccessKey accessKey,
+    SecretAccessKey secretAccessKey,
     Repository repository,
     Inventory inventory,
     Template template,
@@ -31,8 +33,14 @@ public record SemaphoreFixtures(
         new LoginRequest(config.apiUsername(), config.apiPassword() + "-invalid"),
         new Projects(
             new ProjectRequest("bookwright-api-smoke-" + suffix, false, 0),
-            new ProjectRequest("bookwright-hidden-" + suffix, false, 0)),
+            new ProjectRequest("bookwright-hidden-" + suffix, false, 0),
+            new ProjectRequest("bookwright-secrets-" + suffix, false, 0)),
         new AccessKey("bookwright-none-key-" + suffix, "none"),
+        new SecretAccessKey(
+            "bookwright-login-key-" + suffix,
+            "login_password",
+            "bookwright-local-user",
+            "Bw-secret-" + suffix + "-42!"),
         new Repository("bookwright-demo-repository-" + suffix, "file:///fixtures/ansible", "main"),
         new Inventory(
             "bookwright-localhost-inventory-" + suffix,
@@ -44,11 +52,24 @@ public record SemaphoreFixtures(
         new Expectations("owner", "success", "semaphore-bookwright-smoke-ok"));
   }
 
-  public record Projects(ProjectRequest primary, ProjectRequest hidden) {}
+  public record Projects(ProjectRequest primary, ProjectRequest hidden, ProjectRequest secrets) {}
 
   public record AccessKey(String name, String type) {
     public AccessKeyRequest request(long projectId) {
       return new AccessKeyRequest(name, type, projectId);
+    }
+  }
+
+  public record SecretAccessKey(String name, String type, String login, String password) {
+
+    public AccessKeyRequest request(long projectId) {
+      return new AccessKeyRequest(name, type, projectId, new LoginPasswordRequest(login, password));
+    }
+
+    @Override
+    public String toString() {
+      return "SecretAccessKey[name=%s, type=%s, login=%s, password=[REDACTED]]"
+          .formatted(name, type, login);
     }
   }
 

@@ -99,6 +99,10 @@ Project
 
 Перед контрактным тестированием необходимо автоматически сравнить router и OpenAPI целиком.
 
+### 5. Sensitive fields access key не возвращаются в plaintext
+
+Автоматизированный security smoke для `login_password` key подтверждает, что уникальный password marker отсутствует в ответах create/get/list. Ключ используется как inventory credential при реальном запуске локальной Ansible-задачи; marker также отсутствует в structured output, raw output, Allure и JUnit artifacts.
+
 ## Первая очередь API-тестов
 
 ### P0 — обязательный smoke
@@ -127,12 +131,8 @@ Project
 4. Workflows.
 5. Backup/restore и миграционные сценарии.
 
-## Ближайшее техническое решение
+## Текущий статус и ближайшее расширение
 
-До выбора окончательного тестового фреймворка нужно сделать небольшой исполняемый API smoke, который:
+Исполняемый API smoke реализован на Bookwright v1.4.0: он создаёт изолированные ресурсы без фиксированных ID, использует deterministic typed fixtures, выполняет LIFO cleanup и защищает диагностику от секретов.
 
-- создаёт собственный проект с уникальным именем;
-- не зависит от демонстрационного проекта и фиксированных ID;
-- сохраняет ID созданных ресурсов из ответов;
-- всегда выполняет cleanup;
-- печатает понятную диагностику без секретов.
+Следующее расширение P1: ошибки Git clone/branch, SSH key, manager/task_runner RBAC, stop/force-stop задачи и cron validation/timezone.

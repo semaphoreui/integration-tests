@@ -1,6 +1,7 @@
 package io.bookwright.junit;
 
 import io.bookwright.api.model.CreatedBooking;
+import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.User;
 import io.bookwright.config.Configs;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
@@ -24,6 +25,14 @@ public enum Precondition implements IPrecondition {
   SEMAPHORE_ADMIN_SESSION(
       "Login to Semaphore as administrator", (api, store) -> api.semaphore().auth().login()),
 
+  SEMAPHORE_PROJECT_EXISTS(
+      "Create an isolated Semaphore project",
+      (api, store) -> {
+        SemaphoreFixtures fixtures = SemaphoreFixtures.from(Configs.main(), store.testData());
+        Project project = api.semaphore().projects().createProject(fixtures.projects().secrets());
+        store.putSemaphoreProject(project);
+      }),
+
   SEMAPHORE_RBAC_USER_EXISTS(
       "Ensure the Semaphore RBAC fixture user exists",
       (api, store) -> {
@@ -38,6 +47,7 @@ public enum Precondition implements IPrecondition {
       });
 
   static final String BOOKING_KEY = "createdBooking";
+  static final String SEMAPHORE_PROJECT_KEY = "semaphoreProject";
   static final String SEMAPHORE_RBAC_USER_KEY = "semaphoreRbacUser";
 
   private final String title;
