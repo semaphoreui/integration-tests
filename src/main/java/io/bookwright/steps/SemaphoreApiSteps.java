@@ -2,10 +2,18 @@ package io.bookwright.steps;
 
 import com.google.inject.Inject;
 import io.bookwright.api.SemaphoreApi;
+import io.bookwright.api.model.semaphore.AccessKey;
+import io.bookwright.api.model.semaphore.AccessKeyRequest;
+import io.bookwright.api.model.semaphore.Inventory;
+import io.bookwright.api.model.semaphore.InventoryRequest;
 import io.bookwright.api.model.semaphore.LoginRequest;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
+import io.bookwright.api.model.semaphore.Repository;
+import io.bookwright.api.model.semaphore.RepositoryRequest;
+import io.bookwright.api.model.semaphore.Template;
+import io.bookwright.api.model.semaphore.TemplateRequest;
 import io.bookwright.config.MainConfig;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
@@ -74,5 +82,84 @@ public class SemaphoreApiSteps {
   @Step("Get current role in Semaphore project {projectId}")
   public ProjectRole getProjectRole(long projectId) {
     return Calls.body(api.getProjectRole(projectId), 200, "project role");
+  }
+
+  @Step("Create no-auth access key in Semaphore project {projectId}")
+  public AccessKey createNoneAccessKey(long projectId) {
+    AccessKey key =
+        Calls.body(
+            api.createAccessKey(
+                projectId,
+                new AccessKeyRequest(
+                    "bookwright-none-key-" + UUID.randomUUID(), "none", projectId)),
+            201,
+            "created access key");
+    teardown.push(
+        "Delete Semaphore access key " + key.id(),
+        () -> Calls.expectStatus(api.deleteAccessKey(projectId, key.id()), 204));
+    return key;
+  }
+
+  @Step("Create public Git repository in Semaphore project {projectId}")
+  public Repository createPublicRepository(long projectId, long keyId) {
+    Repository repository =
+        Calls.body(
+            api.createRepository(
+                projectId,
+                new RepositoryRequest(
+                    "bookwright-demo-repository-" + UUID.randomUUID(),
+                    projectId,
+                    "https://github.com/semaphoreui/semaphore-demo.git",
+                    "main",
+                    keyId)),
+            201,
+            "created repository");
+    teardown.push(
+        "Delete Semaphore repository " + repository.id(),
+        () -> Calls.expectStatus(api.deleteRepository(projectId, repository.id()), 204));
+    return repository;
+  }
+
+  @Step("Create static inventory in Semaphore project {projectId}")
+  public Inventory createStaticInventory(long projectId, long keyId) {
+    Inventory inventory =
+        Calls.body(
+            api.createInventory(
+                projectId,
+                new InventoryRequest(
+                    "bookwright-localhost-inventory-" + UUID.randomUUID(),
+                    projectId,
+                    "[local]\nlocalhost ansible_connection=local",
+                    keyId,
+                    "static")),
+            201,
+            "created inventory");
+    teardown.push(
+        "Delete Semaphore inventory " + inventory.id(),
+        () -> Calls.expectStatus(api.deleteInventory(projectId, inventory.id()), 204));
+    return inventory;
+  }
+
+  @Step("Create Ansible task template in Semaphore project {projectId}")
+  public Template createAnsibleTemplate(long projectId, long repositoryId, long inventoryId) {
+    Template template =
+        Calls.body(
+            api.createTemplate(
+                projectId,
+                new TemplateRequest(
+                    "bookwright-build-template-" + UUID.randomUUID(),
+                    projectId,
+                    inventoryId,
+                    repositoryId,
+                    0,
+                    "build.yml",
+                    "ansible",
+                    "")),
+            201,
+            "created task template");
+    teardown.push(
+        "Delete Semaphore task template " + template.id(),
+        () -> Calls.expectStatus(api.deleteTemplate(projectId, template.id()), 204));
+    return template;
   }
 }

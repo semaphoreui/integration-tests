@@ -29,7 +29,13 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 ./gradlew apiTest -DSTAND=semaphore
 ```
 
-Тест проверяет health, неверный и корректный login, создаёт изолированный проект, проверяет роль `owner` и удаляет проект через Bookwright LIFO cleanup.
+Тест проверяет health, неверный и корректный login, создаёт изолированный проект и основную цепочку ресурсов:
+
+```text
+project → access key → repository → inventory → task template
+```
+
+После теста Bookwright LIFO cleanup удаляет данные в обратном порядке.
 
 Полный набор инфраструктурных self-tests Bookwright и продуктовых тестов Semaphore:
 

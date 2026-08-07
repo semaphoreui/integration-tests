@@ -1,0 +1,8 @@
+---
+- name: Semaphore test fixture
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Emit deterministic smoke marker
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-smoke-ok

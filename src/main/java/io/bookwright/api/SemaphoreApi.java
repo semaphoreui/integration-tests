@@ -1,9 +1,17 @@
 package io.bookwright.api;
 
+import io.bookwright.api.model.semaphore.AccessKey;
+import io.bookwright.api.model.semaphore.AccessKeyRequest;
+import io.bookwright.api.model.semaphore.Inventory;
+import io.bookwright.api.model.semaphore.InventoryRequest;
 import io.bookwright.api.model.semaphore.LoginRequest;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
+import io.bookwright.api.model.semaphore.Repository;
+import io.bookwright.api.model.semaphore.RepositoryRequest;
+import io.bookwright.api.model.semaphore.Template;
+import io.bookwright.api.model.semaphore.TemplateRequest;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -31,4 +39,33 @@ public interface SemaphoreApi {
 
   @DELETE("project/{projectId}")
   Call<Void> deleteProject(@Path("projectId") long projectId);
+
+  @POST("project/{projectId}/keys")
+  Call<AccessKey> createAccessKey(
+      @Path("projectId") long projectId, @Body AccessKeyRequest request);
+
+  @DELETE("project/{projectId}/keys/{keyId}")
+  Call<Void> deleteAccessKey(@Path("projectId") long projectId, @Path("keyId") long keyId);
+
+  @POST("project/{projectId}/repositories")
+  Call<Repository> createRepository(
+      @Path("projectId") long projectId, @Body RepositoryRequest request);
+
+  @DELETE("project/{projectId}/repositories/{repositoryId}")
+  Call<Void> deleteRepository(
+      @Path("projectId") long projectId, @Path("repositoryId") long repositoryId);
+
+  @POST("project/{projectId}/inventory")
+  Call<Inventory> createInventory(
+      @Path("projectId") long projectId, @Body InventoryRequest request);
+
+  @DELETE("project/{projectId}/inventory/{inventoryId}")
+  Call<Void> deleteInventory(
+      @Path("projectId") long projectId, @Path("inventoryId") long inventoryId);
+
+  @POST("project/{projectId}/templates")
+  Call<Template> createTemplate(@Path("projectId") long projectId, @Body TemplateRequest request);
+
+  @DELETE("project/{projectId}/templates/{templateId}")
+  Call<Void> deleteTemplate(@Path("projectId") long projectId, @Path("templateId") long templateId);
 }

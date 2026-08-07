@@ -10,7 +10,7 @@
 
 Независимый исполняемый smoke `api-smoke.mjs` также успешно проходит полный цикл создания и удаления временного проекта.
 
-Тот же сценарий перенесён на Java-каркас Bookwright и реализован в `SemaphoreProjectSmokeTest`. Тест использует Retrofit/OkHttp, Guice, Allure steps, AssertJ и автоматический LIFO cleanup.
+Тот же сценарий перенесён на Java-каркас Bookwright и реализован в `SemaphoreProjectSmokeTest`. Тест использует Retrofit/OkHttp, Guice, Allure steps, AssertJ и автоматический LIFO cleanup. Сценарий расширен цепочкой access key → repository → inventory → task template.
 
 | Проверка | Ожидаемый результат | Фактический результат | Статус |
 |---|---|---|---|
@@ -28,6 +28,7 @@
 | Роль создателя проекта | `owner` | `200`, роль `owner` | Pass |
 | Cleanup временного проекта | Проект удалён | `204` | Pass |
 | Bookwright `SemaphoreProjectSmokeTest` | Полный Java API smoke | Pass | Pass |
+| Создание core resource chain | Key, repository, inventory и template связаны корректно | Pass | Pass |
 
 Полный локальный прогон инфраструктурных self-tests Bookwright вместе с Semaphore smoke завершён успешно.
 
@@ -45,9 +46,7 @@
 
 Карта API первого сквозного сценария подготовлена в `api-map.md`. Базовый независимый API smoke реализован. Следующий шаг — расширить его ресурсами проекта:
 
-1. access key;
-2. repository;
-3. inventory;
-4. task template;
-5. task lifecycle и output;
-6. гарантированный cleanup зависимых ресурсов.
+1. собственный доверенный Git fixture с безопасным Ansible playbook;
+2. task lifecycle и output;
+3. проверка отсутствия секретов в output;
+4. гарантированный cleanup task и зависимых ресурсов.
