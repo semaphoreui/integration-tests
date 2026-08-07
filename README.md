@@ -35,9 +35,11 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 project → access key → local Git repository → inventory → task template
 → task execution → success status → output marker
 → inactive cron schedule → schedule verification
+→ guest RBAC → assigned project access → forbidden mutation
+→ unassigned project isolation
 ```
 
-После теста Bookwright LIFO cleanup удаляет данные в обратном порядке.
+После теста Bookwright LIFO cleanup удаляет проектные данные в обратном порядке. Для RBAC используется один стабильный fixture-пользователь `bookwright-rbac-guest`: повторные запуски переиспользуют его, потому что Semaphore v2.19.7 не позволяет удалить пользователя после создания login-сессии.
 
 Ansible-код берётся только из доверенного fixture `test-environment/fixtures/ansible/smoke.yml`, упакованного Compose в локальный read-only Git volume. Внешний код при smoke-запуске не исполняется.
 

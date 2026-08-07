@@ -37,6 +37,10 @@ class SemaphoreProjectSmokeTest {
     var schedule = api.semaphore().createInactiveSchedule(created.id(), template.id());
     var savedSchedule = api.semaphore().getSchedule(created.id(), schedule.id());
     var schedules = api.semaphore().getSchedules(created.id());
+    var hiddenProject = api.semaphore().createProject();
+    var guest = api.semaphore().getOrCreateNonAdminUser();
+    api.semaphore().addGuestToProject(created.id(), guest.user().id());
+    var guestApi = api.semaphore().loginAs(guest);
 
     assertThat(created.id()).isPositive();
     assertThat(saved.id()).isEqualTo(created.id());
@@ -59,5 +63,8 @@ class SemaphoreProjectSmokeTest {
     assertThat(savedSchedule.cronFormat()).isEqualTo("0 0 * * *");
     assertThat(savedSchedule.active()).isFalse();
     assertThat(schedules).extracting(item -> item.id()).contains(schedule.id());
+    api.semaphore().verifyProjectReadable(guestApi, created.id());
+    api.semaphore().verifyGuestCannotCreateAccessKey(guestApi, created.id());
+    api.semaphore().verifyProjectHidden(guestApi, hiddenProject.id());
   }
 }

@@ -1,6 +1,7 @@
 package io.bookwright.steps;
 
 import com.google.inject.Inject;
+import io.bookwright.api.RetrofitFactory;
 import io.bookwright.api.SemaphoreApi;
 import io.bookwright.api.model.semaphore.AccessKey;
 import io.bookwright.api.model.semaphore.AccessKeyRequest;
@@ -8,17 +9,21 @@ import io.bookwright.api.model.semaphore.Inventory;
 import io.bookwright.api.model.semaphore.InventoryRequest;
 import io.bookwright.api.model.semaphore.LoginRequest;
 import io.bookwright.api.model.semaphore.Project;
+import io.bookwright.api.model.semaphore.ProjectMemberRequest;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
 import io.bookwright.api.model.semaphore.Repository;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.Schedule;
 import io.bookwright.api.model.semaphore.ScheduleRequest;
+import io.bookwright.api.model.semaphore.SemaphoreTestUser;
 import io.bookwright.api.model.semaphore.Task;
 import io.bookwright.api.model.semaphore.TaskOutput;
 import io.bookwright.api.model.semaphore.TaskRequest;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.TemplateRequest;
+import io.bookwright.api.model.semaphore.User;
+import io.bookwright.api.model.semaphore.UserRequest;
 import io.bookwright.config.MainConfig;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
@@ -241,5 +246,73 @@ public class SemaphoreApiSteps {
   @Step("List schedules in Semaphore project {projectId}")
   public List<Schedule> getSchedules(long projectId) {
     return Calls.body(api.getSchedules(projectId), 200, "schedules");
+  }
+
+  @Step("Get or create the non-admin Semaphore RBAC fixture user")
+  public SemaphoreTestUser getOrCreateNonAdminUser() {
+    String username = "bookwright-rbac-guest";
+    String password = "Bookwright-test-password-42!";
+    User existing =
+        Calls.body(api.getUsers(), 200, "users").stream()
+            .filter(user -> username.equals(user.username()))
+            .findFirst()
+            .orElse(null);
+    if (existing != null) {
+      return new SemaphoreTestUser(existing, password);
+    }
+
+    User user =
+        Calls.body(
+            api.createUser(
+                new UserRequest(
+                    "Bookwright Guest",
+                    username,
+                    username + "@localhost",
+                    password,
+                    false,
+                    false,
+                    false)),
+            201,
+            "created user");
+    return new SemaphoreTestUser(user, password);
+  }
+
+  @Step("Add user {userId} to Semaphore project {projectId} as guest")
+  public void addGuestToProject(long projectId, long userId) {
+    Calls.expectStatus(
+        api.addProjectUser(projectId, new ProjectMemberRequest(userId, "guest")), 204);
+    teardown.push(
+        "Remove Semaphore user %d from project %d".formatted(userId, projectId),
+        () -> Calls.expectStatus(api.removeProjectUser(projectId, userId), 204));
+  }
+
+  @Step("Login as isolated Semaphore user")
+  public SemaphoreApi loginAs(SemaphoreTestUser account) {
+    SemaphoreApi isolatedApi =
+        RetrofitFactory.create(config.apiBaseUrl()).create(SemaphoreApi.class);
+    Calls.expectStatus(
+        isolatedApi.login(new LoginRequest(account.user().username(), account.password())), 204);
+    return isolatedApi;
+  }
+
+  @Step("Verify guest can read assigned Semaphore project {projectId}")
+  public void verifyProjectReadable(SemaphoreApi isolatedApi, long projectId) {
+    Project project = Calls.body(isolatedApi.getProject(projectId), 200, "guest-visible project");
+    if (project.id() != projectId) {
+      throw new IllegalStateException("Guest received a different project");
+    }
+  }
+
+  @Step("Verify guest cannot read unassigned Semaphore project {projectId}")
+  public void verifyProjectHidden(SemaphoreApi isolatedApi, long projectId) {
+    Calls.expectStatus(isolatedApi.getProject(projectId), 404);
+  }
+
+  @Step("Verify guest cannot create access keys in Semaphore project {projectId}")
+  public void verifyGuestCannotCreateAccessKey(SemaphoreApi isolatedApi, long projectId) {
+    Calls.expectStatus(
+        isolatedApi.createAccessKey(
+            projectId, new AccessKeyRequest("forbidden-guest-key", "none", projectId)),
+        403);
   }
 }

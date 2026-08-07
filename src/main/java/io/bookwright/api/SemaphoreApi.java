@@ -6,6 +6,7 @@ import io.bookwright.api.model.semaphore.Inventory;
 import io.bookwright.api.model.semaphore.InventoryRequest;
 import io.bookwright.api.model.semaphore.LoginRequest;
 import io.bookwright.api.model.semaphore.Project;
+import io.bookwright.api.model.semaphore.ProjectMemberRequest;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
 import io.bookwright.api.model.semaphore.Repository;
@@ -17,6 +18,8 @@ import io.bookwright.api.model.semaphore.TaskOutput;
 import io.bookwright.api.model.semaphore.TaskRequest;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.TemplateRequest;
+import io.bookwright.api.model.semaphore.User;
+import io.bookwright.api.model.semaphore.UserRequest;
 import java.util.List;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -100,4 +103,19 @@ public interface SemaphoreApi {
 
   @DELETE("project/{projectId}/schedules/{scheduleId}")
   Call<Void> deleteSchedule(@Path("projectId") long projectId, @Path("scheduleId") long scheduleId);
+
+  @POST("users")
+  Call<User> createUser(@Body UserRequest request);
+
+  @GET("users")
+  Call<List<User>> getUsers();
+
+  @DELETE("users/{userId}")
+  Call<Void> deleteUser(@Path("userId") long userId);
+
+  @POST("project/{projectId}/users")
+  Call<Void> addProjectUser(@Path("projectId") long projectId, @Body ProjectMemberRequest request);
+
+  @DELETE("project/{projectId}/users/{userId}")
+  Call<Void> removeProjectUser(@Path("projectId") long projectId, @Path("userId") long userId);
 }

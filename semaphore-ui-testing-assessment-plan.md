@@ -108,7 +108,7 @@ Issues группируются по функциональным зонам:
 
 **Текущий статус:** минимальный стенд `v2.19.7` с SQLite поднят через Docker Compose. Проверены UI, аутентификация и базовые read-only API-запросы. Команды запуска и результаты smoke-проверки находятся в `test-environment/`.
 
-Для автоматизации выбран Java-каркас Bookwright. В тестовый репозиторий перенесены Gradle/JUnit 5, Retrofit/OkHttp, Guice, Allure, Playwright, детерминированные тестовые данные, framework self-tests и LIFO cleanup. Первый независимый Java API smoke успешно проверяет health, login, создание проекта, роль owner и удаление тестовых данных.
+Для автоматизации выбран Java-каркас Bookwright. В тестовый репозиторий перенесены Gradle/JUnit 5, Retrofit/OkHttp, Guice, Allure, Playwright, детерминированные тестовые данные, framework self-tests и LIFO cleanup. Сквозной Java API smoke успешно проверяет health, login, проект и роль owner, локальный Git fixture, inventory, template, выполнение Ansible-задачи, output, неактивное cron-расписание, гостевой доступ к назначенному проекту, запрет гостю изменять access keys и изоляцию неназначенного проекта. Проектные тестовые данные удаляются автоматически; RBAC fixture-пользователь переиспользуется между запусками из-за ограничения удаления пользователя с историей login-сессий в Semaphore v2.19.7.
 
 Проверяю:
 
