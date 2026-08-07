@@ -11,14 +11,14 @@ import org.junit.jupiter.api.extension.ExtensionContext;
  */
 public class AuthSessionExtension implements BeforeTestExecutionCallback {
 
+  public static final String STORE_KEY = "authSession";
+
   @Override
   public void beforeTestExecution(ExtensionContext context) {
     ApiSteps api =
         StepsParameterResolver.injectorFor(ApiSteps.class, context).getInstance(ApiSteps.class);
     Allure.step(
         "Fixture: authenticate API session",
-        () ->
-            NamespaceRegistry.methodStore(context)
-                .put(NamespaceRegistry.AUTH_SESSION_KEY, api.auth().session()));
+        () -> NamespaceRegistry.methodStore(context).put(STORE_KEY, api.auth().session()));
   }
 }

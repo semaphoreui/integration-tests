@@ -7,6 +7,7 @@ import io.bookwright.config.Configs;
 import io.bookwright.config.MainConfig;
 import io.bookwright.junit.NamespaceRegistry;
 import io.bookwright.junit.TestUser;
+import io.bookwright.junit.UserFixtureExtension;
 import io.bookwright.ui.BrowserManager;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -26,7 +27,7 @@ public class UiModule extends AbstractModule {
   @Provides
   Page page() {
     TestUser user =
-        NamespaceRegistry.methodStore(context).get(NamespaceRegistry.TEST_USER_KEY, TestUser.class);
+        NamespaceRegistry.methodStore(context).get(UserFixtureExtension.STORE_KEY, TestUser.class);
     return user == null
         ? BrowserManager.page()
         : BrowserManager.page(user.session(), Configs.main().localBookingBaseUrl());

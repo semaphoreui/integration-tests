@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.bookwright.annotations.Api;
 import io.bookwright.annotations.OwnerDanil;
 import io.bookwright.annotations.Smoke;
+import io.bookwright.junit.Precondition;
+import io.bookwright.junit.Preconditions;
+import io.bookwright.junit.TestStore;
 import io.bookwright.steps.ApiSteps;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
@@ -17,30 +20,31 @@ import org.junit.jupiter.api.Test;
 class SemaphoreProjectSmokeTest {
 
   @Test
+  @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_RBAC_USER_EXISTS})
   @DisplayName("Owner can execute and clean up the core project workflow")
-  void ownerCanCreateAndReadProject(ApiSteps api) {
-    api.semaphore().health();
-    api.semaphore().invalidLoginIsRejected();
-    api.semaphore().login();
+  void ownerCanCreateAndReadProject(ApiSteps api, TestStore store) {
+    api.semaphoreSystem().health();
+    api.semaphoreAuth().invalidLoginIsRejected();
 
-    var created = api.semaphore().createProject();
-    var saved = api.semaphore().getProject(created.id());
-    var role = api.semaphore().getProjectRole(created.id());
-    var key = api.semaphore().createNoneAccessKey(created.id());
-    var repository = api.semaphore().createPublicRepository(created.id(), key.id());
-    var inventory = api.semaphore().createStaticInventory(created.id(), key.id());
+    var created = api.semaphoreProjects().createProject();
+    var saved = api.semaphoreProjects().getProject(created.id());
+    var role = api.semaphoreProjects().getProjectRole(created.id());
+    var key = api.semaphoreAccessKeys().createNoneAccessKey(created.id());
+    var repository = api.semaphoreRepositories().createPublicRepository(created.id(), key.id());
+    var inventory = api.semaphoreInventories().createStaticInventory(created.id(), key.id());
     var template =
-        api.semaphore().createAnsibleTemplate(created.id(), repository.id(), inventory.id());
-    var startedTask = api.semaphore().startTask(created.id(), template.id());
-    var completedTask = api.semaphore().waitUntilTaskSucceeds(created.id(), startedTask.id());
-    var output = api.semaphore().getTaskOutput(created.id(), completedTask.id());
-    var schedule = api.semaphore().createInactiveSchedule(created.id(), template.id());
-    var savedSchedule = api.semaphore().getSchedule(created.id(), schedule.id());
-    var schedules = api.semaphore().getSchedules(created.id());
-    var hiddenProject = api.semaphore().createProject();
-    var guest = api.semaphore().getOrCreateNonAdminUser();
-    api.semaphore().addGuestToProject(created.id(), guest.user().id());
-    var guestApi = api.semaphore().loginAs(guest);
+        api.semaphoreTemplates()
+            .createAnsibleTemplate(created.id(), repository.id(), inventory.id());
+    var startedTask = api.semaphoreTasks().startTask(created.id(), template.id());
+    var completedTask = api.semaphoreTasks().waitUntilTaskSucceeds(created.id(), startedTask.id());
+    var output = api.semaphoreTasks().getTaskOutput(created.id(), completedTask.id());
+    var schedule = api.semaphoreSchedules().createInactiveSchedule(created.id(), template.id());
+    var savedSchedule = api.semaphoreSchedules().getSchedule(created.id(), schedule.id());
+    var schedules = api.semaphoreSchedules().getSchedules(created.id());
+    var hiddenProject = api.semaphoreProjects().createProject();
+    var guest = store.semaphoreRbacUser();
+    api.semaphoreUsers().addGuestToProject(created.id(), guest.user().id());
+    var guestSession = api.semaphoreAuth().loginAs(guest);
 
     assertThat(created.id()).isPositive();
     assertThat(saved.id()).isEqualTo(created.id());
@@ -63,8 +67,8 @@ class SemaphoreProjectSmokeTest {
     assertThat(savedSchedule.cronFormat()).isEqualTo("0 0 * * *");
     assertThat(savedSchedule.active()).isFalse();
     assertThat(schedules).extracting(item -> item.id()).contains(schedule.id());
-    api.semaphore().verifyProjectReadable(guestApi, created.id());
-    api.semaphore().verifyGuestCannotCreateAccessKey(guestApi, created.id());
-    api.semaphore().verifyProjectHidden(guestApi, hiddenProject.id());
+    api.semaphoreUsers().verifyProjectReadable(guestSession, created.id());
+    api.semaphoreUsers().verifyGuestCannotCreateAccessKey(guestSession, created.id());
+    api.semaphoreUsers().verifyProjectHidden(guestSession, hiddenProject.id());
   }
 }

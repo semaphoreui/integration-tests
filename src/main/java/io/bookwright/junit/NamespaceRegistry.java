@@ -4,18 +4,12 @@ import lombok.experimental.UtilityClass;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * Central registry of JUnit store namespaces and keys, so extensions and tests agree on where
- * shared state lives. Class scope = reusable resources; method scope = isolated per test
- * (injectors, auth session, preconditions, teardown, test data).
+ * Creates the shared JUnit store namespaces. Store keys live next to the fixture or lifecycle
+ * component that owns the corresponding state, so this class does not become a domain registry.
+ * Class scope holds reusable resources; method scope remains isolated per test.
  */
 @UtilityClass
 public class NamespaceRegistry {
-
-  public static final String AUTH_SESSION_KEY = "authSession";
-  public static final String BOOKING_KEY = "createdBooking";
-  public static final String TEARDOWN_STORAGE_KEY = "teardownStorage";
-  public static final String TEST_DATA_KEY = "testData";
-  public static final String TEST_USER_KEY = "testUser";
 
   public ExtensionContext.Store classStore(ExtensionContext context) {
     Class<?> testClass = context.getRequiredTestClass();

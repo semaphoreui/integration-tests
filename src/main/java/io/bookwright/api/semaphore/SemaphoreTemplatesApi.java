@@ -1,0 +1,18 @@
+package io.bookwright.api.semaphore;
+
+import io.bookwright.api.model.semaphore.Template;
+import io.bookwright.api.model.semaphore.TemplateRequest;
+import retrofit2.Call;
+import retrofit2.http.Body;
+import retrofit2.http.DELETE;
+import retrofit2.http.POST;
+import retrofit2.http.Path;
+
+public interface SemaphoreTemplatesApi {
+
+  @POST("project/{projectId}/templates")
+  Call<Template> createTemplate(@Path("projectId") long projectId, @Body TemplateRequest request);
+
+  @DELETE("project/{projectId}/templates/{templateId}")
+  Call<Void> deleteTemplate(@Path("projectId") long projectId, @Path("templateId") long templateId);
+}

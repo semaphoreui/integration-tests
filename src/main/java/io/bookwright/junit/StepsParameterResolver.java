@@ -42,7 +42,7 @@ public class StepsParameterResolver implements ParameterResolver {
     if (type == TestUser.class) {
       TestUser user =
           NamespaceRegistry.methodStore(extensionContext)
-              .get(NamespaceRegistry.TEST_USER_KEY, TestUser.class);
+              .get(UserFixtureExtension.STORE_KEY, TestUser.class);
       if (user == null) {
         throw new IllegalStateException("TestUser requires @UserFixture on the test or class");
       }

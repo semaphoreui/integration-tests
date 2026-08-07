@@ -1,6 +1,8 @@
 package io.bookwright.junit;
 
 import io.bookwright.api.AuthSession;
+import io.bookwright.api.model.semaphore.SemaphoreTestUser;
+import io.bookwright.fixture.semaphore.SemaphoreRbacFixture;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
@@ -30,10 +32,14 @@ public class TestStore {
   }
 
   public AuthSession authSession() {
-    return get(NamespaceRegistry.AUTH_SESSION_KEY, AuthSession.class);
+    return get(AuthSessionExtension.STORE_KEY, AuthSession.class);
   }
 
   public TestUser testUser() {
-    return get(NamespaceRegistry.TEST_USER_KEY, TestUser.class);
+    return get(UserFixtureExtension.STORE_KEY, TestUser.class);
+  }
+
+  public SemaphoreTestUser semaphoreRbacUser() {
+    return get(SemaphoreRbacFixture.STORE_KEY, SemaphoreTestUser.class);
   }
 }
