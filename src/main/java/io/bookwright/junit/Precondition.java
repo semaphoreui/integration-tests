@@ -38,11 +38,7 @@ public enum Precondition implements IPrecondition {
       (api, store) -> {
         SemaphoreFixtures.Rbac rbac =
             SemaphoreFixtures.from(Configs.main(), store.testData()).rbac();
-        User user =
-            api.semaphore().users().getUsers().stream()
-                .filter(candidate -> rbac.username().equals(candidate.username()))
-                .findFirst()
-                .orElseGet(() -> api.semaphore().users().create(rbac.userRequest()));
+        User user = api.semaphore().users().getOrCreate(rbac.userRequest());
         store.putSemaphoreRbacUser(rbac.account(user));
       });
 

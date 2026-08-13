@@ -7,12 +7,15 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
+        set -eu
         cp -R /source/. /repository/
+        chown -R 0:0 /repository
         git -C /repository init -b main
         git -C /repository config user.name "Semaphore Test Fixture"
         git -C /repository config user.email "fixture@localhost"
         git -C /repository add .
         git -C /repository diff --cached --quiet || git -C /repository commit -m "Prepare safe smoke fixture"
+        git -C /repository branch -f bookwright-fixture-ref HEAD
         chown -R 1001:0 /repository
     volumes:
       - fixture-repository:/repository

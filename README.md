@@ -43,9 +43,15 @@ project → access key → local Git repository → inventory → task template
 
 После теста Bookwright LIFO cleanup удаляет проектные данные в обратном порядке. Для RBAC используется один стабильный fixture-пользователь `bookwright-rbac-guest`: повторные запуски переиспользуют его, потому что Semaphore v2.19.7 не позволяет удалить пользователя после создания login-сессии.
 
+Отдельный RBAC-набор фиксирует встроенные контракты `manager` и `task_runner`. Manager может создавать проектные ресурсы и запускать задачи, но не может удалить проект или управлять участниками. Task runner может запускать задачи, но получает `403` при изменении ресурсов, проекта и состава участников.
+
 Отдельный security smoke создаёт `login_password` access key с уникальным маркером, использует его как inventory credential при выполнении задачи и проверяет отсутствие plaintext в create/get/list API, структурированном и raw task output, Allure и JUnit artifacts.
 
-Ansible-код берётся только из доверенного fixture `test-environment/fixtures/ansible/smoke.yml`, упакованного Compose в локальный read-only Git volume. Внешний код при smoke-запуске не исполняется.
+Git-набор проверяет выполнение задачи из явно выбранной ветки, диагностируемый отказ для отсутствующей ветки и недоступного HTTPS remote. Для authenticated clone дополнительно проверяется, что login/password не попадают в structured и raw task output.
+
+Task lifecycle-набор запускает безопасный long-running playbook, дожидается marker фактического выполнения и проверяет обычный stop и force-stop. В обоих случаях задача переходит в `stopped`, а шаг после паузы не выполняется.
+
+Ansible-код берётся только из доверенных fixtures `test-environment/fixtures/ansible/smoke.yml` и `long-running.yml`, упакованных Compose в локальный read-only Git volume с ветками `main` и `bookwright-fixture-ref`. Внешний код при API-запуске не исполняется.
 
 Полный набор инфраструктурных self-tests Bookwright и продуктовых тестов Semaphore:
 

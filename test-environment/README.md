@@ -28,7 +28,7 @@ docker compose -f test-environment/compose.yml down
 
 SQLite хранится в именованном Docker volume и сохраняется между перезапусками.
 
-Compose-сервис `fixture-init` создаёт отдельный Git repository из `fixtures/ansible`. Он монтируется в Semaphore read-only и используется для безопасной проверки task lifecycle.
+Compose-сервис `fixture-init` создаёт отдельный Git repository из `fixtures/ansible` с ветками `main` и `bookwright-fixture-ref`. Инициализация безопасно повторяется для существующего volume и завершается ошибкой при сбое Git-команды. Repository монтируется в Semaphore read-only и используется для проверки task lifecycle, выбора ветки и отсутствующего ref. `long-running.yml` содержит marker начала, контролируемую паузу и marker завершения для детерминированной проверки stop/force-stop.
 
 ## Быстрая проверка
 

@@ -4,6 +4,8 @@ import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.Task;
 import io.bookwright.api.model.semaphore.TaskOutput;
 import io.bookwright.api.model.semaphore.TaskRequest;
+import io.bookwright.api.model.semaphore.TaskStopRequest;
+import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
@@ -38,12 +40,56 @@ public class TaskSteps {
     return waitUntilTaskSucceeds(projectId, startTask(projectId, templateId).id());
   }
 
+  @Step("Start Semaphore task as isolated user from template {templateId} and wait for success")
+  public Task startAndWait(SemaphoreSessionApis session, long projectId, long templateId) {
+    Task task =
+        Calls.body(
+            session.tasks().startTask(projectId, new TaskRequest(templateId)), 201, "started task");
+    teardown.push(
+        "Delete Semaphore task " + task.id(),
+        () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
+    return waitUntilTaskSucceeds(projectId, task.id());
+  }
+
+  @Step("Start Semaphore task from template {templateId} and wait for failure")
+  public Task startAndWaitForFailure(long projectId, long templateId) {
+    return waitUntilTaskFails(projectId, startTask(projectId, templateId).id());
+  }
+
   @Step("Wait for Semaphore task {taskId} to succeed")
   public Task waitUntilTaskSucceeds(long projectId, long taskId) {
     return Waits.awaitSlow("Semaphore task %d reaches terminal status".formatted(taskId))
         .until(
             () -> Calls.body(api.getTask(projectId, taskId), 200, "task status"),
             task -> isSuccessfulOrThrow(projectId, task));
+  }
+
+  @Step("Wait for Semaphore task {taskId} to fail")
+  public Task waitUntilTaskFails(long projectId, long taskId) {
+    return Waits.awaitSlow("Semaphore task %d fails".formatted(taskId))
+        .until(
+            () -> Calls.body(api.getTask(projectId, taskId), 200, "task status"),
+            task -> isFailedOrThrow(task));
+  }
+
+  @Step("Wait for Semaphore task {taskId} output marker")
+  public void waitUntilTaskOutputContains(long projectId, long taskId, String marker) {
+    Waits.awaitSlow("Semaphore task %d emits expected output".formatted(taskId))
+        .until(() -> getTaskOutputText(projectId, taskId), output -> output.contains(marker));
+  }
+
+  @Step("Stop Semaphore task {taskId} and wait for terminal status")
+  public Task stopAndWait(long projectId, long taskId, boolean force) {
+    Calls.expectStatus(api.stopTask(projectId, taskId, new TaskStopRequest(force)), 204);
+    return waitUntilTaskStops(projectId, taskId);
+  }
+
+  @Step("Wait for Semaphore task {taskId} to stop")
+  public Task waitUntilTaskStops(long projectId, long taskId) {
+    return Waits.awaitSlow("Semaphore task %d stops".formatted(taskId))
+        .until(
+            () -> Calls.body(api.getTask(projectId, taskId), 200, "task status"),
+            task -> isStoppedOrThrow(task));
   }
 
   private boolean isSuccessfulOrThrow(long projectId, Task task) {
@@ -58,6 +104,24 @@ public class TaskSteps {
               .formatted(task.id(), task.status(), diagnostic));
     }
     return "success".equals(task.status());
+  }
+
+  private boolean isFailedOrThrow(Task task) {
+    if ("success".equals(task.status()) || "stopped".equals(task.status())) {
+      throw new IllegalStateException(
+          "Task %d finished with status %s but error was expected"
+              .formatted(task.id(), task.status()));
+    }
+    return "error".equals(task.status());
+  }
+
+  private boolean isStoppedOrThrow(Task task) {
+    if ("success".equals(task.status()) || "error".equals(task.status())) {
+      throw new IllegalStateException(
+          "Task %d finished with status %s but stopped was expected"
+              .formatted(task.id(), task.status()));
+    }
+    return "stopped".equals(task.status());
   }
 
   @Step("Get output of Semaphore task {taskId}")

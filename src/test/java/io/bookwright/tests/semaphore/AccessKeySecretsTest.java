@@ -33,7 +33,9 @@ class AccessKeySecretsTest {
     var repository =
         api.semaphore()
             .repositories()
-            .create(project.id(), fixtures.repository().request(project.id(), repositoryKey.id()));
+            .create(
+                project.id(),
+                fixtures.repositories().primary().request(project.id(), repositoryKey.id()));
     var secretKey =
         api.semaphore()
             .accessKeys()
@@ -47,7 +49,10 @@ class AccessKeySecretsTest {
             .templates()
             .create(
                 project.id(),
-                fixtures.template().request(project.id(), repository.id(), inventory.id()));
+                fixtures
+                    .templates()
+                    .primary()
+                    .request(project.id(), repository.id(), inventory.id()));
     var completedTask = api.semaphore().tasks().startAndWait(project.id(), template.id());
 
     assertThat(secretKey.type()).isEqualTo(fixtures.secretAccessKey().type());

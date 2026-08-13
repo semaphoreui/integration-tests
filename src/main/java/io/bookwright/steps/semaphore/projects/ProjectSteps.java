@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
+import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.projects.SemaphoreProjectsApi;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
@@ -37,5 +38,15 @@ public class ProjectSteps {
   @Step("Get current role in Semaphore project {projectId}")
   public ProjectRole getProjectRole(long projectId) {
     return Calls.body(api.getProjectRole(projectId), 200, "project role");
+  }
+
+  @Step("Get isolated user's role in Semaphore project {projectId}")
+  public ProjectRole getProjectRole(SemaphoreSessionApis session, long projectId) {
+    return Calls.body(session.projects().getProjectRole(projectId), 200, "project role");
+  }
+
+  @Step("Verify isolated user cannot delete Semaphore project {projectId}")
+  public void verifyCannotDelete(SemaphoreSessionApis session, long projectId) {
+    Calls.expectStatus(session.projects().deleteProject(projectId), 403);
   }
 }

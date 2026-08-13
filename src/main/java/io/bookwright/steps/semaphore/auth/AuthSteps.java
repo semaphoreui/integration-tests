@@ -8,6 +8,8 @@ import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.api.semaphore.auth.SemaphoreAuthApi;
 import io.bookwright.api.semaphore.projects.SemaphoreProjectsApi;
+import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
+import io.bookwright.api.semaphore.users.SemaphoreUsersApi;
 import io.bookwright.config.MainConfig;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
@@ -45,6 +47,9 @@ public class AuthSteps {
     Calls.expectStatus(
         isolatedAuth.login(new LoginRequest(account.user().username(), account.password())), 204);
     return new SemaphoreSessionApis(
-        retrofit.create(SemaphoreProjectsApi.class), retrofit.create(SemaphoreAccessKeysApi.class));
+        retrofit.create(SemaphoreProjectsApi.class),
+        retrofit.create(SemaphoreAccessKeysApi.class),
+        retrofit.create(SemaphoreTasksApi.class),
+        retrofit.create(SemaphoreUsersApi.class));
   }
 }

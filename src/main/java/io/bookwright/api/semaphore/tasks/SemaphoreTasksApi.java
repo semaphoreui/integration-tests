@@ -3,6 +3,7 @@ package io.bookwright.api.semaphore.tasks;
 import io.bookwright.api.model.semaphore.Task;
 import io.bookwright.api.model.semaphore.TaskOutput;
 import io.bookwright.api.model.semaphore.TaskRequest;
+import io.bookwright.api.model.semaphore.TaskStopRequest;
 import java.util.List;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -27,6 +28,12 @@ public interface SemaphoreTasksApi {
   @GET("project/{projectId}/tasks/{taskId}/raw_output")
   Call<ResponseBody> getTaskRawOutput(
       @Path("projectId") long projectId, @Path("taskId") long taskId);
+
+  @POST("project/{projectId}/tasks/{taskId}/stop")
+  Call<Void> stopTask(
+      @Path("projectId") long projectId,
+      @Path("taskId") long taskId,
+      @Body TaskStopRequest request);
 
   @DELETE("project/{projectId}/tasks/{taskId}")
   Call<Void> deleteTask(@Path("projectId") long projectId, @Path("taskId") long taskId);

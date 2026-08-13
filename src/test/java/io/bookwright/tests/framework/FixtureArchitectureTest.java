@@ -2,6 +2,7 @@ package io.bookwright.tests.framework;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.bookwright.assertions.SecretAssertions;
 import io.bookwright.config.Configs;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
@@ -75,17 +76,22 @@ class FixtureArchitectureTest {
     SemaphoreFixtures semaphore =
         SemaphoreFixtures.from(Configs.main(), new TestData(1L, 2L, "fixture-redaction"));
 
-    assertThat(sauceDemo.toString())
-        .doesNotContain(sauceDemo.standardUser().password())
-        .doesNotContain(sauceDemo.invalidPassword().user().password())
-        .contains("[REDACTED]");
-    assertThat(local.toString())
-        .doesNotContain(local.invalidExistingUser().password())
-        .contains("[REDACTED]");
-    assertThat(semaphore.toString())
-        .doesNotContain(semaphore.rbac().password())
-        .doesNotContain(semaphore.invalidLogin().password())
-        .contains("[REDACTED]");
+    SecretAssertions.absent(
+        "SauceDemo fixture diagnostics", sauceDemo.toString(), sauceDemo.standardUser().password());
+    SecretAssertions.absent(
+        "SauceDemo fixture diagnostics",
+        sauceDemo.toString(),
+        sauceDemo.invalidPassword().user().password());
+    SecretAssertions.absent(
+        "local fixture diagnostics", local.toString(), local.invalidExistingUser().password());
+    SecretAssertions.absent(
+        "Semaphore fixture diagnostics", semaphore.toString(), semaphore.rbac().password());
+    SecretAssertions.absent(
+        "Semaphore fixture diagnostics", semaphore.toString(), semaphore.invalidLogin().password());
+
+    assertThat(sauceDemo.toString()).contains("[REDACTED]");
+    assertThat(local.toString()).contains("[REDACTED]");
+    assertThat(semaphore.toString()).contains("[REDACTED]");
   }
 
   private void inspect(Path root, List<String> violations) throws IOException {

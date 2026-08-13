@@ -37,7 +37,8 @@ class SemaphoreProjectSmokeTest {
     var repository =
         api.semaphore()
             .repositories()
-            .create(created.id(), fixtures.repository().request(created.id(), key.id()));
+            .create(
+                created.id(), fixtures.repositories().primary().request(created.id(), key.id()));
     var inventory =
         api.semaphore()
             .inventories()
@@ -47,7 +48,10 @@ class SemaphoreProjectSmokeTest {
             .templates()
             .create(
                 created.id(),
-                fixtures.template().request(created.id(), repository.id(), inventory.id()));
+                fixtures
+                    .templates()
+                    .primary()
+                    .request(created.id(), repository.id(), inventory.id()));
     var startedTask = api.semaphore().tasks().startTask(created.id(), template.id());
     var completedTask =
         api.semaphore().tasks().waitUntilTaskSucceeds(created.id(), startedTask.id());
@@ -62,7 +66,7 @@ class SemaphoreProjectSmokeTest {
     var guest = store.semaphoreRbacUser();
     api.semaphore()
         .users()
-        .addToProject(created.id(), guest.user().id(), fixtures.rbac().projectRole());
+        .addToProject(created.id(), guest.user().id(), fixtures.rbac().guestRole());
     var guestSession = api.semaphore().auth().loginAs(guest);
 
     assertThat(created.id()).isPositive();
@@ -88,8 +92,8 @@ class SemaphoreProjectSmokeTest {
     assertThat(schedules).extracting(item -> item.id()).contains(schedule.id());
     api.semaphore().users().verifyProjectReadable(guestSession, created.id());
     api.semaphore()
-        .users()
-        .verifyCannotCreateAccessKey(
+        .accessKeys()
+        .verifyCannotCreate(
             guestSession, created.id(), fixtures.rbac().forbiddenAccessKey().request(created.id()));
     api.semaphore().users().verifyProjectHidden(guestSession, hiddenProject.id());
   }

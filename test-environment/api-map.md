@@ -135,4 +135,10 @@ Project
 
 Исполняемый API smoke реализован на Bookwright v1.4.0: он создаёт изолированные ресурсы без фиксированных ID, использует deterministic typed fixtures, выполняет LIFO cleanup и защищает диагностику от секретов.
 
-Следующее расширение P1: ошибки Git clone/branch, SSH key, manager/task_runner RBAC, stop/force-stop задачи и cron validation/timezone.
+Из Git-рисков P1 автоматизированы успешный запуск из явно выбранной ветки, отсутствующий ref и недоступный authenticated HTTPS remote. Ошибки приводят задачу в ожидаемый статус `error`, сохраняют полезную Git-диагностику и не раскрывают login/password в structured или raw output.
+
+Для встроенных ролей `manager` и `task_runner` автоматизированы точные permission bitmask и поведенческие границы. Обе роли могут запускать задачи; manager может управлять ресурсами, но не проектом и участниками; task runner не может изменять ресурсы, проект или участников.
+
+Обычный stop и force-stop автоматизированы на long-running Ansible fixture. Запрос отправляется после marker фактического начала playbook; затем проверяются terminal `stopped` и отсутствие marker шага после паузы.
+
+Следующее расширение P1: SSH key и cron validation/timezone.

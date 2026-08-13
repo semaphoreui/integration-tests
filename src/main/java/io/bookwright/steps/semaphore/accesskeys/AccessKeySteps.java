@@ -3,6 +3,7 @@ package io.bookwright.steps.semaphore.accesskeys;
 import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.AccessKey;
 import io.bookwright.api.model.semaphore.AccessKeyRequest;
+import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.assertions.SecretAssertions;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.SecretAccessKey;
@@ -28,6 +29,23 @@ public class AccessKeySteps {
         "Delete Semaphore access key " + key.id(),
         () -> Calls.expectStatus(api.deleteAccessKey(projectId, key.id()), 204));
     return key;
+  }
+
+  @Step("Create access key as isolated user in Semaphore project {projectId}")
+  public AccessKey create(SemaphoreSessionApis session, long projectId, AccessKeyRequest request) {
+    AccessKey key =
+        Calls.body(
+            session.accessKeys().createAccessKey(projectId, request), 201, "created access key");
+    teardown.push(
+        "Delete Semaphore access key " + key.id(),
+        () -> Calls.expectStatus(api.deleteAccessKey(projectId, key.id()), 204));
+    return key;
+  }
+
+  @Step("Verify isolated user cannot create access keys in Semaphore project {projectId}")
+  public void verifyCannotCreate(
+      SemaphoreSessionApis session, long projectId, AccessKeyRequest request) {
+    Calls.expectStatus(session.accessKeys().createAccessKey(projectId, request), 403);
   }
 
   @Step("Create a login/password key and verify API responses mask its password")

@@ -1,7 +1,6 @@
 package io.bookwright.steps.semaphore.users;
 
 import com.google.inject.Inject;
-import io.bookwright.api.model.semaphore.AccessKeyRequest;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.ProjectMemberRequest;
 import io.bookwright.api.model.semaphore.User;
@@ -49,7 +48,30 @@ public class UserSteps {
     }
   }
 
-  @Step("Add user {userId} to Semaphore project {projectId} as guest")
+  @Step("Get or create Semaphore user {request.username}")
+  public User getOrCreate(UserRequest request) {
+    return getUsers().stream()
+        .filter(user -> request.username().equals(user.username()))
+        .findFirst()
+        .orElseGet(() -> createOrFindAfterConcurrentCreation(request));
+  }
+
+  private User createOrFindAfterConcurrentCreation(UserRequest request) {
+    try {
+      return create(request);
+    } catch (RuntimeException creationError) {
+      try {
+        return findByUsername(request.username());
+      } catch (SemaphoreUserNotFoundException notFound) {
+        throw new IllegalStateException(
+            "Failed to create Semaphore user '%s' and no concurrent creator supplied it"
+                .formatted(request.username()),
+            creationError);
+      }
+    }
+  }
+
+  @Step("Add user {userId} to Semaphore project {projectId}")
   public void addToProject(long projectId, long userId, String role) {
     Calls.expectStatus(api.addProjectUser(projectId, new ProjectMemberRequest(userId, role)), 204);
     teardown.push(
@@ -71,9 +93,9 @@ public class UserSteps {
     Calls.expectStatus(session.projects().getProject(projectId), 404);
   }
 
-  @Step("Verify guest cannot create access keys in Semaphore project {projectId}")
-  public void verifyCannotCreateAccessKey(
-      SemaphoreSessionApis session, long projectId, AccessKeyRequest request) {
-    Calls.expectStatus(session.accessKeys().createAccessKey(projectId, request), 403);
+  @Step("Verify isolated user cannot remove project member {userId} from project {projectId}")
+  public void verifyCannotRemoveFromProject(
+      SemaphoreSessionApis session, long projectId, long userId) {
+    Calls.expectStatus(session.users().removeProjectUser(projectId, userId), 403);
   }
 }

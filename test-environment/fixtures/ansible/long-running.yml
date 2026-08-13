@@ -1,0 +1,16 @@
+---
+- name: Semaphore stoppable task fixture
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Signal that the task is ready to be stopped
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-stop-ready
+
+    - name: Keep the task running long enough for the stop request
+      ansible.builtin.pause:
+        seconds: 30
+
+    - name: Signal unexpected completion
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-stop-completed

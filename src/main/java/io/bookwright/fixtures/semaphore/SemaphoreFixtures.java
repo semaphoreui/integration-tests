@@ -20,9 +20,9 @@ public record SemaphoreFixtures(
     Projects projects,
     AccessKey accessKey,
     SecretAccessKey secretAccessKey,
-    Repository repository,
+    Repositories repositories,
     Inventory inventory,
-    Template template,
+    Templates templates,
     Schedule schedule,
     Rbac rbac,
     Expectations expectations) {
@@ -34,25 +34,52 @@ public record SemaphoreFixtures(
         new Projects(
             new ProjectRequest("bookwright-api-smoke-" + suffix, false, 0),
             new ProjectRequest("bookwright-hidden-" + suffix, false, 0),
-            new ProjectRequest("bookwright-secrets-" + suffix, false, 0)),
+            new ProjectRequest("bookwright-secrets-" + suffix, false, 0),
+            new ProjectRequest("bookwright-git-" + suffix, false, 0)),
         new AccessKey("bookwright-none-key-" + suffix, "none"),
         new SecretAccessKey(
             "bookwright-login-key-" + suffix,
             "login_password",
             "bookwright-local-user",
             "Bw-secret-" + suffix + "-42!"),
-        new Repository("bookwright-demo-repository-" + suffix, "file:///fixtures/ansible", "main"),
+        new Repositories(
+            new Repository(
+                "bookwright-demo-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            new Repository(
+                "bookwright-ref-repository-" + suffix,
+                "file:///fixtures/ansible",
+                "bookwright-fixture-ref"),
+            new Repository(
+                "bookwright-missing-ref-repository-" + suffix,
+                "file:///fixtures/ansible",
+                "bookwright-missing-ref"),
+            new Repository(
+                "bookwright-unavailable-repository-" + suffix,
+                "https://127.0.0.1:1/bookwright-unavailable.git",
+                "main")),
         new Inventory(
             "bookwright-localhost-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",
             "static"),
-        new Template("bookwright-build-template-" + suffix, "smoke.yml", "ansible", ""),
+        new Templates(
+            new Template("bookwright-build-template-" + suffix, "smoke.yml", "ansible", ""),
+            new Template(
+                "bookwright-stoppable-template-" + suffix, "long-running.yml", "ansible", "")),
         new Schedule("bookwright-nightly-schedule-" + suffix, "0 0 * * *", false, ""),
         Rbac.standard(),
-        new Expectations("owner", "success", "semaphore-bookwright-smoke-ok"));
+        new Expectations(
+            "owner",
+            "success",
+            "error",
+            "stopped",
+            "semaphore-bookwright-smoke-ok",
+            "Failed updating repository",
+            "semaphore-bookwright-stop-ready",
+            "semaphore-bookwright-stop-completed"));
   }
 
-  public record Projects(ProjectRequest primary, ProjectRequest hidden, ProjectRequest secrets) {}
+  public record Projects(
+      ProjectRequest primary, ProjectRequest hidden, ProjectRequest secrets, ProjectRequest git) {}
 
   public record AccessKey(String name, String type) {
     public AccessKeyRequest request(long projectId) {
@@ -79,6 +106,12 @@ public record SemaphoreFixtures(
     }
   }
 
+  public record Repositories(
+      Repository primary,
+      Repository alternateBranch,
+      Repository missingBranch,
+      Repository unavailable) {}
+
   public record Inventory(String name, String content, String type) {
     public InventoryRequest request(long projectId, long keyId) {
       return new InventoryRequest(name, projectId, content, keyId, type);
@@ -92,6 +125,8 @@ public record SemaphoreFixtures(
     }
   }
 
+  public record Templates(Template primary, Template longRunning) {}
+
   public record Schedule(String name, String cronFormat, boolean active, String type) {
     public ScheduleRequest request(long projectId, long templateId) {
       return new ScheduleRequest(name, projectId, templateId, cronFormat, active, type);
@@ -99,7 +134,14 @@ public record SemaphoreFixtures(
   }
 
   public record Rbac(
-      UserRequest userRequest, String password, String projectRole, AccessKey forbiddenAccessKey) {
+      UserRequest userRequest,
+      String password,
+      String guestRole,
+      String managerRole,
+      long managerPermissions,
+      String taskRunnerRole,
+      long taskRunnerPermissions,
+      AccessKey forbiddenAccessKey) {
 
     private static Rbac standard() {
       String username = "bookwright-rbac-guest";
@@ -109,6 +151,10 @@ public record SemaphoreFixtures(
               "Bookwright Guest", username, username + "@localhost", password, false, false, false),
           password,
           "guest",
+          "manager",
+          5,
+          "task_runner",
+          1,
           new AccessKey("forbidden-guest-key", "none"));
     }
 
@@ -122,10 +168,18 @@ public record SemaphoreFixtures(
 
     @Override
     public String toString() {
-      return "Rbac[user=%s, password=[REDACTED], projectRole=%s]"
-          .formatted(userRequest.username(), projectRole);
+      return "Rbac[user=%s, password=[REDACTED], roles=%s/%s/%s]"
+          .formatted(userRequest.username(), guestRole, managerRole, taskRunnerRole);
     }
   }
 
-  public record Expectations(String ownerRole, String successfulTaskStatus, String outputMarker) {}
+  public record Expectations(
+      String ownerRole,
+      String successfulTaskStatus,
+      String failedTaskStatus,
+      String stoppedTaskStatus,
+      String outputMarker,
+      String cloneFailureMarker,
+      String stopReadyMarker,
+      String stopCompletedMarker) {}
 }
