@@ -215,7 +215,7 @@ Manifest должен попадать в Allure environment/labels вместе
 ./test-environment/profile down core-sqlite-local
 ```
 
-Команда `profile` реализована для первого профиля `core-sqlite-local`: она управляет Compose lifecycle, ожидает readiness, запускает API-тесты и записывает manifest/runtime metadata в Allure. Следующие профили должны подключаться через тот же интерфейс.
+Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local` и `prod-postgres-runner`: она управляет Compose lifecycle, ждёт readiness/setup services, запускает API-тесты и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
 
 ## Обнаруженный риск воспроизводимости
 
@@ -232,7 +232,7 @@ Manifest должен попадать в Allure environment/labels вместе
 
 1. Ввести manifest и единый lifecycle профиля.
 2. Перенести существующий стенд в `core-sqlite-local` без изменения тестов. Выполнено.
-3. Добавить PostgreSQL: промежуточный `core-postgres-local` реализован и проходит существующую core suite; следующий шаг — вынести выполнение в remote runner и получить `prod-postgres-runner`.
+3. Добавить PostgreSQL и remote runner. Выполнено: `core-postgres-local` и `prod-postgres-runner` проходят существующую core suite; runner API дополнительно подтверждает default/online/heartbeat contract.
 4. Добавить короткую DB-матрицу MySQL/MariaDB.
 5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL.
 6. Затем выбирать между OIDC, LDAP и HA по частоте релевантных issues и доступной инфраструктуре.

@@ -1,0 +1,44 @@
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_USE_REMOTE_RUNNER: "true"
+      SEMAPHORE_RUNNER_REGISTRATION_TOKEN: bookwright-local-runner-registration-token
+
+  runner:
+    image: semaphoreui/runner:v2.19.7
+    restart: unless-stopped
+    environment:
+      SEMAPHORE_WEB_ROOT: http://semaphore:3000
+      SEMAPHORE_RUNNER_API_URL: http://semaphore:3000/internal
+      SEMAPHORE_RUNNER_REGISTRATION_TOKEN: bookwright-local-runner-registration-token
+      SEMAPHORE_RUNNER_NAME: bookwright-persistent-runner
+      SEMAPHORE_RUNNER_ENABLED: "true"
+      SEMAPHORE_RUNNER_MAX_PARALLEL_TASKS: "2"
+    depends_on:
+      semaphore:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /var/lib/semaphore/runner_token.txt"]
+      interval: 2s
+      timeout: 2s
+      retries: 45
+    volumes:
+      - runner-data:/var/lib/semaphore
+      - fixture-repository:/fixtures/ansible:ro
+
+  runner-configure:
+    image: semaphoreui/runner:v2.19.7
+    entrypoint: ["python3", "/configure-runner.py"]
+    environment:
+      SEMAPHORE_API_URL: http://semaphore:3000/api
+      SEMAPHORE_ADMIN: admin
+      SEMAPHORE_ADMIN_PASSWORD: test-password
+      SEMAPHORE_TEST_RUNNER_NAME: bookwright-persistent-runner
+    depends_on:
+      runner:
+        condition: service_healthy
+    volumes:
+      - ./profiles/prod-postgres-runner/configure-runner.py:/configure-runner.py:ro
+
+volumes:
+  runner-data:

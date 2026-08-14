@@ -47,6 +47,7 @@ select_profile() {
   compose_project=$(manifest_value compose_project)
   readiness_url=$(manifest_value readiness_url)
   stand=$(manifest_value stand)
+  setup_service=$(manifest_value setup_service)
 
   [ -n "$compose_relative" ] || fail "compose_file is missing in $manifest_file"
   [ -n "$compose_project" ] || fail "compose_project is missing in $manifest_file"
@@ -60,6 +61,25 @@ select_profile() {
 
 compose() {
   docker compose --project-name "$compose_project" --file "$compose_file" "$@"
+}
+
+wait_for_setup() {
+  if [ -n "$setup_service" ]; then
+    setup_container=$(compose ps --all --quiet "$setup_service")
+    [ -n "$setup_container" ] || fail "profile setup service '$setup_service' has no container; run the up action first"
+
+    setup_status=$(docker inspect --format '{{.State.Status}}' "$setup_container")
+    if [ "$setup_status" != "exited" ]; then
+      printf 'Waiting for profile setup service %s...\n' "$setup_service"
+      compose wait "$setup_service"
+    fi
+
+    setup_exit_code=$(docker inspect --format '{{.State.ExitCode}}' "$setup_container")
+    if [ "$setup_exit_code" -ne 0 ]; then
+      compose logs --tail 100 "$setup_service" >&2 || true
+      fail "profile setup service '$setup_service' exited with code $setup_exit_code"
+    fi
+  fi
 }
 
 await_ready() {
@@ -109,6 +129,13 @@ write_allure_environment() {
     [ -z "$inspected_database_image" ] || database_image_reference=$inspected_database_image
   fi
 
+  runner_image=$(manifest_value runner_image)
+  runner_image_reference=$runner_image
+  if [ -n "$runner_image" ]; then
+    inspected_runner_image=$(docker image inspect "$runner_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+    [ -z "$inspected_runner_image" ] || runner_image_reference=$inspected_runner_image
+  fi
+
   {
     printf 'profile=%s\n' "$profile_id"
     printf 'semaphore.version=%s\n' "$(manifest_value semaphore_version)"
@@ -121,6 +148,10 @@ write_allure_environment() {
     printf 'database.image=%s\n' "$database_image_reference"
     printf 'execution.mode=%s\n' "$(manifest_value execution_mode)"
     printf 'execution.executor=%s\n' "$(manifest_value execution_executor)"
+    if [ -n "$runner_image_reference" ]; then
+      printf 'runner.image=%s\n' "$runner_image_reference"
+      printf 'runner.name=%s\n' "$(manifest_value runner_name)"
+    fi
     printf 'auth=%s\n' "$(manifest_value auth)"
     printf 'git.client=%s\n' "$(manifest_value git_client)"
     printf 'capabilities=%s\n' "$(manifest_value capabilities)"
@@ -145,11 +176,13 @@ case "$action" in
   up)
     select_profile "${2:-}"
     compose up --detach
+    wait_for_setup
     await_ready
     ;;
   test)
     select_profile "${2:-}"
     shift 2
+    wait_for_setup
     await_ready
     configure_java
     write_allure_environment

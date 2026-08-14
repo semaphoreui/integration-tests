@@ -6,6 +6,7 @@ import io.bookwright.steps.semaphore.auth.AuthSteps;
 import io.bookwright.steps.semaphore.inventories.InventorySteps;
 import io.bookwright.steps.semaphore.projects.ProjectSteps;
 import io.bookwright.steps.semaphore.repositories.RepositorySteps;
+import io.bookwright.steps.semaphore.runners.RunnerSteps;
 import io.bookwright.steps.semaphore.schedules.ScheduleSteps;
 import io.bookwright.steps.semaphore.system.SystemSteps;
 import io.bookwright.steps.semaphore.tasks.TaskSteps;
@@ -24,6 +25,7 @@ public class SemaphoreSteps {
   @Inject private ProjectSteps projects;
   @Inject private AccessKeySteps accessKeys;
   @Inject private RepositorySteps repositories;
+  @Inject private RunnerSteps runners;
   @Inject private InventorySteps inventories;
   @Inject private TemplateSteps templates;
   @Inject private TaskSteps tasks;

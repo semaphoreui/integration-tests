@@ -40,6 +40,16 @@ test-environment/profile up core-postgres-local
 test-environment/profile test core-postgres-local
 ```
 
+Production-like вариант выполняет задачи в отдельном persistent runner:
+
+```bash
+test-environment/profile down core-postgres-local
+test-environment/profile up prod-postgres-runner
+test-environment/profile test prod-postgres-runner
+```
+
+Runner регистрируется автоматически, сохраняет долгоживущий token в отдельном volume и через admin API назначается default runner. Отдельный API-тест подтверждает `active`, `registered`, `is_default`, `online` и heartbeat до запуска task-сценариев.
+
 Тест проверяет health, неверный и корректный login, создаёт изолированный проект и основную цепочку ресурсов:
 
 ```text

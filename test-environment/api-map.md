@@ -33,6 +33,7 @@
 | Stop task | `POST /tasks/{id}/stop` | 204 | Обычная и принудительная остановка |
 | Schedules | CRUD `/api/project/{project_id}/schedules` | 200/201/204 | cron, `run_at`, active, timezone/DST, task params |
 | Project users | CRUD `/api/project/{project_id}/users` | 200/204 | Роли owner/manager/task_runner/guest и project isolation |
+| Global runners | `GET /api/runners` | 200 | Регистрация, active/default flags, online status и heartbeat |
 | Cleanup | DELETE созданных ресурсов и проекта | 204 | Удаление в обратном порядке и отсутствие остаточных данных |
 
 ## Зависимости ресурсов
@@ -127,7 +128,7 @@ Project
 
 1. Variable Groups и secret storage.
 2. Integrations и webhooks.
-3. Runners.
+3. Runners. Базовый persistent remote runner автоматизирован; остаются disconnect/reconnect, capacity и one-off режимы.
 4. Workflows.
 5. Backup/restore и миграционные сценарии.
 
@@ -140,5 +141,7 @@ Project
 Для встроенных ролей `manager` и `task_runner` автоматизированы точные permission bitmask и поведенческие границы. Обе роли могут запускать задачи; manager может управлять ресурсами, но не проектом и участниками; task runner не может изменять ресурсы, проект или участников.
 
 Обычный stop и force-stop автоматизированы на long-running Ansible fixture. Запрос отправляется после marker фактического начала playbook; затем проверяются terminal `stopped` и отсутствие marker шага после паузы.
+
+Persistent remote runner автоматизирован отдельной API-группой и production-like профилем PostgreSQL. Проверяются регистрация, `active`, `is_default`, `online`, heartbeat и выполнение всей существующей task suite вне server process. Обнаруженный конфигурационный контракт: global runner после авторегистрации не становится default автоматически, а задачи без tag выбирают только `is_default=true` runners.
 
 Следующее расширение P1: SSH key и cron validation/timezone.

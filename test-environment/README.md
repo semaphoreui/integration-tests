@@ -4,14 +4,15 @@
 
 Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
 
-Доступны два профиля с локальным выполнением задач:
+Доступны три опорных профиля:
 
 | Профиль | СУБД | Назначение |
 |---|---|---|
 | `core-sqlite-local` | SQLite | быстрый основной baseline |
 | `core-postgres-local` | PostgreSQL 14.3 | black-box проверка SQL dialect и миграций на чистом PostgreSQL |
+| `prod-postgres-runner` | PostgreSQL 14.3 | production-like server → DB → persistent remote runner |
 
-Общая конфигурация Semaphore и Git fixture находится в `compose.base.yml`, а профили добавляют только DB-specific overlay. Оба публикуют Semaphore на порту `3000`, поэтому одновременно должен быть запущен только один профиль.
+Общая конфигурация Semaphore и Git fixture находится в `compose.base.yml`, а профили добавляют только DB/execution-specific overlay. Все публикуют Semaphore на порту `3000`, поэтому одновременно должен быть запущен только один профиль.
 
 ## Запуск
 
@@ -72,6 +73,22 @@ test-environment/profile test core-postgres-local
 ```
 
 PostgreSQL использует отдельные Compose project и volumes. `down` сохраняет БД, а `clean core-postgres-local --yes` удаляет только volumes этого профиля.
+
+## Remote runner
+
+Production-like профиль использует тот же PostgreSQL overlay, включает `SEMAPHORE_USE_REMOTE_RUNNER` и запускает `semaphoreui/runner:v2.19.7` отдельным сервисом:
+
+```bash
+test-environment/profile down core-postgres-local
+test-environment/profile up prod-postgres-runner
+test-environment/profile test prod-postgres-runner
+```
+
+При первом старте runner регистрируется через тестовый global registration token и сохраняет выданный долгоживущий token в `runner-data`. Авторегистрация создаёт global runner с `is_default=false`, а задачи без runner tag выбирают только default runners. Поэтому one-shot `runner-configure` после регистрации входит через admin API, выставляет `is_default=true`, и lifecycle не объявляет профиль готовым до успешного завершения этой настройки.
+
+Git fixture монтируется по одинаковому пути `/fixtures/ansible` в server и runner. Иначе локальный repository был бы доступен server, но отсутствовал бы в реальной среде исполнения задачи.
+
+API-набор дополнительно проверяет, что runner активен, зарегистрирован, назначен default, имеет статус `online` и отправляет heartbeat. Успешные task/output и stop/force-stop сценарии при включённом remote mode подтверждают фактическое выполнение на runner.
 
 Compose-сервис `fixture-init` создаёт отдельный Git repository из `fixtures/ansible` с ветками `main` и `bookwright-fixture-ref`. Инициализация безопасно повторяется для существующего volume и завершается ошибкой при сбое Git-команды. Repository монтируется в Semaphore read-only и используется для проверки task lifecycle, выбора ветки и отсутствующего ref. `long-running.yml` содержит marker начала, контролируемую паузу и marker завершения для детерминированной проверки stop/force-stop.
 
