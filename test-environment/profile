@@ -1,0 +1,181 @@
+#!/bin/sh
+
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repository_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+profiles_dir="$script_dir/profiles"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  test-environment/profile list
+  test-environment/profile show <profile>
+  test-environment/profile up <profile>
+  test-environment/profile test <profile> [Gradle arguments]
+  test-environment/profile ps <profile>
+  test-environment/profile logs <profile>
+  test-environment/profile down <profile>
+  test-environment/profile clean <profile> --yes
+
+Profiles:
+  core-sqlite-local
+
+down keeps database and fixture volumes. clean permanently removes them and
+therefore requires the explicit --yes confirmation.
+EOF
+}
+
+fail() {
+  printf 'profile: %s\n' "$1" >&2
+  exit 1
+}
+
+manifest_value() {
+  key=$1
+  sed -n "s/^${key}:[[:space:]]*//p" "$manifest_file" | sed -n '1p'
+}
+
+select_profile() {
+  profile_id=$1
+  case "$profile_id" in
+    ''|*[!A-Za-z0-9._-]*) fail "invalid profile id: $profile_id" ;;
+  esac
+
+  profile_dir="$profiles_dir/$profile_id"
+  manifest_file="$profile_dir/profile.yaml"
+  [ -f "$manifest_file" ] || fail "unknown profile '$profile_id'; run 'test-environment/profile list'"
+
+  compose_relative=$(manifest_value compose_file)
+  compose_project=$(manifest_value compose_project)
+  readiness_url=$(manifest_value readiness_url)
+  stand=$(manifest_value stand)
+
+  [ -n "$compose_relative" ] || fail "compose_file is missing in $manifest_file"
+  [ -n "$compose_project" ] || fail "compose_project is missing in $manifest_file"
+  [ -n "$readiness_url" ] || fail "readiness_url is missing in $manifest_file"
+  [ -n "$stand" ] || fail "stand is missing in $manifest_file"
+
+  compose_dir=$(CDPATH= cd -- "$profile_dir/$(dirname -- "$compose_relative")" && pwd)
+  compose_file="$compose_dir/$(basename -- "$compose_relative")"
+  [ -f "$compose_file" ] || fail "Compose file does not exist: $compose_file"
+}
+
+compose() {
+  docker compose --project-name "$compose_project" --file "$compose_file" "$@"
+}
+
+await_ready() {
+  attempt=0
+  while [ "$attempt" -lt 60 ]; do
+    if [ "$(curl --silent --show-error --max-time 2 "$readiness_url" 2>/dev/null || true)" = "pong" ]; then
+      printf 'Profile %s is ready at %s\n' "$profile_id" "$readiness_url"
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    sleep 1
+  done
+
+  printf 'Profile %s did not become ready within 60 seconds.\n' "$profile_id" >&2
+  compose ps >&2 || true
+  compose logs --tail 100 semaphore >&2 || true
+  return 1
+}
+
+configure_java() {
+  if java -version >/dev/null 2>&1; then
+    return
+  fi
+
+  macos_java_home=/opt/homebrew/opt/openjdk@21
+  if [ -x "$macos_java_home/bin/java" ]; then
+    JAVA_HOME=$macos_java_home
+    export JAVA_HOME
+    return
+  fi
+
+  fail "Java 21 is not available; set JAVA_HOME before running the test action"
+}
+
+write_allure_environment() {
+  allure_dir="$repository_dir/build/allure-results"
+  mkdir -p "$allure_dir"
+
+  image=$(manifest_value semaphore_image)
+  image_reference=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+  [ -n "$image_reference" ] || image_reference=$image
+
+  {
+    printf 'profile=%s\n' "$profile_id"
+    printf 'semaphore.version=%s\n' "$(manifest_value semaphore_version)"
+    printf 'semaphore.image=%s\n' "$image_reference"
+    printf 'semaphore.source.commit=%s\n' "$(manifest_value source_commit)"
+    printf 'semaphore.edition=%s\n' "$(manifest_value edition)"
+    printf 'installation=%s\n' "$(manifest_value installation)"
+    printf 'architecture=%s\n' "$(uname -m)"
+    printf 'database.type=%s\n' "$(manifest_value database_type)"
+    printf 'database.image=%s\n' "$(manifest_value database_image)"
+    printf 'execution.mode=%s\n' "$(manifest_value execution_mode)"
+    printf 'execution.executor=%s\n' "$(manifest_value execution_executor)"
+    printf 'auth=%s\n' "$(manifest_value auth)"
+    printf 'git.client=%s\n' "$(manifest_value git_client)"
+    printf 'capabilities=%s\n' "$(manifest_value capabilities)"
+  } > "$allure_dir/environment.properties"
+}
+
+action=${1:-}
+
+case "$action" in
+  list)
+    for manifest_file in "$profiles_dir"/*/profile.yaml; do
+      [ -f "$manifest_file" ] || continue
+      profile_id=$(sed -n 's/^id:[[:space:]]*//p' "$manifest_file" | sed -n '1p')
+      description=$(sed -n 's/^description:[[:space:]]*//p' "$manifest_file" | sed -n '1p')
+      printf '%-24s %s\n' "$profile_id" "$description"
+    done
+    ;;
+  show)
+    select_profile "${2:-}"
+    sed -n '1,240p' "$manifest_file"
+    ;;
+  up)
+    select_profile "${2:-}"
+    compose up --detach
+    await_ready
+    ;;
+  test)
+    select_profile "${2:-}"
+    shift 2
+    await_ready
+    configure_java
+    write_allure_environment
+    (
+      cd "$repository_dir"
+      ./gradlew apiTest -DSTAND="$stand" -DSEMAPHORE_PROFILE="$profile_id" "$@"
+    )
+    ;;
+  ps)
+    select_profile "${2:-}"
+    compose ps
+    ;;
+  logs)
+    select_profile "${2:-}"
+    compose logs --follow semaphore
+    ;;
+  down)
+    select_profile "${2:-}"
+    compose down --remove-orphans
+    ;;
+  clean)
+    select_profile "${2:-}"
+    [ "${3:-}" = "--yes" ] || fail "clean removes profile volumes; repeat with: test-environment/profile clean $profile_id --yes"
+    compose down --volumes --remove-orphans
+    ;;
+  help|-h|--help|'')
+    usage
+    ;;
+  *)
+    usage >&2
+    fail "unknown action: $action"
+    ;;
+esac

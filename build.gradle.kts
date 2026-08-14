@@ -95,7 +95,16 @@ spotless {
         endWithNewline()
     }
     format("projectFiles") {
-        target("*.kts", "*.properties", ".github/**/*.yml", "docker/**/*.yml", "scripts/**/*.sh")
+        target(
+            "*.kts",
+            "*.properties",
+            ".github/**/*.yml",
+            "docker/**/*.yml",
+            "scripts/**/*.sh",
+            "test-environment/profile",
+            "test-environment/**/*.yml",
+            "test-environment/**/*.yaml",
+        )
         trimTrailingWhitespace()
         endWithNewline()
     }
@@ -104,7 +113,7 @@ spotless {
 fun Test.configureBookwrightTestRuntime() {
     dependsOn("validateVersion")
     useJUnitPlatform()
-    listOf("STAND", "DB_PASSWORD", "SSH_PASSWORD", "test.seed").forEach { key ->
+    listOf("STAND", "SEMAPHORE_PROFILE", "DB_PASSWORD", "SSH_PASSWORD", "test.seed").forEach { key ->
         (System.getProperty(key) ?: System.getenv(key))?.let { systemProperty(key, it) }
     }
     val configPrefixes = listOf("api.", "ui.", "db.", "ssh.", "teardown.", "local.booking.", "local.user.")

@@ -19,7 +19,7 @@ Framework адаптирован под Semaphore с сохранением ар
 ## Локальный стенд
 
 ```bash
-docker compose -f test-environment/compose.yml up -d
+test-environment/profile up core-sqlite-local
 ```
 
 Semaphore будет доступен на <http://localhost:3000>.
@@ -27,9 +27,10 @@ Semaphore будет доступен на <http://localhost:3000>.
 ## Первый API smoke
 
 ```bash
-JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
-./gradlew apiTest -DSTAND=semaphore
+test-environment/profile test core-sqlite-local
 ```
+
+Команда сама проверяет readiness и добавляет точную конфигурацию стенда в Allure environment. Остановка с сохранением SQLite volume: `test-environment/profile down core-sqlite-local`. Полное удаление состояния требует явной команды `test-environment/profile clean core-sqlite-local --yes`.
 
 Тест проверяет health, неверный и корректный login, создаёт изолированный проект и основную цепочку ресурсов:
 
@@ -66,6 +67,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `semaphore-testing-component-map.md` — карта компонентов;
 - `outputs/issues-assessment/` — полный реестр issues;
 - `test-environment/api-map.md` — карта API и приоритеты автоматизации;
+- `test-environment/configuration-testing-overview.md` — матрица клиентских конфигураций и опорные профили;
 - `test-environment/smoke-report.md` — результаты проверки стенда.
 
 Исходный код Semaphore хранится локально в `/semaphore/` и исключён из этого репозитория.

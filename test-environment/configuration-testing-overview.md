@@ -215,7 +215,7 @@ Manifest должен попадать в Allure environment/labels вместе
 ./test-environment/profile down core-sqlite-local
 ```
 
-Скрипт `profile` пока является целевым интерфейсом, а не реализованной командой.
+Команда `profile` реализована для первого профиля `core-sqlite-local`: она управляет Compose lifecycle, ожидает readiness, запускает API-тесты и записывает manifest/runtime metadata в Allure. Следующие профили должны подключаться через тот же интерфейс.
 
 ## Обнаруженный риск воспроизводимости
 
