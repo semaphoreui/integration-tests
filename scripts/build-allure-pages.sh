@@ -65,9 +65,9 @@ for results_dir in "$downloads_dir"/allure-results-*; do
   first_result=$(find "$results_dir" -maxdepth 1 -type f -name '*-result.json' -print -quit)
   [ -n "$first_result" ] || continue
 
-  "$allure_bin" generate "$results_dir" --clean --output "$site_dir/reports/$report_name"
+  "$allure_bin" generate "$results_dir" --clean --single-file --output "$site_dir/reports/$report_name"
   result_count=$(find "$results_dir" -maxdepth 1 -type f -name '*-result.json' | wc -l | tr -d ' ')
-  printf '    <a class="card" href="reports/%s/"><span class="name">%s</span><span class="count">%s test results</span></a>\n' \
+  printf '    <a class="card" href="reports/%s/index.html"><span class="name">%s</span><span class="count">%s test results</span></a>\n' \
     "$report_name" "$report_name" "$result_count" >> "$index_file"
   report_count=$((report_count + 1))
 done

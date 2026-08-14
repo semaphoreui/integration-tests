@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       report_title:
-        description: Title shown on the Allure Pages landing page
+        description: Title shown on the downloadable Allure landing page
         required: true
         type: string
 
@@ -38,7 +38,7 @@ jobs:
       - name: Download pinned Allure CLI
         run: ./gradlew --no-daemon downloadAllure
 
-      - name: Build Pages site
+      - name: Build downloadable Allure site
         env:
           REPORT_TITLE: ${{ inputs.report_title }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
