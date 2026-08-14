@@ -120,7 +120,7 @@ Issues группируются по функциональным зонам:
 - какие внешние зависимости понадобятся для тестов;
 - можно ли одинаково запускать окружение локально и в CI.
 
-Первичная матрица конфигураций и способ её расширения зафиксированы в `test-environment/configuration-testing-overview.md`. Вместо полного перебора используются быстрые configuration checks, несколько опорных end-to-end профилей и самостоятельные feature profiles. Текущий SQLite-стенд оформлен как `core-sqlite-local`: manifest закрепляет его конфигурацию, единая lifecycle-команда управляет запуском и записывает runtime metadata в Allure. Следующий профиль — production-like PostgreSQL + remote runner, затем ночная MySQL/MariaDB-матрица.
+Первичная матрица конфигураций и способ её расширения зафиксированы в `test-environment/configuration-testing-overview.md`. Вместо полного перебора используются быстрые configuration checks, несколько опорных end-to-end профилей и самостоятельные feature profiles. Реализованы `core-sqlite-local` и промежуточный `core-postgres-local`: manifests закрепляют конфигурацию, единая lifecycle-команда управляет запуском и записывает runtime metadata в Allure, один и тот же core API-набор проходит на обеих СУБД. Следующий шаг — добавить remote runner к PostgreSQL и получить production-like профиль, затем ночную MySQL/MariaDB-матрицу.
 
 **Результат:** рабочее тестовое окружение и документированная команда запуска.
 

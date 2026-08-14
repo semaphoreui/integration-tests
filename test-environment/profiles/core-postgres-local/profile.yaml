@@ -1,0 +1,19 @@
+id: core-postgres-local
+description: Release Docker image with PostgreSQL and task execution inside the server container
+compose_file: compose.yml
+compose_project: semaphore-test-core-postgres-local
+readiness_url: http://localhost:3000/api/ping
+stand: semaphore
+semaphore_version: v2.19.7
+semaphore_image: semaphoreui/semaphore:v2.19.7
+source_commit: e9dc41a1de8a747569334f7a2b76c320b945d4f0
+edition: community
+installation: docker-compose
+architecture: native
+database_type: postgres
+database_image: postgres:14.3
+execution_mode: local
+execution_executor: local
+auth: password
+git_client: cmd_git
+capabilities: core-api,task-execution,task-stop,git-local,rbac,schedules,secrets,database-migrations

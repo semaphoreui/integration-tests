@@ -1,0 +1,10 @@
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_DB_DIALECT: sqlite
+      SEMAPHORE_DB_PATH: /var/lib/semaphore
+    volumes:
+      - semaphore-data:/var/lib/semaphore
+
+volumes:
+  semaphore-data:

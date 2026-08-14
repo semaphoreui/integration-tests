@@ -18,9 +18,6 @@ Usage:
   test-environment/profile down <profile>
   test-environment/profile clean <profile> --yes
 
-Profiles:
-  core-sqlite-local
-
 down keeps database and fixture volumes. clean permanently removes them and
 therefore requires the explicit --yes confirmation.
 EOF
@@ -78,7 +75,7 @@ await_ready() {
 
   printf 'Profile %s did not become ready within 60 seconds.\n' "$profile_id" >&2
   compose ps >&2 || true
-  compose logs --tail 100 semaphore >&2 || true
+  compose logs --tail 100 >&2 || true
   return 1
 }
 
@@ -105,6 +102,13 @@ write_allure_environment() {
   image_reference=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
   [ -n "$image_reference" ] || image_reference=$image
 
+  database_image=$(manifest_value database_image)
+  database_image_reference=$database_image
+  if [ "$database_image" != "embedded" ]; then
+    inspected_database_image=$(docker image inspect "$database_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+    [ -z "$inspected_database_image" ] || database_image_reference=$inspected_database_image
+  fi
+
   {
     printf 'profile=%s\n' "$profile_id"
     printf 'semaphore.version=%s\n' "$(manifest_value semaphore_version)"
@@ -114,7 +118,7 @@ write_allure_environment() {
     printf 'installation=%s\n' "$(manifest_value installation)"
     printf 'architecture=%s\n' "$(uname -m)"
     printf 'database.type=%s\n' "$(manifest_value database_type)"
-    printf 'database.image=%s\n' "$(manifest_value database_image)"
+    printf 'database.image=%s\n' "$database_image_reference"
     printf 'execution.mode=%s\n' "$(manifest_value execution_mode)"
     printf 'execution.executor=%s\n' "$(manifest_value execution_executor)"
     printf 'auth=%s\n' "$(manifest_value auth)"

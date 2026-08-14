@@ -2,7 +2,16 @@
 
 Профиль `core-sqlite-local`: минимальный стенд Semaphore UI `v2.19.7` с SQLite, локальным выполнением задач и доверенным Git fixture.
 
-Manifest профиля находится в `profiles/core-sqlite-local/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию в `build/allure-results/environment.properties`.
+Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
+
+Доступны два профиля с локальным выполнением задач:
+
+| Профиль | СУБД | Назначение |
+|---|---|---|
+| `core-sqlite-local` | SQLite | быстрый основной baseline |
+| `core-postgres-local` | PostgreSQL 14.3 | black-box проверка SQL dialect и миграций на чистом PostgreSQL |
+
+Общая конфигурация Semaphore и Git fixture находится в `compose.base.yml`, а профили добавляют только DB-specific overlay. Оба публикуют Semaphore на порту `3000`, поэтому одновременно должен быть запущен только один профиль.
 
 ## Запуск
 
@@ -51,6 +60,18 @@ test-environment/profile show core-sqlite-local
 ```
 
 Прямой вызов `docker compose -f test-environment/compose.yml ...` сохранён для диагностики и обратной совместимости, но основной интерфейс запуска — команда `profile`.
+
+## PostgreSQL
+
+Переключение с SQLite на PostgreSQL с сохранением данных SQLite:
+
+```bash
+test-environment/profile down core-sqlite-local
+test-environment/profile up core-postgres-local
+test-environment/profile test core-postgres-local
+```
+
+PostgreSQL использует отдельные Compose project и volumes. `down` сохраняет БД, а `clean core-postgres-local --yes` удаляет только volumes этого профиля.
 
 Compose-сервис `fixture-init` создаёт отдельный Git repository из `fixtures/ansible` с ветками `main` и `bookwright-fixture-ref`. Инициализация безопасно повторяется для существующего volume и завершается ошибкой при сбое Git-команды. Repository монтируется в Semaphore read-only и используется для проверки task lifecycle, выбора ветки и отсутствующего ref. `long-running.yml` содержит marker начала, контролируемую паузу и marker завершения для детерминированной проверки stop/force-stop.
 

@@ -231,8 +231,8 @@ Manifest должен попадать в Allure environment/labels вместе
 ## Рекомендуемая последовательность
 
 1. Ввести manifest и единый lifecycle профиля.
-2. Перенести существующий стенд в `core-sqlite-local` без изменения тестов.
-3. Добавить `prod-postgres-runner` и добиться прохождения существующей core suite.
+2. Перенести существующий стенд в `core-sqlite-local` без изменения тестов. Выполнено.
+3. Добавить PostgreSQL: промежуточный `core-postgres-local` реализован и проходит существующую core suite; следующий шаг — вынести выполнение в remote runner и получить `prod-postgres-runner`.
 4. Добавить короткую DB-матрицу MySQL/MariaDB.
 5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL.
 6. Затем выбирать между OIDC, LDAP и HA по частоте релевантных issues и доступной инфраструктуре.
