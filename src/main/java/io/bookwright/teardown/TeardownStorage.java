@@ -30,6 +30,14 @@ public class TeardownStorage {
     actions.addLast(new TeardownAction(name, action));
   }
 
+  /**
+   * Discards the queued cleanup only after a multi-phase test has successfully created the state
+   * that the next phase must inspect.
+   */
+  public void retainCreatedData() {
+    actions.clear();
+  }
+
   TeardownAction pollLast() {
     return actions.pollLast();
   }

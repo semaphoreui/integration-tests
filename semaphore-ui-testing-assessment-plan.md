@@ -120,7 +120,7 @@ Issues группируются по функциональным зонам:
 - какие внешние зависимости понадобятся для тестов;
 - можно ли одинаково запускать окружение локально и в CI.
 
-Первичная матрица конфигураций и способ её расширения зафиксированы в `test-environment/configuration-testing-overview.md`. Вместо полного перебора используются быстрые configuration checks, несколько опорных end-to-end профилей и самостоятельные feature profiles. Реализованы `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local` и production-like `prod-postgres-runner`: manifests закрепляют конфигурацию, единая lifecycle-команда управляет запуском/setup и записывает runtime metadata и точные image digests в Allure. Один core API-набор проходит на SQLite, PostgreSQL, MySQL 8.4 и MariaDB 10.11, локально и через отдельный persistent runner; runner API подтверждает регистрацию, default/online status и heartbeat. Следующий шаг матрицы — проверка обновления N-1 → current для SQLite и PostgreSQL.
+Первичная матрица конфигураций и способ её расширения зафиксированы в `test-environment/configuration-testing-overview.md`. Вместо полного перебора используются быстрые configuration checks, несколько опорных end-to-end профилей и самостоятельные feature profiles. Реализованы `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local` и production-like `prod-postgres-runner`: manifests закрепляют конфигурацию, единая lifecycle-команда управляет запуском/setup и записывает runtime metadata и точные image digests в Allure. Один core API-набор проходит на SQLite, PostgreSQL, MySQL 8.4 и MariaDB 10.11, локально и через отдельный persistent runner; runner API подтверждает регистрацию, default/online status и heartbeat. Отдельные `upgrade-sqlite-local` и `upgrade-postgres-local` воспроизводят N-1 → current на сохранённой БД. Они обнаружили блокирующую несовместимость `v2.19.6 → v2.19.7`: текущий релиз не читает access keys из схемы предыдущего релиза из-за удалённых полей миграции `v2.20.1`. Автоматизация и отчёт готовы, но upgrade jobs должны оставаться красными до исправления продукта.
 
 **Результат:** рабочее тестовое окружение и документированная команда запуска.
 
@@ -239,6 +239,8 @@ Issues группируются по функциональным зонам:
 На старте тесты не должны блокировать разработку, пока не подтверждена их стабильность. После периода наблюдения надёжные критичные проверки переводятся в обязательный gate.
 
 **Результат:** работающий CI-пайплайн и понятный процесс разбора падений.
+
+**Текущий статус:** этап реализован. Pull-request workflow выполняет framework quality gate и `core-sqlite-local`; ежедневная matrix job запускает PostgreSQL, MySQL, MariaDB и persistent runner; еженедельный и ручной release workflow проверяет upgrade SQLite/PostgreSQL. Jobs имеют таймауты, `fail-fast: false` для матриц, сохраняют JUnit/HTML/Allure и Compose diagnostics, а cleanup выполняется всегда. Upgrade workflow отделён от PR gate и остаётся красным до исправления подтверждённого дефекта продукта. После каждого запуска отдельные Allure-отчёты профилей собираются reusable workflow в готовый HTML artifact, включая отчёты упавших jobs. GitHub Pages deployment приостановлен из-за тарифного ограничения private-репозитория.
 
 ---
 

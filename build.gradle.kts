@@ -113,7 +113,14 @@ spotless {
 fun Test.configureBookwrightTestRuntime() {
     dependsOn("validateVersion")
     useJUnitPlatform()
-    listOf("STAND", "SEMAPHORE_PROFILE", "DB_PASSWORD", "SSH_PASSWORD", "test.seed").forEach { key ->
+    listOf(
+        "STAND",
+        "SEMAPHORE_PROFILE",
+        "SEMAPHORE_UPGRADE_PHASE",
+        "DB_PASSWORD",
+        "SSH_PASSWORD",
+        "test.seed",
+    ).forEach { key ->
         (System.getProperty(key) ?: System.getenv(key))?.let { systemProperty(key, it) }
     }
     val configPrefixes = listOf("api.", "ui.", "db.", "ssh.", "teardown.", "local.booking.", "local.user.")
@@ -159,6 +166,12 @@ tasks.register<Test>("apiTest") {
     filter { includeTestsMatching("io.bookwright.tests.semaphore.*") }
 }
 
+tasks.register<Test>("upgradeTest") {
+    group = "verification"
+    description = "Runs the seed or verify phase of the Semaphore release-upgrade scenario."
+    filter { includeTestsMatching("io.bookwright.tests.semaphore.UpgradeCompatibilityTest") }
+}
+
 tasks.register<Test>("uiTest") {
     group = "verification"
     description = "Runs Playwright product scenarios."
@@ -186,7 +199,12 @@ val frameworkCoverageClasses = sourceSets.main.get().output.asFileTree.matching 
         "io/bookwright/ui/**",
         "io/bookwright/util/**",
     )
-    exclude("io/bookwright/api/model/**")
+    // Product contracts and page objects are exercised by target suites, not framework self-tests.
+    exclude(
+        "io/bookwright/api/model/**",
+        "io/bookwright/api/semaphore/**",
+        "io/bookwright/ui/*Page*",
+    )
 }
 
 val frameworkJacocoReport = tasks.register<JacocoReport>("frameworkJacocoReport") {

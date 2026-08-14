@@ -3,6 +3,7 @@ package io.bookwright.api.semaphore.accesskeys;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.bookwright.api.model.semaphore.AccessKey;
 import io.bookwright.api.model.semaphore.AccessKeyRequest;
+import java.util.List;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
@@ -11,6 +12,9 @@ import retrofit2.http.POST;
 import retrofit2.http.Path;
 
 public interface SemaphoreAccessKeysApi {
+
+  @GET("project/{projectId}/keys")
+  Call<List<AccessKey>> getAccessKeys(@Path("projectId") long projectId);
 
   @POST("project/{projectId}/keys")
   Call<AccessKey> createAccessKey(

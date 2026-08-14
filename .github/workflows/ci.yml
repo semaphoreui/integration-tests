@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Framework quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Run quality gate
+        run: ./gradlew --no-daemon qualityGate
+
+      - name: Upload quality reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/reports/jacoco/
+            build/reports/tests/frameworkTest/
+            build/test-results/frameworkTest/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload quality Allure results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-results-quality
+          path: build/allure-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  core-sqlite:
+    name: Core API · SQLite
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PROFILE: core-sqlite-local
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Show Docker versions
+        run: |
+          docker version
+          docker compose version
+
+      - name: Start profile
+        run: test-environment/profile up "$PROFILE"
+
+      - name: Run core API suite
+        run: test-environment/profile test "$PROFILE" --no-daemon
+
+      - name: Capture failure diagnostics
+        if: failure()
+        run: |
+          mkdir -p build/ci-diagnostics
+          test-environment/profile ps "$PROFILE" > "build/ci-diagnostics/$PROFILE-ps.txt" 2>&1 || true
+          test-environment/profile logs "$PROFILE" > "build/ci-diagnostics/$PROFILE-compose.log" 2>&1 || true
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.PROFILE }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/reports/tests/apiTest/
+            build/test-results/apiTest/
+            build/ci-diagnostics/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload profile Allure results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-results-${{ env.PROFILE }}
+          path: build/allure-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Clean profile
+        if: always()
+        run: test-environment/profile clean "$PROFILE" --yes
+
+  allure-report:
+    name: Build Allure report
+    if: ${{ always() }}
+    needs:
+      - quality
+      - core-sqlite
+    permissions:
+      actions: read
+      contents: read
+    uses: ./.github/workflows/_publish-allure.yml
+    with:
+      report_title: Semaphore CI

@@ -10,6 +10,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreFixtures.SecretAccessKey;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
+import java.util.List;
 
 public class AccessKeySteps {
 
@@ -29,6 +30,19 @@ public class AccessKeySteps {
         "Delete Semaphore access key " + key.id(),
         () -> Calls.expectStatus(api.deleteAccessKey(projectId, key.id()), 204));
     return key;
+  }
+
+  @Step("Find required access key {name} in Semaphore project {projectId}")
+  public AccessKey requireByName(long projectId, String name) {
+    List<AccessKey> keys = Calls.body(api.getAccessKeys(projectId), 200, "access keys");
+    return keys.stream()
+        .filter(key -> name.equals(key.name()))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Required access key '%s' was not found in project %d. Available keys: %s"
+                        .formatted(name, projectId, keys.stream().map(AccessKey::name).toList())));
   }
 
   @Step("Create access key as isolated user in Semaphore project {projectId}")
@@ -62,17 +76,22 @@ public class AccessKeySteps {
         "Delete Semaphore access key " + keyId,
         () -> Calls.expectStatus(api.deleteAccessKey(projectId, keyId), 204));
 
-    var saved =
-        Calls.body(api.getAccessKeyDocument(projectId, keyId), 200, "saved access key document");
-    var listed = Calls.body(api.getAccessKeysDocument(projectId), 200, "access key collection");
-    SecretAssertions.absent("access-key GET response", saved.toString(), fixture);
-    SecretAssertions.absent("access-key collection response", listed.toString(), fixture);
+    verifyMasked(projectId, keyId, fixture);
 
     return new AccessKey(
         keyId,
         requiredText(created, "name"),
         requiredText(created, "type"),
         created.path("project_id").asLong());
+  }
+
+  @Step("Verify persisted access key {keyId} remains masked")
+  public void verifyMasked(long projectId, long keyId, SecretAccessKey fixture) {
+    var saved =
+        Calls.body(api.getAccessKeyDocument(projectId, keyId), 200, "saved access key document");
+    var listed = Calls.body(api.getAccessKeysDocument(projectId), 200, "access key collection");
+    SecretAssertions.absent("access-key GET response", saved.toString(), fixture);
+    SecretAssertions.absent("access-key collection response", listed.toString(), fixture);
   }
 
   private long requiredLong(com.fasterxml.jackson.databind.JsonNode document, String field) {

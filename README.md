@@ -58,6 +58,28 @@ test-environment/profile test prod-postgres-runner
 
 Runner регистрируется автоматически, сохраняет долгоживущий token в отдельном volume и через admin API назначается default runner. Отдельный API-тест подтверждает `active`, `registered`, `is_default`, `online` и heartbeat до запуска task-сценариев.
 
+Проверка обновления опубликованных образов на сохранённой SQLite или PostgreSQL запускается отдельной командой:
+
+```bash
+test-environment/profile upgrade-test upgrade-sqlite-local
+test-environment/profile down upgrade-sqlite-local
+test-environment/profile upgrade-test upgrade-postgres-local
+```
+
+Текущий путь `v2.19.6 → v2.19.7` обнаруживает воспроизводимую несовместимость схемы access keys и остаётся красным до исправления продукта. Диагностика зафиксирована в `test-environment/upgrade-report.md`.
+
+## CI
+
+GitHub Actions разделены по стоимости и назначению:
+
+- `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite на `core-sqlite-local`;
+- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB и production-like PostgreSQL с persistent runner;
+- `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.6 → v2.19.7` на SQLite и PostgreSQL.
+
+Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate и остаётся красным на подтверждённой несовместимости продукта — успешный job должен означать реальное восстановление upgrade path.
+
+После каждого CI, nightly matrix или release-upgrade запуска Allure автоматически собирается в готовый HTML-сайт и загружается как artifact `allure-html-<run>-<attempt>`. После скачивания достаточно распаковать архив и открыть `index.html`. Для matrix run стартовая страница содержит отдельный отчёт каждого профиля, поэтому результаты разных СУБД не смешиваются в retries. Публикация через GitHub Pages подготовлена, но приостановлена: текущий тариф не поддерживает Pages для private-репозитория.
+
 Тест проверяет health, неверный и корректный login, создаёт изолированный проект и основную цепочку ресурсов:
 
 ```text

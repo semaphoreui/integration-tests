@@ -15,6 +15,9 @@ import retrofit2.http.Path;
 
 public interface SemaphoreTasksApi {
 
+  @GET("project/{projectId}/tasks")
+  Call<List<Task>> getTasks(@Path("projectId") long projectId);
+
   @POST("project/{projectId}/tasks")
   Call<Task> startTask(@Path("projectId") long projectId, @Body TaskRequest request);
 

@@ -44,6 +44,18 @@ class TeardownExtensionTest {
         .doesNotThrowAnyException();
   }
 
+  @Test
+  void retainedMultiPhaseDataIsNotCleanedUp() {
+    TeardownStorage storage = new TeardownStorage();
+    List<String> deleted = new ArrayList<>();
+    storage.push("upgrade fixture", () -> deleted.add("upgrade fixture"));
+
+    storage.retainCreatedData();
+    TeardownExtension.execute(storage, true, false);
+
+    assertThat(deleted).isEmpty();
+  }
+
   private TeardownStorage failingStorage() {
     TeardownStorage storage = new TeardownStorage();
     storage.push(

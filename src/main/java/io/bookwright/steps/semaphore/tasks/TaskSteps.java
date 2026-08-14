@@ -35,6 +35,24 @@ public class TaskSteps {
     return task;
   }
 
+  @Step("Find successful persisted task for Semaphore template {templateId}")
+  public Task requireSuccessfulForTemplate(long projectId, long templateId) {
+    List<Task> tasks = Calls.body(api.getTasks(projectId), 200, "tasks");
+    return tasks.stream()
+        .filter(task -> task.templateId() == templateId && "success".equals(task.status()))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "No successful persisted task was found for template %d in project %d. Task states: %s"
+                        .formatted(
+                            templateId,
+                            projectId,
+                            tasks.stream()
+                                .map(task -> "%d:%s".formatted(task.id(), task.status()))
+                                .toList())));
+  }
+
   @Step("Start Semaphore task from template {templateId} and wait for success")
   public Task startAndWait(long projectId, long templateId) {
     return waitUntilTaskSucceeds(projectId, startTask(projectId, templateId).id());

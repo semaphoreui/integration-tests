@@ -32,7 +32,10 @@ test-environment/profile up core-sqlite-local
 ```bash
 test-environment/profile ps core-sqlite-local
 test-environment/profile logs core-sqlite-local
+test-environment/profile logs core-sqlite-local --follow
 ```
+
+Без флага команда `logs` печатает конечный снимок логов всех сервисов профиля, что подходит для CI diagnostics. Флаг `--follow` включает интерактивное слежение.
 
 ## Остановка
 
@@ -101,6 +104,34 @@ test-environment/profile test prod-postgres-runner
 Git fixture монтируется по одинаковому пути `/fixtures/ansible` в server и runner. Иначе локальный repository был бы доступен server, но отсутствовал бы в реальной среде исполнения задачи.
 
 API-набор дополнительно проверяет, что runner активен, зарегистрирован, назначен default, имеет статус `online` и отправляет heartbeat. Успешные task/output и stop/force-stop сценарии при включённом remote mode подтверждают фактическое выполнение на runner.
+
+## Обновление N-1 → current
+
+Два изолированных профиля проверяют обновление release image `v2.19.6` → `v2.19.7` с сохранением одной и той же БД:
+
+```bash
+test-environment/profile upgrade-test upgrade-sqlite-local
+test-environment/profile down upgrade-sqlite-local
+test-environment/profile upgrade-test upgrade-postgres-local
+```
+
+Команда удаляет только volumes выбранного upgrade-профиля, поднимает N-1, создаёт связанный persisted fixture и выполняет задачу. Затем она пересоздаёт только server на текущем image, проверяет сохранённые project/access key/repository/inventory/template/schedule/task output, повторно выполняет старый template и запускает обычную core suite. Оба image references и digests записываются в Allure environment.
+
+На проверенной паре релизов оба профиля сейчас ожидаемо завершаются ошибкой продукта: `v2.19.6` добавляет колонки access key из миграции `v2.20.1`, а `v2.19.7` удаляет миграцию и поля модели без rollback. Подробности и критерии исправления находятся в `upgrade-report.md`. Тест нельзя помечать skipped или expected failure: зелёный результат должен означать, что опубликованный upgrade path действительно восстановлен.
+
+## CI-профили
+
+Профили подключены к трём GitHub Actions workflows:
+
+| Workflow | Триггер | Профили |
+|---|---|---|
+| `CI` | pull request и push в `main` | `core-sqlite-local` после framework quality gate |
+| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner` |
+| `Release upgrade` | воскресенье `03:30 UTC`, вручную | `upgrade-sqlite-local`, `upgrade-postgres-local` |
+
+Каждый matrix profile работает на отдельном runner, поэтому общий порт `3000` не создаёт конфликтов. После выполнения workflow сохраняет JUnit/HTML/Allure artifacts, при ошибке добавляет `profile ps` и конечный снимок Compose logs, а затем удаляет только контейнеры и volumes выбранного профиля.
+
+Raw Allure results каждого job загружаются отдельным artifact. Финальный reusable workflow скачивает их, генерирует независимый HTML-отчёт для каждого профиля и загружает общий сайт как downloadable artifact. Сборка выполняется и после тестового падения, включая pull request, поэтому диагностику красного run можно открыть без GitHub Pages. Pages deployment приостановлен, пока private-репозиторий остаётся на тарифе без private Pages.
 
 Compose-сервис `fixture-init` создаёт отдельный Git repository из `fixtures/ansible` с ветками `main` и `bookwright-fixture-ref`. Инициализация безопасно повторяется для существующего volume и завершается ошибкой при сбое Git-команды. Repository монтируется в Semaphore read-only и используется для проверки task lifecycle, выбора ветки и отсутствующего ref. `long-running.yml` содержит marker начала, контролируемую паузу и marker завершения для детерминированной проверки stop/force-stop.
 

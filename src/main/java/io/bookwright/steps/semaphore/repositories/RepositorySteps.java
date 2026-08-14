@@ -7,6 +7,7 @@ import io.bookwright.api.semaphore.repositories.SemaphoreRepositoriesApi;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
+import java.util.List;
 
 public class RepositorySteps {
 
@@ -27,5 +28,21 @@ public class RepositorySteps {
         "Delete Semaphore repository " + repository.id(),
         () -> Calls.expectStatus(api.deleteRepository(projectId, repository.id()), 204));
     return repository;
+  }
+
+  @Step("Find required repository {name} in Semaphore project {projectId}")
+  public Repository requireByName(long projectId, String name) {
+    List<Repository> repositories = Calls.body(api.getRepositories(projectId), 200, "repositories");
+    return repositories.stream()
+        .filter(repository -> name.equals(repository.name()))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Required repository '%s' was not found in project %d. Available repositories: %s"
+                        .formatted(
+                            name,
+                            projectId,
+                            repositories.stream().map(Repository::name).toList())));
   }
 }

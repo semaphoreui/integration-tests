@@ -38,4 +38,18 @@ public class ScheduleSteps {
   public List<Schedule> getSchedules(long projectId) {
     return Calls.body(api.getSchedules(projectId), 200, "schedules");
   }
+
+  @Step("Find required schedule {name} in Semaphore project {projectId}")
+  public Schedule requireByName(long projectId, String name) {
+    List<Schedule> schedules = getSchedules(projectId);
+    return schedules.stream()
+        .filter(schedule -> name.equals(schedule.name()))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Required schedule '%s' was not found in project %d. Available schedules: %s"
+                        .formatted(
+                            name, projectId, schedules.stream().map(Schedule::name).toList())));
+  }
 }

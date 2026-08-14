@@ -147,6 +147,8 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 
 Базовые пять профилей реализованы. OIDC/LDAP/HA/dynamic runner следует добавлять последовательно, не размножая на них всю DB-матрицу.
 
+CI-распределение также реализовано: `core-sqlite-local` входит в pull-request gate после framework quality checks; остальные четыре базовых профиля запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate и не маскирует известную несовместимость как expected failure.
+
 ## Какие тесты где запускать
 
 | Набор | SQLite | PostgreSQL local | PostgreSQL + runner | MySQL | MariaDB | Feature profile |
@@ -236,7 +238,7 @@ Manifest должен попадать в Allure environment/labels вместе
 2. Перенести существующий стенд в `core-sqlite-local` без изменения тестов. Выполнено.
 3. Добавить PostgreSQL и remote runner. Выполнено: `core-postgres-local` и `prod-postgres-runner` проходят существующую core suite; runner API дополнительно подтверждает default/online/heartbeat contract.
 4. Добавить короткую DB-матрицу MySQL/MariaDB. Выполнено: профили `core-mysql-local` на MySQL 8.4 и `core-mariadb-local` на MariaDB 10.11 проходят ту же core suite после миграции чистой схемы; фактические image digests попадают в Allure.
-5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL.
+5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL. Выполнено: `upgrade-sqlite-local` и `upgrade-postgres-local` автоматически создают данные на `v2.19.6`, переключают server image на `v2.19.7` с сохранением БД и запускают verify/core suite. Оба профиля обнаружили блокирующую несовместимость миграции `v2.20.1`: колонки `access_key.task_id` и `access_key.expire_at` остаются в схеме, но отсутствуют в модели `v2.19.7`, из-за чего access key API возвращает 400. До исправления продукта upgrade jobs должны оставаться красными.
 6. Затем выбирать между OIDC, LDAP и HA по частоте релевантных issues и доступной инфраструктуре.
 
 Так мы сначала защищаем типичную установку клиента и самые дорогие точки отказа, но сохраняем окружение понятным для одного инженера.

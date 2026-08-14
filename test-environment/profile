@@ -13,13 +13,18 @@ Usage:
   test-environment/profile show <profile>
   test-environment/profile up <profile>
   test-environment/profile test <profile> [Gradle arguments]
+  test-environment/profile upgrade-test <profile>
   test-environment/profile ps <profile>
-  test-environment/profile logs <profile>
+  test-environment/profile logs <profile> [--follow]
   test-environment/profile down <profile>
   test-environment/profile clean <profile> --yes
 
 down keeps database and fixture volumes. clean permanently removes them and
 therefore requires the explicit --yes confirmation.
+
+upgrade-test is available only for upgrade profiles. It recreates that profile's
+isolated volumes, seeds data on N-1, switches the server image to current and
+verifies the persisted data and task execution.
 EOF
 }
 
@@ -48,6 +53,7 @@ select_profile() {
   readiness_url=$(manifest_value readiness_url)
   stand=$(manifest_value stand)
   setup_service=$(manifest_value setup_service)
+  selected_semaphore_image=$(manifest_value semaphore_image)
 
   [ -n "$compose_relative" ] || fail "compose_file is missing in $manifest_file"
   [ -n "$compose_project" ] || fail "compose_project is missing in $manifest_file"
@@ -60,7 +66,8 @@ select_profile() {
 }
 
 compose() {
-  docker compose --project-name "$compose_project" --file "$compose_file" "$@"
+  SEMAPHORE_IMAGE="$selected_semaphore_image" \
+    docker compose --project-name "$compose_project" --file "$compose_file" "$@"
 }
 
 wait_for_setup() {
@@ -155,7 +162,27 @@ write_allure_environment() {
     printf 'auth=%s\n' "$(manifest_value auth)"
     printf 'git.client=%s\n' "$(manifest_value git_client)"
     printf 'capabilities=%s\n' "$(manifest_value capabilities)"
+    previous_image=$(manifest_value previous_semaphore_image)
+    if [ -n "$previous_image" ]; then
+      previous_image_reference=$(docker image inspect "$previous_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+      [ -n "$previous_image_reference" ] || previous_image_reference=$previous_image
+      printf 'upgrade.from.version=%s\n' "$(manifest_value previous_semaphore_version)"
+      printf 'upgrade.from.image=%s\n' "$previous_image_reference"
+      printf 'upgrade.from.source.commit=%s\n' "$(manifest_value previous_source_commit)"
+      printf 'upgrade.to.version=%s\n' "$(manifest_value semaphore_version)"
+    fi
   } > "$allure_dir/environment.properties"
+}
+
+run_upgrade_phase() {
+  phase=$1
+  (
+    cd "$repository_dir"
+    ./gradlew upgradeTest \
+      -DSTAND="$stand" \
+      -DSEMAPHORE_PROFILE="$profile_id" \
+      -DSEMAPHORE_UPGRADE_PHASE="$phase"
+  )
 }
 
 action=${1:-}
@@ -191,13 +218,43 @@ case "$action" in
       ./gradlew apiTest -DSTAND="$stand" -DSEMAPHORE_PROFILE="$profile_id" "$@"
     )
     ;;
+  upgrade-test)
+    select_profile "${2:-}"
+    previous_semaphore_image=$(manifest_value previous_semaphore_image)
+    [ -n "$previous_semaphore_image" ] || fail "profile '$profile_id' does not define previous_semaphore_image"
+    configure_java
+
+    compose down --volumes --remove-orphans
+    selected_semaphore_image=$previous_semaphore_image
+    compose up --detach
+    wait_for_setup
+    await_ready
+    run_upgrade_phase seed
+
+    selected_semaphore_image=$(manifest_value semaphore_image)
+    compose up --detach --force-recreate semaphore
+    await_ready
+    write_allure_environment
+    if ! run_upgrade_phase verify; then
+      compose logs --tail 120 semaphore >&2 || true
+      fail "upgrade verification failed for '$profile_id'; current containers and volumes were retained for diagnosis"
+    fi
+    (
+      cd "$repository_dir"
+      ./gradlew apiTest -DSTAND="$stand" -DSEMAPHORE_PROFILE="$profile_id"
+    )
+    ;;
   ps)
     select_profile "${2:-}"
     compose ps
     ;;
   logs)
     select_profile "${2:-}"
-    compose logs --follow semaphore
+    case "${3:-}" in
+      '') compose logs --no-color --timestamps ;;
+      --follow) compose logs --no-color --timestamps --follow ;;
+      *) fail "unknown logs option '${3:-}'; use --follow or omit it" ;;
+    esac
     ;;
   down)
     select_profile "${2:-}"

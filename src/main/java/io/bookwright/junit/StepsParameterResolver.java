@@ -10,6 +10,7 @@ import io.bookwright.fixtures.database.HotelDatabaseFixtures;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.steps.DbSteps;
 import io.bookwright.steps.UiSteps;
@@ -34,11 +35,13 @@ public class StepsParameterResolver implements ParameterResolver {
       ParameterContext parameterContext, ExtensionContext extensionContext) {
     Class<?> type = parameterContext.getParameter().getType();
     return type == TestStore.class
+        || type == TeardownStorage.class
         || type == TestUser.class
         || type == SauceDemoFixtures.class
         || type == LocalUserFixtures.class
         || type == HotelDatabaseFixtures.class
         || type == SemaphoreFixtures.class
+        || type == SemaphoreUpgradeFixtures.class
         || SUPPORTED.contains(type);
   }
 
@@ -48,6 +51,9 @@ public class StepsParameterResolver implements ParameterResolver {
     Class<?> type = parameterContext.getParameter().getType();
     if (type == TestStore.class) {
       return new TestStore(extensionContext);
+    }
+    if (type == TeardownStorage.class) {
+      return TeardownStorage.getOrCreate(extensionContext);
     }
     if (type == SauceDemoFixtures.class) {
       return SauceDemoFixtures.from(io.bookwright.config.Configs.main());
@@ -61,6 +67,9 @@ public class StepsParameterResolver implements ParameterResolver {
     if (type == SemaphoreFixtures.class) {
       return SemaphoreFixtures.from(
           io.bookwright.config.Configs.main(), TestDataExtension.getOrCreate(extensionContext));
+    }
+    if (type == SemaphoreUpgradeFixtures.class) {
+      return SemaphoreUpgradeFixtures.standard();
     }
     if (type == TestUser.class) {
       return UserFixtureExtension.require(extensionContext);

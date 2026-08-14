@@ -7,6 +7,7 @@ import io.bookwright.config.Configs;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
 import io.bookwright.util.TestData;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -75,6 +76,7 @@ class FixtureArchitectureTest {
     LocalUserFixtures local = LocalUserFixtures.from(Configs.main());
     SemaphoreFixtures semaphore =
         SemaphoreFixtures.from(Configs.main(), new TestData(1L, 2L, "fixture-redaction"));
+    SemaphoreUpgradeFixtures upgrade = SemaphoreUpgradeFixtures.standard();
 
     SecretAssertions.absent(
         "SauceDemo fixture diagnostics", sauceDemo.toString(), sauceDemo.standardUser().password());
@@ -88,10 +90,15 @@ class FixtureArchitectureTest {
         "Semaphore fixture diagnostics", semaphore.toString(), semaphore.rbac().password());
     SecretAssertions.absent(
         "Semaphore fixture diagnostics", semaphore.toString(), semaphore.invalidLogin().password());
+    SecretAssertions.absent(
+        "Semaphore upgrade fixture diagnostics",
+        upgrade.toString(),
+        upgrade.accessKey().password());
 
     assertThat(sauceDemo.toString()).contains("[REDACTED]");
     assertThat(local.toString()).contains("[REDACTED]");
     assertThat(semaphore.toString()).contains("[REDACTED]");
+    assertThat(upgrade.toString()).contains("[REDACTED]");
   }
 
   private void inspect(Path root, List<String> violations) throws IOException {

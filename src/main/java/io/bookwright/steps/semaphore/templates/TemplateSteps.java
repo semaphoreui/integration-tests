@@ -7,6 +7,7 @@ import io.bookwright.api.semaphore.templates.SemaphoreTemplatesApi;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
+import java.util.List;
 
 public class TemplateSteps {
 
@@ -27,5 +28,19 @@ public class TemplateSteps {
         "Delete Semaphore task template " + template.id(),
         () -> Calls.expectStatus(api.deleteTemplate(projectId, template.id()), 204));
     return template;
+  }
+
+  @Step("Find required template {name} in Semaphore project {projectId}")
+  public Template requireByName(long projectId, String name) {
+    List<Template> templates = Calls.body(api.getTemplates(projectId), 200, "templates");
+    return templates.stream()
+        .filter(template -> name.equals(template.name()))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Required template '%s' was not found in project %d. Available templates: %s"
+                        .formatted(
+                            name, projectId, templates.stream().map(Template::name).toList())));
   }
 }
