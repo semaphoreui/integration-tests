@@ -134,9 +134,10 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 | ID | Конфигурация | Зачем | Запуск |
 |---|---|---|---|
 | `core-sqlite-local` | release Docker image, SQLite, local execution, env config, password auth, `cmd_git` | Самый дешёвый smoke и удобная локальная разработка | каждый PR |
+| `core-postgres-local` | Docker Compose, PostgreSQL 14.3, local execution | Black-box совместимость PostgreSQL и миграций без runner-specific переменных | nightly |
 | `prod-postgres-runner` | Docker Compose, PostgreSQL, отдельный persistent runner с local executor, config file | Наиболее полезная проверка production-like границы server ↔ DB ↔ runner | nightly; после стабилизации — PR gate |
-| `mysql-local` | Docker Compose, MySQL, local execution | Black-box совместимость MySQL и миграций | nightly |
-| `mariadb-local` | Docker Compose, MariaDB, local execution | Реальная совместимость MySQL dialect с MariaDB | nightly |
+| `core-mysql-local` | Docker Compose, MySQL 8.4, local execution | Black-box совместимость MySQL и миграций | nightly |
+| `core-mariadb-local` | Docker Compose, MariaDB 10.11, local execution | Реальная совместимость MySQL dialect с MariaDB | nightly |
 | `proxy-oidc` | PostgreSQL, reverse proxy TLS, non-root web path, OIDC provider | Callback URL, cookies, redirects, account mapping и RBAC | nightly/по расписанию |
 | `ldap-tls` | PostgreSQL и LDAP с TLS | Bind/search/mapping, отказ TLS и RBAC | по расписанию |
 | `ha-two-node` | два server nodes, PostgreSQL, Redis, remote runner | Очередь, session/state consistency и отказ одного node | по расписанию |
@@ -144,20 +145,21 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 | `pro-docker-executor` | Pro runner с Docker executor | Изоляция task container, лимиты, cleanup, secret hydration | при наличии Pro, nightly |
 | `pro-k8s-executor` | Helm/Pro runner с Kubernetes executor | pod lifecycle, service account, pull secret и cleanup | при наличии Pro/K8s, release |
 
-На первом шаге достаточно реализовать первые четыре профиля. OIDC/LDAP/HA/dynamic runner добавлять последовательно, когда базовая матрица стабильна.
+Базовые пять профилей реализованы. OIDC/LDAP/HA/dynamic runner следует добавлять последовательно, не размножая на них всю DB-матрицу.
 
 ## Какие тесты где запускать
 
-| Набор | SQLite | PostgreSQL + runner | MySQL | MariaDB | Feature profile |
-|---|:---:|:---:|:---:|:---:|:---:|
-| health, login, project CRUD | ✓ | ✓ | ✓ | ✓ | короткий smoke |
-| Git → template → task → output → cleanup | ✓ | ✓ | ✓ | ✓ | если применимо |
-| RBAC и project isolation | ✓ | ✓ | — | — | auth profiles |
-| task stop/force-stop и runner disconnect | local stop | полный набор | — | — | runner profiles |
-| constraints, schedules, cleanup, migration | smoke | ✓ | ✓ | ✓ | — |
-| HTTPS/SSH Git и отсутствие утечек | ✓ | ✓ | — | — | encryption/storage |
-| OIDC/LDAP/MFA | — | — | — | — | только свой профиль |
-| HA/failover | — | — | — | — | только HA profile |
+| Набор | SQLite | PostgreSQL local | PostgreSQL + runner | MySQL | MariaDB | Feature profile |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| health, login, project CRUD | ✓ | ✓ | ✓ | ✓ | ✓ | короткий smoke |
+| Git → template → task → output → cleanup | ✓ | ✓ | ✓ | ✓ | ✓ | если применимо |
+| RBAC и project isolation | ✓ | ✓ | ✓ | ✓ | ✓ | auth profiles расширяют набор |
+| task stop/force-stop | local | local | remote | local | local | runner profiles |
+| runner registration/default/heartbeat | — | — | ✓ | — | — | runner profiles |
+| constraints, schedules, cleanup, clean migration | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| secrets и отсутствие утечек | ✓ | ✓ | ✓ | ✓ | ✓ | encryption/storage расширяют набор |
+| OIDC/LDAP/MFA | — | — | — | — | — | только свой профиль |
+| HA/failover | — | — | — | — | — | только HA profile |
 
 Знак `—` означает сознательное исключение, а не неизвестное покрытие. Это важно фиксировать, иначе матрица со временем снова превратится в неявный полный перебор.
 
@@ -215,7 +217,7 @@ Manifest должен попадать в Allure environment/labels вместе
 ./test-environment/profile down core-sqlite-local
 ```
 
-Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local` и `prod-postgres-runner`: она управляет Compose lifecycle, ждёт readiness/setup services, запускает API-тесты и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
+Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local` и `prod-postgres-runner`: она управляет Compose lifecycle, ждёт readiness/setup services, запускает API-тесты и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
 
 ## Обнаруженный риск воспроизводимости
 
@@ -233,7 +235,7 @@ Manifest должен попадать в Allure environment/labels вместе
 1. Ввести manifest и единый lifecycle профиля.
 2. Перенести существующий стенд в `core-sqlite-local` без изменения тестов. Выполнено.
 3. Добавить PostgreSQL и remote runner. Выполнено: `core-postgres-local` и `prod-postgres-runner` проходят существующую core suite; runner API дополнительно подтверждает default/online/heartbeat contract.
-4. Добавить короткую DB-матрицу MySQL/MariaDB.
+4. Добавить короткую DB-матрицу MySQL/MariaDB. Выполнено: профили `core-mysql-local` на MySQL 8.4 и `core-mariadb-local` на MariaDB 10.11 проходят ту же core suite после миграции чистой схемы; фактические image digests попадают в Allure.
 5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL.
 6. Затем выбирать между OIDC, LDAP и HA по частоте релевантных issues и доступной инфраструктуре.
 

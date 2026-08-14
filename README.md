@@ -32,12 +32,20 @@ test-environment/profile test core-sqlite-local
 
 Команда сама проверяет readiness и добавляет точную конфигурацию стенда в Allure environment. Остановка с сохранением SQLite volume: `test-environment/profile down core-sqlite-local`. Полное удаление состояния требует явной команды `test-environment/profile clean core-sqlite-local --yes`.
 
-Тот же набор можно выполнить на PostgreSQL. Профили используют общий порт и запускаются последовательно:
+Тот же набор выполняется без копирования тестов на PostgreSQL, MySQL и MariaDB. Профили используют общий порт и запускаются последовательно:
 
 ```bash
 test-environment/profile down core-sqlite-local
 test-environment/profile up core-postgres-local
 test-environment/profile test core-postgres-local
+
+test-environment/profile down core-postgres-local
+test-environment/profile up core-mysql-local
+test-environment/profile test core-mysql-local
+
+test-environment/profile down core-mysql-local
+test-environment/profile up core-mariadb-local
+test-environment/profile test core-mariadb-local
 ```
 
 Production-like вариант выполняет задачи в отдельном persistent runner:

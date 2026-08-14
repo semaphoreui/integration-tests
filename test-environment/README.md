@@ -4,12 +4,14 @@
 
 Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
 
-Доступны три опорных профиля:
+Доступны пять опорных профилей:
 
 | Профиль | СУБД | Назначение |
 |---|---|---|
 | `core-sqlite-local` | SQLite | быстрый основной baseline |
 | `core-postgres-local` | PostgreSQL 14.3 | black-box проверка SQL dialect и миграций на чистом PostgreSQL |
+| `core-mysql-local` | MySQL 8.4 | black-box проверка MySQL dialect и миграций |
+| `core-mariadb-local` | MariaDB 10.11 | проверка совместимости MariaDB через MySQL dialect |
 | `prod-postgres-runner` | PostgreSQL 14.3 | production-like server → DB → persistent remote runner |
 
 Общая конфигурация Semaphore и Git fixture находится в `compose.base.yml`, а профили добавляют только DB/execution-specific overlay. Все публикуют Semaphore на порту `3000`, поэтому одновременно должен быть запущен только один профиль.
@@ -62,17 +64,27 @@ test-environment/profile show core-sqlite-local
 
 Прямой вызов `docker compose -f test-environment/compose.yml ...` сохранён для диагностики и обратной совместимости, но основной интерфейс запуска — команда `profile`.
 
-## PostgreSQL
+## SQL-матрица
 
-Переключение с SQLite на PostgreSQL с сохранением данных SQLite:
+Переключение профилей с сохранением данных каждой СУБД:
 
 ```bash
 test-environment/profile down core-sqlite-local
 test-environment/profile up core-postgres-local
 test-environment/profile test core-postgres-local
+
+test-environment/profile down core-postgres-local
+test-environment/profile up core-mysql-local
+test-environment/profile test core-mysql-local
+
+test-environment/profile down core-mysql-local
+test-environment/profile up core-mariadb-local
+test-environment/profile test core-mariadb-local
 ```
 
-PostgreSQL использует отдельные Compose project и volumes. `down` сохраняет БД, а `clean core-postgres-local --yes` удаляет только volumes этого профиля.
+Каждый профиль использует отдельные Compose project и volumes. `down` сохраняет БД, а `clean <profile> --yes` удаляет только volumes выбранного профиля.
+
+Версии MySQL 8.4 и MariaDB 10.11 совпадают с образами, на которых upstream CI Semaphore `v2.19.7` запускает migration и integration jobs. Старые официальные Compose-примеры используют MySQL 8.0 и MariaDB 10.8; их можно позже добавить в compatibility-набор после фиксации минимально поддерживаемых версий.
 
 ## Remote runner
 

@@ -120,7 +120,7 @@ Issues группируются по функциональным зонам:
 - какие внешние зависимости понадобятся для тестов;
 - можно ли одинаково запускать окружение локально и в CI.
 
-Первичная матрица конфигураций и способ её расширения зафиксированы в `test-environment/configuration-testing-overview.md`. Вместо полного перебора используются быстрые configuration checks, несколько опорных end-to-end профилей и самостоятельные feature profiles. Реализованы `core-sqlite-local`, `core-postgres-local` и production-like `prod-postgres-runner`: manifests закрепляют конфигурацию, единая lifecycle-команда управляет запуском/setup и записывает runtime metadata в Allure. Один core API-набор проходит на обеих СУБД и через отдельный persistent runner; runner API подтверждает регистрацию, default/online status и heartbeat. Следующий шаг матрицы — ночные MySQL/MariaDB-профили.
+Первичная матрица конфигураций и способ её расширения зафиксированы в `test-environment/configuration-testing-overview.md`. Вместо полного перебора используются быстрые configuration checks, несколько опорных end-to-end профилей и самостоятельные feature profiles. Реализованы `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local` и production-like `prod-postgres-runner`: manifests закрепляют конфигурацию, единая lifecycle-команда управляет запуском/setup и записывает runtime metadata и точные image digests в Allure. Один core API-набор проходит на SQLite, PostgreSQL, MySQL 8.4 и MariaDB 10.11, локально и через отдельный persistent runner; runner API подтверждает регистрацию, default/online status и heartbeat. Следующий шаг матрицы — проверка обновления N-1 → current для SQLite и PostgreSQL.
 
 **Результат:** рабочее тестовое окружение и документированная команда запуска.
 
