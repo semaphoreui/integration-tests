@@ -13,6 +13,7 @@ import io.bookwright.util.Waits;
 import io.qameta.allure.Step;
 import java.io.IOException;
 import java.util.List;
+import org.awaitility.core.ConditionTimeoutException;
 
 public class TaskSteps {
 
@@ -88,6 +89,55 @@ public class TaskSteps {
         .until(
             () -> Calls.body(api.getTask(projectId, taskId), 200, "task status"),
             task -> isFailedOrThrow(task));
+  }
+
+  @Step("Wait for schedule {scheduleId} to create and complete a Semaphore task")
+  public Task waitForScheduledTaskToSucceed(long projectId, long scheduleId, long templateId) {
+    List<Task> tasks;
+    try {
+      tasks =
+          Waits.awaitSlow("Semaphore schedule %d creates a task".formatted(scheduleId))
+              .until(
+                  () -> Calls.body(api.getTasks(projectId), 200, "scheduled tasks"),
+                  candidates ->
+                      candidates.stream()
+                          .anyMatch(candidate -> belongsTo(candidate, scheduleId, templateId)));
+    } catch (ConditionTimeoutException timeout) {
+      List<Task> observed =
+          Calls.body(api.getTasks(projectId), 200, "scheduled tasks after timeout");
+      throw new IllegalStateException(
+          "Schedule %d did not create a task for template %d in project %d. Observed tasks: %s"
+              .formatted(
+                  scheduleId,
+                  templateId,
+                  projectId,
+                  observed.stream()
+                      .map(
+                          task ->
+                              "%d:schedule=%s:template=%d:status=%s"
+                                  .formatted(
+                                      task.id(),
+                                      task.scheduleId(),
+                                      task.templateId(),
+                                      task.status()))
+                      .toList()),
+          timeout);
+    }
+    Task task =
+        tasks.stream()
+            .filter(candidate -> belongsTo(candidate, scheduleId, templateId))
+            .findFirst()
+            .orElseThrow();
+    teardown.push(
+        "Delete scheduled Semaphore task " + task.id(),
+        () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
+    return waitUntilTaskSucceeds(projectId, task.id());
+  }
+
+  private boolean belongsTo(Task task, long scheduleId, long templateId) {
+    return task.scheduleId() != null
+        && task.scheduleId() == scheduleId
+        && task.templateId() == templateId;
   }
 
   @Step("Wait for Semaphore task {taskId} output marker")

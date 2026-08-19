@@ -69,6 +69,31 @@ class SafeHttpReportingInterceptorTest {
   }
 
   @Test
+  void redactsSshPrivateKeyAndPassphraseFromRequestReport() throws IOException {
+    Request request =
+        new Request.Builder()
+            .url(server.url("/access-keys"))
+            .post(
+                RequestBody.create(
+                    """
+                        {
+                          "type": "ssh",
+                          "ssh": {
+                            "login": "fixture",
+                            "passphrase": "ssh-passphrase-secret",
+                            "private_key": "ssh-private-key-secret"
+                          }
+                        }
+                        """,
+                    MediaType.get("application/json")))
+            .build();
+
+    assertThat(SafeHttpReportingInterceptor.requestReport(request))
+        .contains("fixture", SecretSanitizer.REDACTED)
+        .doesNotContain("ssh-passphrase-secret", "ssh-private-key-secret");
+  }
+
+  @Test
   void redactsSensitiveResponseHeadersAndJsonFields() throws IOException {
     server.enqueue(
         new MockResponse()

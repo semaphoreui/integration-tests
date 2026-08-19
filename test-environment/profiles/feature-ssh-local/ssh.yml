@@ -1,0 +1,19 @@
+services:
+  semaphore:
+    depends_on:
+      ssh-fixture:
+        condition: service_healthy
+
+  ssh-fixture:
+    build:
+      context: fixtures/ssh
+    image: semaphore-test/ssh-fixture:alpine-3.22.1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 22"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    volumes:
+      - fixture-repository:/repositories/ansible:ro
+      - ../build/test-fixtures/ssh/id_ed25519.pub:/home/fixture/.ssh/authorized_keys:ro

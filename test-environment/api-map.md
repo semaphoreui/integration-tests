@@ -118,7 +118,7 @@ Project
 ### P1 — основные риски
 
 1. Git branch/ref и ошибки clone.
-2. SSH и login/password access keys.
+2. Расширенные SSH и login/password access keys: rotation, known_hosts и custom SSH config.
 3. Schedule: cron, run-at, timezone/DST и параметры задачи.
 4. RBAC для manager, task_runner и guest.
 5. Запрет доступа к ресурсам другого проекта.
@@ -138,12 +138,14 @@ Project
 
 Из Git-рисков P1 автоматизированы успешный запуск из явно выбранной ветки, отсутствующий ref и недоступный authenticated HTTPS remote. Ошибки приводят задачу в ожидаемый статус `error`, сохраняют полезную Git-диагностику и не раскрывают login/password в structured или raw output.
 
+Успешный SSH repository/access key автоматизирован в отдельном `feature-ssh-local`: один зашифрованный ключ используется для Git clone и Ansible SSH inventory, удалённый output подтверждён маркером. Negative-сценарий с неверным ключом проверяет диагностируемый отказ и отсутствие private key/passphrase в API responses, HTTP/Allure diagnostics, structured и raw task output.
+
 Для встроенных ролей `manager` и `task_runner` автоматизированы точные permission bitmask и поведенческие границы. Обе роли могут запускать задачи; manager может управлять ресурсами, но не проектом и участниками; task runner не может изменять ресурсы, проект или участников.
 
 Обычный stop и force-stop автоматизированы на long-running Ansible fixture. Запрос отправляется после marker фактического начала playbook; затем проверяются terminal `stopped` и отсутствие marker шага после паузы.
 
 Persistent remote runner автоматизирован отдельной API-группой и production-like профилем PostgreSQL. Проверяются регистрация, `active`, `is_default`, `online`, heartbeat и выполнение всей существующей task suite вне server process. Обнаруженный конфигурационный контракт: global runner после авторегистрации не становится default автоматически, а задачи без tag выбирают только `is_default=true` runners.
 
-Schedule P1 расширен отдельным API-набором: backend cron validation, диагностируемые ошибки invalid cron/type/run-at, CRUD/update, active toggle, сохранение `run_at`, `delete_after_run` и task parameters, запрет создания для `task_runner`, а также контракт системной timezone. Реальное срабатывание по cron, DST-переход и delete-after-run после исполнения остаются отдельными временными сценариями, чтобы не замедлять основной PR gate.
+Schedule P1 расширен отдельным API-набором: backend cron validation, диагностируемые ошибки invalid cron/type/run-at, CRUD/update, active toggle, сохранение `run_at`, `delete_after_run` и task parameters, запрет создания для `task_runner`, а также контракт системной timezone. Реальное cron и `run_at` исполнение покрыто отдельным `feature-schedule-timezone`, но на `v2.19.8` оба сценария воспроизводят отсутствие автоматически созданной task. До Linux-подтверждения профиль оставлен вне CI matrix; доказательства собраны в `schedule-execution-defect.md`.
 
-Следующее расширение P1: успешный SSH repository/access key и реальное срабатывание schedule в выделенном timezone-профиле.
+Следующий шаг P1: подтвердить schedule execution defect в Linux CI/upstream и проверить исправление; затем SSH key rotation/known_hosts.

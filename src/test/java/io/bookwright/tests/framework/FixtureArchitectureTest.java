@@ -7,6 +7,7 @@ import io.bookwright.config.Configs;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
 import io.bookwright.util.TestData;
 import java.io.IOException;
@@ -55,6 +56,9 @@ class FixtureArchitectureTest {
           "forbidden-guest-key",
           "localhost ansible_connection=local",
           "smoke.yml",
+          "Bookwright-ssh-passphrase-42!",
+          "ssh://fixture@ssh-fixture:22/repositories/ansible",
+          "semaphore-bookwright-ssh-target-ok",
           "0 0 * * *");
 
   @Test
@@ -76,6 +80,9 @@ class FixtureArchitectureTest {
     LocalUserFixtures local = LocalUserFixtures.from(Configs.main());
     SemaphoreFixtures semaphore =
         SemaphoreFixtures.from(Configs.main(), new TestData(1L, 2L, "fixture-redaction"));
+    SemaphoreSshFixtures.SshAccessKey sshKey =
+        new SemaphoreSshFixtures.SshAccessKey(
+            "fixture-key", "ssh", "fixture", "ssh-passphrase-secret", "ssh-private-key-secret");
     SemaphoreUpgradeFixtures upgrade = SemaphoreUpgradeFixtures.standard();
 
     SecretAssertions.absent(
@@ -94,11 +101,15 @@ class FixtureArchitectureTest {
         "Semaphore upgrade fixture diagnostics",
         upgrade.toString(),
         upgrade.accessKey().password());
+    SecretAssertions.absent("Semaphore SSH key diagnostics", sshKey.toString(), sshKey);
+    SecretAssertions.absent(
+        "Semaphore SSH request diagnostics", sshKey.request(1).toString(), sshKey);
 
     assertThat(sauceDemo.toString()).contains("[REDACTED]");
     assertThat(local.toString()).contains("[REDACTED]");
     assertThat(semaphore.toString()).contains("[REDACTED]");
     assertThat(upgrade.toString()).contains("[REDACTED]");
+    assertThat(sshKey.toString()).contains("[REDACTED]");
   }
 
   private void inspect(Path root, List<String> violations) throws IOException {

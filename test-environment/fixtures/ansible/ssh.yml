@@ -1,0 +1,13 @@
+---
+- name: Semaphore SSH fixture
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Prove remote SSH command execution
+      ansible.builtin.raw: printf semaphore-bookwright-ssh-target-ok
+      register: ssh_probe
+      changed_when: false
+
+    - name: Report remote SSH proof
+      ansible.builtin.debug:
+        msg: "{{ ssh_probe.stdout }}"

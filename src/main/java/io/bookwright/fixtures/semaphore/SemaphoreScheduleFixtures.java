@@ -6,6 +6,8 @@ import io.bookwright.api.model.semaphore.ScheduleTaskParameters;
 import io.bookwright.util.TestData;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
@@ -13,6 +15,7 @@ import java.util.Map;
 public record SemaphoreScheduleFixtures(
     CronSchedule cron,
     RunAtSchedule runAt,
+    ExecutionSchedule execution,
     String invalidCronFormat,
     String invalidType,
     String expectedCronError,
@@ -34,13 +37,17 @@ public record SemaphoreScheduleFixtures(
             "bookwright-one-shot-schedule-" + suffix,
             "bookwright-run-at-message-" + suffix,
             "run_at"),
+        new ExecutionSchedule(
+            "bookwright-executing-schedule-" + suffix,
+            "bookwright-scheduled-task-" + suffix,
+            Duration.ofSeconds(75)),
         "*/foo",
         "unknown",
         "Cron:",
         "run_at must be provided",
         "run_at must be in the future",
         "invalid schedule type",
-        "UTC");
+        System.getProperty("SEMAPHORE_SCHEDULE_TIMEZONE", "UTC"));
   }
 
   public CronValidationRequest invalidCron(long projectId) {
@@ -117,6 +124,49 @@ public record SemaphoreScheduleFixtures(
       return SemaphoreScheduleFixtures.taskParameters(taskMessage);
     }
   }
+
+  public record ExecutionSchedule(String name, String taskMessage, Duration leadTime) {
+
+    public ScheduledCron next(long projectId, long templateId, String timezone) {
+      ZonedDateTime target =
+          ZonedDateTime.now(ZoneId.of(timezone)).plus(leadTime).truncatedTo(ChronoUnit.MINUTES);
+      String cronFormat = "%d %d * * *".formatted(target.getMinute(), target.getHour());
+      return new ScheduledCron(
+          new ScheduleRequest(
+              null,
+              name,
+              projectId,
+              templateId,
+              cronFormat,
+              true,
+              "",
+              null,
+              false,
+              taskParameters(taskMessage)),
+          target.toInstant());
+    }
+
+    public ScheduledRunAt nextRunAt(long projectId, long templateId) {
+      Instant target = Instant.now().plus(Duration.ofSeconds(15)).truncatedTo(ChronoUnit.SECONDS);
+      return new ScheduledRunAt(
+          new ScheduleRequest(
+              null,
+              name,
+              projectId,
+              templateId,
+              "",
+              true,
+              "run_at",
+              target,
+              false,
+              taskParameters(taskMessage)),
+          target);
+    }
+  }
+
+  public record ScheduledCron(ScheduleRequest request, Instant expectedAt) {}
+
+  public record ScheduledRunAt(ScheduleRequest request, Instant expectedAt) {}
 
   private static ScheduleTaskParameters taskParameters(String message) {
     return new ScheduleTaskParameters(

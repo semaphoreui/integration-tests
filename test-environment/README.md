@@ -4,7 +4,7 @@
 
 Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
 
-Доступны пять опорных профилей:
+Доступны пять опорных профилей и два feature-профиля:
 
 | Профиль | СУБД | Назначение |
 |---|---|---|
@@ -13,6 +13,8 @@ Manifest профиля находится в `profiles/<profile>/profile.yaml`.
 | `core-mysql-local` | MySQL 8.4 | black-box проверка MySQL dialect и миграций |
 | `core-mariadb-local` | MariaDB 10.11 | проверка совместимости MariaDB через MySQL dialect |
 | `prod-postgres-runner` | PostgreSQL 14.3 | production-like server → DB → persistent remote runner |
+| `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target и защита key material |
+| `feature-schedule-timezone` | SQLite | cron/run-at execution в `Pacific/Kiritimati`; локальный defect reproducer |
 
 Общая конфигурация Semaphore и Git fixture находится в `compose.base.yml`, а профили добавляют только DB/execution-specific overlay. Все публикуют Semaphore на порту `3000`, поэтому одновременно должен быть запущен только один профиль.
 
@@ -105,6 +107,31 @@ Git fixture монтируется по одинаковому пути `/fixtur
 
 API-набор дополнительно проверяет, что runner активен, зарегистрирован, назначен default, имеет статус `online` и отправляет heartbeat. Успешные task/output и stop/force-stop сценарии при включённом remote mode подтверждают фактическое выполнение на runner.
 
+## SSH feature-профиль
+
+```bash
+test-environment/profile down prod-postgres-runner
+test-environment/profile up feature-ssh-local
+test-environment/profile test feature-ssh-local
+```
+
+Профиль собирает минимальный Alpine SSH fixture и монтирует в него локальный Git repository read-only. Один зашифрованный Semaphore access key используется для clone `ssh://fixture@ssh-fixture:22/repositories/ansible` и подключения Ansible к `ssh-fixture`. Отдельный negative-сценарий проверяет неверный ключ и clone failure. Create/get/list responses, structured output и raw output проверяются на отсутствие private key и passphrase.
+
+Пара ключей генерируется при `profile up` в игнорируемом Git каталоге `build/test-fixtures/ssh`. В контейнер монтируется только public key, а private key остаётся вне Docker build context и используется Java-тестом только для локального API. Версия fixture image записывается в Allure environment.
+
+## Schedule timezone feature-профиль
+
+```bash
+test-environment/profile down feature-ssh-local
+test-environment/profile up feature-schedule-timezone
+test-environment/profile test feature-schedule-timezone \
+  --tests io.bookwright.tests.semaphore.ScheduledTaskExecutionTest
+```
+
+Профиль задаёт `SEMAPHORE_SCHEDULE_TIMEZONE=Pacific/Kiritimati`, передаёт ту же зону в test JVM и записывает её в Allure environment. Тесты рассчитывают ближайший cron в этой зоне и отдельный `run_at`, затем ожидают автоматически созданную task по `schedule_id` и её успешный output.
+
+На release `v2.19.8` профиль сейчас является defect reproducer: API сохраняет активные cron и one-shot schedules, но task не появляется. Он сознательно не включён в CI matrix до Linux-подтверждения и решения по upstream issue. Полный отчёт — `schedule-execution-defect.md`.
+
 ## Обновление N-1 → current
 
 Два изолированных профиля проверяют обновление release image `v2.19.7` → `v2.19.8` с сохранением одной и той же БД:
@@ -126,10 +153,12 @@ test-environment/profile upgrade-test upgrade-postgres-local
 | Workflow | Триггер | Профили |
 |---|---|---|
 | `CI` | pull request и push в `main` | `core-sqlite-local` после framework quality gate |
-| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner` |
+| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local` |
 | `Release upgrade` | воскресенье `03:30 UTC`, вручную | `upgrade-sqlite-local`, `upgrade-postgres-local` |
 
 Каждый matrix profile работает на отдельном runner, поэтому общий порт `3000` не создаёт конфликтов. После выполнения workflow сохраняет JUnit/HTML/Allure artifacts, при ошибке добавляет `profile ps` и конечный снимок Compose logs, а затем удаляет только контейнеры и volumes выбранного профиля.
+
+В ручном `Configuration matrix` input `include_schedule_investigation=true` добавляет `feature-schedule-timezone` только к выбранному run. Его ожидаемое до исправления падение не загрязняет ежедневный gate, но сохраняет Linux diagnostics для подтверждения дефекта.
 
 Raw Allure results каждого job загружаются отдельным artifact. Финальный reusable workflow скачивает их, генерирует независимый HTML-отчёт для каждого профиля и загружает общий сайт как downloadable artifact. Сборка выполняется и после тестового падения, включая pull request, поэтому диагностику красного run можно открыть без GitHub Pages. Pages deployment приостановлен, пока private-репозиторий остаётся на тарифе без private Pages.
 

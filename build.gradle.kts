@@ -116,6 +116,7 @@ fun Test.configureBookwrightTestRuntime() {
     listOf(
         "STAND",
         "SEMAPHORE_PROFILE",
+        "SEMAPHORE_SCHEDULE_TIMEZONE",
         "SEMAPHORE_UPGRADE_PHASE",
         "DB_PASSWORD",
         "SSH_PASSWORD",

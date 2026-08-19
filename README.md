@@ -58,6 +58,27 @@ test-environment/profile test prod-postgres-runner
 
 Runner регистрируется автоматически, сохраняет долгоживущий token в отдельном volume и через admin API назначается default runner. Отдельный API-тест подтверждает `active`, `registered`, `is_default`, `online` и heartbeat до запуска task-сценариев.
 
+SSH feature-профиль проверяет один зашифрованный access key сразу на двух клиентских границах: Git clone по SSH и подключение Ansible к удалённому target:
+
+```bash
+test-environment/profile down prod-postgres-runner
+test-environment/profile up feature-ssh-local
+test-environment/profile test feature-ssh-local
+```
+
+Изолированный SSH-сервер доступен только внутри Compose network. Положительный сценарий подтверждает удалённое выполнение playbook, отрицательный — полезную clone-диагностику с неверным ключом; оба дополнительно проверяют отсутствие private key и passphrase в API и task output.
+
+Экспериментальный schedule-профиль воспроизводит реальное cron/`run_at` исполнение в non-UTC timezone:
+
+```bash
+test-environment/profile down feature-ssh-local
+test-environment/profile up feature-schedule-timezone
+test-environment/profile test feature-schedule-timezone \
+  --tests io.bookwright.tests.semaphore.ScheduledTaskExecutionTest
+```
+
+На `v2.19.8` оба сценария локально воспроизводят дефект: активное расписание сохраняется, но task не создаётся. Профиль пока не включён в CI matrix; доказательства и ожидаемое поведение находятся в `test-environment/schedule-execution-defect.md`.
+
 Проверка обновления опубликованных образов на сохранённой SQLite или PostgreSQL запускается отдельной командой:
 
 ```bash
@@ -73,10 +94,12 @@ test-environment/profile upgrade-test upgrade-postgres-local
 GitHub Actions разделены по стоимости и назначению:
 
 - `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite на `core-sqlite-local`;
-- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB и production-like PostgreSQL с persistent runner;
+- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner и SSH feature-профиль;
 - `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.7 → v2.19.8` на SQLite и PostgreSQL.
 
 Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
+
+При ручном запуске `Configuration matrix` можно включить input `include_schedule_investigation`. Тогда к матрице только для этого run добавится известный красный `feature-schedule-timezone`, чтобы подтвердить schedule defect на Linux и собрать стандартные артефакты; ежедневный запуск остаётся зелёным gate без expected failures.
 
 После каждого CI, nightly matrix или release-upgrade запуска Allure автоматически собирается в готовый HTML-сайт и загружается как artifact `allure-html-<run>-<attempt>`. Каждый Allure-отчёт собирается в single-file mode: после скачивания достаточно распаковать архив и открыть `index.html` двойным кликом — локальный HTTP-сервер не нужен. Для matrix run стартовая страница содержит отдельный отчёт каждого профиля, поэтому результаты разных СУБД не смешиваются в retries. Публикация через GitHub Pages подготовлена, но приостановлена: текущий тариф не поддерживает Pages для private-репозитория.
 
@@ -98,6 +121,8 @@ project → access key → local Git repository → inventory → task template
 
 Git-набор проверяет выполнение задачи из явно выбранной ветки, диагностируемый отказ для отсутствующей ветки и недоступного HTTPS remote. Для authenticated clone дополнительно проверяется, что login/password не попадают в structured и raw task output.
 
+SSH-набор использует отдельный typed fixture и проверяет успешный Git clone по SSH, выполнение playbook на SSH target и безопасный отказ с неверным ключом. Зашифрованная тестовая пара ключей генерируется в игнорируемом `build/test-fixtures/ssh`; private key не входит ни в Git, ни в Docker build context.
+
 Task lifecycle-набор запускает безопасный long-running playbook, дожидается marker фактического выполнения и проверяет обычный stop и force-stop. В обоих случаях задача переходит в `stopped`, а шаг после паузы не выполняется.
 
 Ansible-код берётся только из доверенных fixtures `test-environment/fixtures/ansible/smoke.yml` и `long-running.yml`, упакованных Compose в локальный read-only Git volume с ветками `main` и `bookwright-fixture-ref`. Внешний код при API-запуске не исполняется.
@@ -118,5 +143,6 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `test-environment/legacy-qa-review.md` — разбор старых UI-тестов и ручных сценариев;
 - `test-environment/configuration-testing-overview.md` — матрица клиентских конфигураций и опорные профили;
 - `test-environment/smoke-report.md` — результаты проверки стенда.
+- `test-environment/schedule-execution-defect.md` — воспроизводимый дефект cron/run-at execution.
 
 Исходный код Semaphore хранится локально в `/semaphore/` и исключён из этого репозитория.

@@ -1,0 +1,21 @@
+id: feature-ssh-local
+description: SQLite with Git-over-SSH and Ansible SSH target fixture
+compose_file: compose.yml
+compose_project: semaphore-test-feature-ssh-local
+readiness_url: http://localhost:3000/api/ping
+stand: semaphore
+semaphore_version: v2.19.8
+semaphore_image: semaphoreui/semaphore:v2.19.8
+source_commit: 3449a04f3bfa2522ec7fd60803f71b578c39f6b4
+edition: community
+installation: docker-compose
+architecture: native
+database_type: sqlite
+database_image: embedded
+execution_mode: local
+execution_executor: local
+auth: password
+git_client: cmd_git
+ssh_fixture_image: semaphore-test/ssh-fixture:alpine-3.22.1
+ssh_fixture_key: generated
+capabilities: core-api,task-execution,git-ssh,inventory-ssh,ssh-key-security

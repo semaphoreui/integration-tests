@@ -23,7 +23,16 @@ public final class SecretSanitizer {
   static final String OMITTED_BODY = "[BODY OMITTED]";
 
   private static final Set<String> SENSITIVE_MARKERS =
-      Set.of("authorization", "cookie", "credential", "password", "passwd", "token", "secret");
+      Set.of(
+          "authorization",
+          "cookie",
+          "credential",
+          "password",
+          "passwd",
+          "passphrase",
+          "private_key",
+          "token",
+          "secret");
 
   private static final ObjectMapper JSON = new ObjectMapper();
 

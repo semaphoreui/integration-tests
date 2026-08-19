@@ -26,7 +26,7 @@ public class ScheduleSteps {
     this.teardown = teardown;
   }
 
-  @Step("Create Semaphore schedule for template {templateId}")
+  @Step("Create Semaphore schedule for template {request.templateId}")
   public Schedule create(long projectId, ScheduleRequest request) {
     Schedule schedule = Calls.body(api.createSchedule(projectId, request), 201, "created schedule");
     teardown.push(

@@ -7,4 +7,6 @@ public record Task(
     @JsonProperty("project_id") long projectId,
     @JsonProperty("template_id") long templateId,
     String status,
-    @JsonProperty("commit_hash") String commitHash) {}
+    @JsonProperty("commit_hash") String commitHash,
+    @JsonProperty("schedule_id") Long scheduleId,
+    String message) {}

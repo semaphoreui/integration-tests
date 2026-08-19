@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "30 1 * * *"
   workflow_dispatch:
+    inputs:
+      include_schedule_investigation:
+        description: Include the known-failing schedule execution reproducer
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,11 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile:
-          - core-postgres-local
-          - core-mysql-local
-          - core-mariadb-local
-          - prod-postgres-runner
+        profile: ${{ fromJSON(inputs.include_schedule_investigation && '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-schedule-timezone"]' || '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local"]') }}
     env:
       PROFILE: ${{ matrix.profile }}
     steps:

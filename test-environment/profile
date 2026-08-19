@@ -54,6 +54,8 @@ select_profile() {
   stand=$(manifest_value stand)
   setup_service=$(manifest_value setup_service)
   selected_semaphore_image=$(manifest_value semaphore_image)
+  selected_schedule_timezone=$(manifest_value schedule_timezone)
+  [ -n "$selected_schedule_timezone" ] || selected_schedule_timezone=UTC
 
   [ -n "$compose_relative" ] || fail "compose_file is missing in $manifest_file"
   [ -n "$compose_project" ] || fail "compose_project is missing in $manifest_file"
@@ -121,6 +123,29 @@ configure_java() {
   fail "Java 21 is not available; set JAVA_HOME before running the test action"
 }
 
+prepare_ssh_fixture() {
+  [ "$(manifest_value ssh_fixture_key)" = "generated" ] || return 0
+  command -v ssh-keygen >/dev/null 2>&1 || fail "ssh-keygen is required for profile '$profile_id'"
+
+  ssh_fixture_dir="$repository_dir/build/test-fixtures/ssh"
+  ssh_private_key="$ssh_fixture_dir/id_ed25519"
+  ssh_public_key="$ssh_private_key.pub"
+  mkdir -p "$ssh_fixture_dir"
+
+  if [ ! -s "$ssh_private_key" ] || [ ! -s "$ssh_public_key" ]; then
+    if [ -e "$ssh_private_key" ] || [ -e "$ssh_public_key" ]; then
+      fail "incomplete SSH fixture key pair in $ssh_fixture_dir; remove both files and retry"
+    fi
+    ssh-keygen -q -t ed25519 -a 16 \
+      -N 'Bookwright-ssh-passphrase-42!' \
+      -C bookwright-test-only \
+      -f "$ssh_private_key"
+  fi
+
+  chmod 600 "$ssh_private_key"
+  chmod 644 "$ssh_public_key"
+}
+
 write_allure_environment() {
   allure_dir="$repository_dir/build/allure-results"
   mkdir -p "$allure_dir"
@@ -143,6 +168,13 @@ write_allure_environment() {
     [ -z "$inspected_runner_image" ] || runner_image_reference=$inspected_runner_image
   fi
 
+  ssh_fixture_image=$(manifest_value ssh_fixture_image)
+  ssh_fixture_image_reference=$ssh_fixture_image
+  if [ -n "$ssh_fixture_image" ]; then
+    inspected_ssh_fixture_image=$(docker image inspect "$ssh_fixture_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+    [ -z "$inspected_ssh_fixture_image" ] || ssh_fixture_image_reference=$inspected_ssh_fixture_image
+  fi
+
   {
     printf 'profile=%s\n' "$profile_id"
     printf 'semaphore.version=%s\n' "$(manifest_value semaphore_version)"
@@ -155,9 +187,13 @@ write_allure_environment() {
     printf 'database.image=%s\n' "$database_image_reference"
     printf 'execution.mode=%s\n' "$(manifest_value execution_mode)"
     printf 'execution.executor=%s\n' "$(manifest_value execution_executor)"
+    printf 'schedule.timezone=%s\n' "$selected_schedule_timezone"
     if [ -n "$runner_image_reference" ]; then
       printf 'runner.image=%s\n' "$runner_image_reference"
       printf 'runner.name=%s\n' "$(manifest_value runner_name)"
+    fi
+    if [ -n "$ssh_fixture_image_reference" ]; then
+      printf 'ssh.fixture.image=%s\n' "$ssh_fixture_image_reference"
     fi
     printf 'auth=%s\n' "$(manifest_value auth)"
     printf 'git.client=%s\n' "$(manifest_value git_client)"
@@ -181,6 +217,7 @@ run_upgrade_phase() {
     ./gradlew upgradeTest \
       -DSTAND="$stand" \
       -DSEMAPHORE_PROFILE="$profile_id" \
+      -DSEMAPHORE_SCHEDULE_TIMEZONE="$selected_schedule_timezone" \
       -DSEMAPHORE_UPGRADE_PHASE="$phase"
   )
 }
@@ -202,6 +239,7 @@ case "$action" in
     ;;
   up)
     select_profile "${2:-}"
+    prepare_ssh_fixture
     compose up --detach
     wait_for_setup
     await_ready
@@ -209,13 +247,18 @@ case "$action" in
   test)
     select_profile "${2:-}"
     shift 2
+    prepare_ssh_fixture
     wait_for_setup
     await_ready
     configure_java
     write_allure_environment
     (
       cd "$repository_dir"
-      ./gradlew apiTest -DSTAND="$stand" -DSEMAPHORE_PROFILE="$profile_id" "$@"
+      ./gradlew apiTest \
+        -DSTAND="$stand" \
+        -DSEMAPHORE_PROFILE="$profile_id" \
+        -DSEMAPHORE_SCHEDULE_TIMEZONE="$selected_schedule_timezone" \
+        "$@"
     )
     ;;
   upgrade-test)
@@ -241,7 +284,10 @@ case "$action" in
     fi
     (
       cd "$repository_dir"
-      ./gradlew apiTest -DSTAND="$stand" -DSEMAPHORE_PROFILE="$profile_id"
+      ./gradlew apiTest \
+        -DSTAND="$stand" \
+        -DSEMAPHORE_PROFILE="$profile_id" \
+        -DSEMAPHORE_SCHEDULE_TIMEZONE="$selected_schedule_timezone"
     )
     ;;
   ps)

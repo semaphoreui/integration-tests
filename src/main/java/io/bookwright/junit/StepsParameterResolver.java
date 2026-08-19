@@ -11,6 +11,7 @@ import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreScheduleFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.steps.DbSteps;
@@ -43,6 +44,7 @@ public class StepsParameterResolver implements ParameterResolver {
         || type == HotelDatabaseFixtures.class
         || type == SemaphoreFixtures.class
         || type == SemaphoreScheduleFixtures.class
+        || type == SemaphoreSshFixtures.class
         || type == SemaphoreUpgradeFixtures.class
         || SUPPORTED.contains(type);
   }
@@ -72,6 +74,9 @@ public class StepsParameterResolver implements ParameterResolver {
     }
     if (type == SemaphoreScheduleFixtures.class) {
       return SemaphoreScheduleFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
+    if (type == SemaphoreSshFixtures.class) {
+      return SemaphoreSshFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreUpgradeFixtures.class) {
       return SemaphoreUpgradeFixtures.standard();
