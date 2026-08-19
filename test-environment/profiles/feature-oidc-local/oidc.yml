@@ -1,0 +1,33 @@
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_WEB_ROOT: http://localhost:3000
+      SEMAPHORE_OIDC_PROVIDERS: >-
+        {"dex":{"client_id":"semaphore","client_secret":"semaphore-test-client-secret","provider_url":"http://dex.localhost:5556/dex","redirect_url":"http://localhost:3000/api/auth/oidc/dex/redirect","display_name":"Bookwright Dex","username_claim":"email","name_claim":"email","return_via_state":true}}
+    extra_hosts:
+      - "dex.localhost:host-gateway"
+    depends_on:
+      dex:
+        condition: service_healthy
+
+  dex:
+    image: ghcr.io/dexidp/dex:v2.45.1-alpine
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    ports:
+      - "5556:5556"
+    volumes:
+      - ./profiles/feature-oidc-local/dex.yaml:/etc/dex/config.yaml:ro
+      - dex-data:/var/dex
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:5556/dex/.well-known/openid-configuration >/dev/null",
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  dex-data:

@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: ${{ fromJSON(inputs.include_schedule_investigation && '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-schedule-timezone"]' || '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local"]') }}
+        profile: ${{ fromJSON(inputs.include_schedule_investigation && '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-oidc-local","feature-schedule-timezone"]' || '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-oidc-local"]') }}
     env:
       PROFILE: ${{ matrix.profile }}
     steps:
@@ -42,6 +42,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Install Playwright Chromium
+        if: matrix.profile == 'feature-oidc-local'
+        run: ./gradlew --no-daemon playwrightInstallChromium
+
       - name: Show Docker versions
         run: |
           docker version
@@ -50,7 +54,7 @@ jobs:
       - name: Start profile
         run: test-environment/profile up "$PROFILE"
 
-      - name: Run core API suite
+      - name: Run profile suite
         run: test-environment/profile test "$PROFILE" --no-daemon
 
       - name: Capture failure diagnostics
@@ -68,6 +72,8 @@ jobs:
           path: |
             build/reports/tests/apiTest/
             build/test-results/apiTest/
+            build/reports/tests/uiTest/
+            build/test-results/uiTest/
             build/ci-diagnostics/
           if-no-files-found: ignore
           retention-days: 14

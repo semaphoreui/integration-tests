@@ -179,6 +179,14 @@ tasks.register<Test>("uiTest") {
     filter { includeTestsMatching("io.bookwright.tests.ui.*") }
 }
 
+tasks.register<JavaExec>("playwrightInstallChromium") {
+    group = "verification"
+    description = "Installs Chromium and its Linux dependencies for Playwright product tests."
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "com.microsoft.playwright.CLI"
+    args("install", "--with-deps", "chromium")
+}
+
 tasks.register<Test>("dbTest") {
     group = "verification"
     description = "Runs database scenarios through the SSH tunnel."

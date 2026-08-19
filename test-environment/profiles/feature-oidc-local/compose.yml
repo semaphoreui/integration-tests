@@ -1,0 +1,5 @@
+include:
+  - path:
+      - ../../compose.base.yml
+      - ../core-sqlite-local/compose.yml
+      - oidc.yml

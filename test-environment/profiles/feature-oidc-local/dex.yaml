@@ -1,0 +1,27 @@
+issuer: http://dex.localhost:5556/dex
+
+storage:
+  type: sqlite3
+  config:
+    file: /var/dex/dex.db
+
+web:
+  http: 0.0.0.0:5556
+
+oauth2:
+  skipApprovalScreen: true
+
+staticClients:
+  - id: semaphore
+    name: Semaphore
+    secret: semaphore-test-client-secret
+    redirectURIs:
+      - http://localhost:3000/api/auth/oidc/dex/redirect
+
+enablePasswordDB: true
+staticPasswords:
+  - email: oidc.user@bookwright.test
+    # bcrypt hash for the local-only credential stored in SemaphoreOidcFixtures
+    hash: $2y$10$083AJsRwhLY53laxO1YKjueHo0C2KvzSlSgPugUp5xWCiE0AquTTe
+    username: oidc.user@bookwright.test
+    userID: 2d3f3c3a-493f-4b65-b617-13f07414c28e

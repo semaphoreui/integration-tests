@@ -139,6 +139,7 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 | `core-mysql-local` | Docker Compose, MySQL 8.4, local execution | Black-box совместимость MySQL и миграций | nightly |
 | `core-mariadb-local` | Docker Compose, MariaDB 10.11, local execution | Реальная совместимость MySQL dialect с MariaDB | nightly |
 | `feature-ssh-local` | SQLite, два локальных SSH server с разными зашифрованными test keys | Git clone и Ansible target по SSH, key rotation, negative auth и защита секретов | nightly |
+| `feature-oidc-local` | SQLite и pinned локальный Dex | Discovery, реальный browser login, callback, session, return path и external-user provisioning | nightly |
 | `feature-schedule-timezone` | SQLite, `Pacific/Kiritimati`, local execution | Реальное cron/run-at исполнение и связь schedule → task | вручную; defect reproducer |
 | `proxy-oidc` | PostgreSQL, reverse proxy TLS, non-root web path, OIDC provider | Callback URL, cookies, redirects, account mapping и RBAC | nightly/по расписанию |
 | `ldap-tls` | PostgreSQL и LDAP с TLS | Bind/search/mapping, отказ TLS и RBAC | по расписанию |
@@ -147,9 +148,9 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 | `pro-docker-executor` | Pro runner с Docker executor | Изоляция task container, лимиты, cleanup, secret hydration | при наличии Pro, nightly |
 | `pro-k8s-executor` | Helm/Pro runner с Kubernetes executor | pod lifecycle, service account, pull secret и cleanup | при наличии Pro/K8s, release |
 
-Базовые пять профилей и два feature-профиля реализованы. `feature-schedule-timezone` пока не является зелёным gate: он воспроизводит локальный дефект `v2.19.8` и ожидает Linux-подтверждения. OIDC/LDAP/HA/dynamic runner следует добавлять последовательно, не размножая на них всю DB-матрицу.
+Базовые пять профилей и три feature-профиля реализованы. `feature-oidc-local` даёт зелёный сквозной auth smoke без размножения по DB-матрице. `feature-schedule-timezone` пока не является зелёным gate: он воспроизводит дефект `v2.19.8`. Следующими auth/infrastructure профилями остаются LDAP, HA и dynamic runner.
 
-CI-распределение также реализовано: `core-sqlite-local` входит в pull-request gate после framework quality checks; остальные четыре базовых профиля и `feature-ssh-local` запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate.
+CI-распределение также реализовано: `core-sqlite-local` входит в pull-request gate после framework quality checks; остальные четыре базовых профиля, `feature-ssh-local` и `feature-oidc-local` запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate.
 
 ## Какие тесты где запускать
 
@@ -164,7 +165,7 @@ CI-распределение также реализовано: `core-sqlite-lo
 | реальное cron/run-at execution | — | — | — | — | — | `feature-schedule-timezone`, defect |
 | constraints, schedules, cleanup, clean migration | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | secrets и отсутствие утечек | ✓ | ✓ | ✓ | ✓ | ✓ | encryption/storage расширяют набор |
-| OIDC/LDAP/MFA | — | — | — | — | — | только свой профиль |
+| OIDC/LDAP/MFA | — | — | — | — | — | OIDC: `feature-oidc-local`; LDAP/MFA — будущие профили |
 | HA/failover | — | — | — | — | — | только HA profile |
 
 Знак `—` означает сознательное исключение, а не неизвестное покрытие. Это важно фиксировать, иначе матрица со временем снова превратится в неявный полный перебор.
@@ -223,7 +224,7 @@ Manifest должен попадать в Allure environment/labels вместе
 ./test-environment/profile down core-sqlite-local
 ```
 
-Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-schedule-timezone` и upgrade-профилей: она управляет Compose lifecycle, ждёт readiness/setup services, запускает API-тесты и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
+Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-oidc-local`, `feature-schedule-timezone` и upgrade-профилей: она управляет Compose lifecycle, ждёт readiness/setup services, запускает выбранный в manifest API/UI test task и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
 
 ## Обнаруженный риск воспроизводимости
 
@@ -245,6 +246,7 @@ Manifest должен попадать в Allure environment/labels вместе
 5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL. Выполнено: `upgrade-sqlite-local` и `upgrade-postgres-local` создают данные на `v2.19.7`, переключают server image на `v2.19.8` с сохранением БД и запускают verify/core suite. Оба профиля прошли в Linux CI; локально сохраняется наблюдение за гонкой финализации task output.
 6. Добавить SSH feature-профиль. Выполнено: Git clone, Ansible SSH target, неверный ключ, замена secret у существующего key ID и защита key material проверяются на двух изолированных SSH fixtures. `known_hosts` откладывается до релиза с соответствующей upstream-конфигурацией.
 7. Добавить реальное schedule execution. Reproducer реализован для cron и `run_at`; отсутствие task на `v2.19.8` подтверждено локально и в Linux CI. Следующий шаг — upstream issue/fix verification.
-8. Затем выбирать между OIDC, LDAP и HA по частоте релевантных issues и доступной инфраструктуре.
+8. Добавить OIDC feature-профиль. Выполнено: pinned Dex, discovery, browser login, callback, session, return path и external-user provisioning проходят локально на `v2.19.8`.
+9. Затем выбирать между LDAP и HA по частоте релевантных issues и доступной инфраструктуре.
 
 Так мы сначала защищаем типичную установку клиента и самые дорогие точки отказа, но сохраняем окружение понятным для одного инженера.

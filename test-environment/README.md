@@ -4,7 +4,7 @@
 
 Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
 
-Доступны пять опорных профилей и два feature-профиля:
+Доступны пять опорных профилей и три feature-профиля:
 
 | Профиль | СУБД | Назначение |
 |---|---|---|
@@ -14,6 +14,7 @@ Manifest профиля находится в `profiles/<profile>/profile.yaml`.
 | `core-mariadb-local` | MariaDB 10.11 | проверка совместимости MariaDB через MySQL dialect |
 | `prod-postgres-runner` | PostgreSQL 14.3 | production-like server → DB → persistent remote runner |
 | `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target и защита key material |
+| `feature-oidc-local` | SQLite | реальный browser login через локальный Dex, callback и provisioning external user |
 | `feature-schedule-timezone` | SQLite | cron/run-at execution в `Pacific/Kiritimati`; локальный defect reproducer |
 
 Общая конфигурация Semaphore и Git fixture находится в `compose.base.yml`, а профили добавляют только DB/execution-specific overlay. Все публикуют Semaphore на порту `3000`, поэтому одновременно должен быть запущен только один профиль.
@@ -132,6 +133,16 @@ test-environment/profile test feature-schedule-timezone \
 
 На release `v2.19.8` профиль сейчас является defect reproducer: API сохраняет активные cron и one-shot schedules, но task не появляется. Он сознательно не включён в CI matrix до Linux-подтверждения и решения по upstream issue. Полный отчёт — `schedule-execution-defect.md`.
 
+## OIDC feature-профиль
+
+```bash
+test-environment/profile down feature-schedule-timezone
+test-environment/profile up feature-oidc-local
+test-environment/profile test feature-oidc-local
+```
+
+Профиль запускает pinned Dex `v2.45.1` и браузерный `uiTest`. Сценарий проверяет отображение настроенного провайдера, ввод credentials на стороне IdP, OAuth callback, Semaphore session через `/api/user`, возврат на исходный `/tokens` и создание non-admin external user. `SEMAPHORE_WEB_ROOT` задан явно, а claims `username`/`name` маппятся на `email`, потому что локальный Dex connector не выдаёт `preferred_username`.
+
 ## Обновление N-1 → current
 
 Два изолированных профиля проверяют обновление release image `v2.19.7` → `v2.19.8` с сохранением одной и той же БД:
@@ -153,7 +164,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 | Workflow | Триггер | Профили |
 |---|---|---|
 | `CI` | pull request и push в `main` | `core-sqlite-local` после framework quality gate |
-| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local` |
+| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-oidc-local` |
 | `Release upgrade` | воскресенье `03:30 UTC`, вручную | `upgrade-sqlite-local`, `upgrade-postgres-local` |
 
 Каждый matrix profile работает на отдельном runner, поэтому общий порт `3000` не создаёт конфликтов. После выполнения workflow сохраняет JUnit/HTML/Allure artifacts, при ошибке добавляет `profile ps` и конечный снимок Compose logs, а затем удаляет только контейнеры и volumes выбранного профиля.

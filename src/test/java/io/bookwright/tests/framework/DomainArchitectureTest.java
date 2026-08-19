@@ -11,6 +11,7 @@ import io.bookwright.steps.restfulbooker.RestfulBookerSteps;
 import io.bookwright.steps.semaphore.SemaphoreSteps;
 import io.bookwright.steps.ui.local.LocalUiSteps;
 import io.bookwright.steps.ui.saucedemo.SauceDemoSteps;
+import io.bookwright.steps.ui.semaphore.SemaphoreUiSteps;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,7 +41,8 @@ class DomainArchitectureTest {
         .containsExactlyInAnyOrder(
             RestfulBookerSteps.class, LocalApiSteps.class, SemaphoreSteps.class);
     assertThat(fieldTypes(UiSteps.class))
-        .containsExactlyInAnyOrder(SauceDemoSteps.class, LocalUiSteps.class);
+        .containsExactlyInAnyOrder(
+            SauceDemoSteps.class, LocalUiSteps.class, SemaphoreUiSteps.class);
   }
 
   @Test

@@ -56,6 +56,13 @@ select_profile() {
   selected_semaphore_image=$(manifest_value semaphore_image)
   selected_schedule_timezone=$(manifest_value schedule_timezone)
   [ -n "$selected_schedule_timezone" ] || selected_schedule_timezone=UTC
+  selected_test_task=$(manifest_value test_task)
+  [ -n "$selected_test_task" ] || selected_test_task=apiTest
+
+  case "$selected_test_task" in
+    apiTest|uiTest) ;;
+    *) fail "unsupported test_task '$selected_test_task' in $manifest_file" ;;
+  esac
 
   [ -n "$compose_relative" ] || fail "compose_file is missing in $manifest_file"
   [ -n "$compose_project" ] || fail "compose_project is missing in $manifest_file"
@@ -210,6 +217,17 @@ write_allure_environment() {
       printf 'ssh.fixture.image=%s\n' "$ssh_fixture_image_reference"
     fi
     printf 'auth=%s\n' "$(manifest_value auth)"
+    printf 'test.task=%s\n' "$selected_test_task"
+    oidc_provider=$(manifest_value oidc_provider)
+    if [ -n "$oidc_provider" ]; then
+      printf 'auth.oidc.provider=%s\n' "$oidc_provider"
+    fi
+    oidc_image=$(manifest_value oidc_image)
+    if [ -n "$oidc_image" ]; then
+      oidc_image_reference=$(docker image inspect "$oidc_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+      [ -n "$oidc_image_reference" ] || oidc_image_reference=$oidc_image
+      printf 'auth.oidc.image=%s\n' "$oidc_image_reference"
+    fi
     printf 'git.client=%s\n' "$(manifest_value git_client)"
     printf 'capabilities=%s\n' "$(manifest_value capabilities)"
     previous_image=$(manifest_value previous_semaphore_image)
@@ -268,7 +286,7 @@ case "$action" in
     write_allure_environment
     (
       cd "$repository_dir"
-      ./gradlew apiTest \
+      ./gradlew "$selected_test_task" \
         -DSTAND="$stand" \
         -DSEMAPHORE_PROFILE="$profile_id" \
         -DSEMAPHORE_SCHEDULE_TIMEZONE="$selected_schedule_timezone" \

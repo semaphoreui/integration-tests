@@ -68,6 +68,14 @@ test-environment/profile test feature-ssh-local
 
 Два изолированных SSH-сервера доступны только внутри Compose network и принимают разные сгенерированные ключи. Положительный сценарий подтверждает удалённое выполнение playbook, отрицательный — полезную clone-диагностику с неверным ключом. Rotation-сценарий сначала получает отказ второго сервера со старым ключом, обновляет secret у того же access key через API и затем подтверждает успешные Git clone и Ansible SSH. Все сценарии проверяют отсутствие private key и passphrase в API и task output.
 
+OIDC feature-профиль выполняет полный браузерный вход через локальный Dex и проверяет callback, session, return path и provisioning external user:
+
+```bash
+test-environment/profile down feature-ssh-local
+test-environment/profile up feature-oidc-local
+test-environment/profile test feature-oidc-local
+```
+
 Экспериментальный schedule-профиль воспроизводит реальное cron/`run_at` исполнение в non-UTC timezone:
 
 ```bash
@@ -94,7 +102,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 GitHub Actions разделены по стоимости и назначению:
 
 - `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite на `core-sqlite-local`;
-- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner и SSH feature-профиль;
+- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH и OIDC feature-профили;
 - `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.7 → v2.19.8` на SQLite и PostgreSQL.
 
 Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
