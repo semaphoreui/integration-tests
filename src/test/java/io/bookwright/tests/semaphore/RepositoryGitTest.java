@@ -85,6 +85,10 @@ class RepositoryGitTest {
     var failedTask = api.semaphore().tasks().startAndWaitForFailure(project.id(), template.id());
 
     assertThat(failedTask.status()).isEqualTo(fixtures.expectations().failedTaskStatus());
+    api.semaphore()
+        .tasks()
+        .waitUntilTaskOutputContains(
+            project.id(), failedTask.id(), fixtures.repositories().missingBranch().gitBranch());
     assertThat(api.semaphore().tasks().getTaskOutputText(project.id(), failedTask.id()))
         .containsIgnoringCase(fixtures.expectations().cloneFailureMarker())
         .contains(fixtures.repositories().missingBranch().gitBranch());
