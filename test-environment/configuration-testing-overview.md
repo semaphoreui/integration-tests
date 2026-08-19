@@ -223,7 +223,7 @@ Manifest должен попадать в Allure environment/labels вместе
 
 ## Обнаруженный риск воспроизводимости
 
-Текущий тестовый Compose закреплён на release image `v2.19.7`, а локальная копия исходников находится на commit `80b78a3ef4a074cab6ec33792dd96f9cd85619af`. Tag `v2.19.7` указывает на другой commit — `e9dc41a1de8a747569334f7a2b76c320b945d4f0`.
+Текущий тестовый Compose закреплён на release image `v2.19.8` (tag commit `3449a04f3bfa2522ec7fd60803f71b578c39f6b4`), а локальная копия upstream `develop` находится на commit `ae12f3acac626f78673b95cc57acd62ed873b089`.
 
 Значит, API schema и детали конфигурации нельзя автоматически считать соответствующими запущенному image. До расширения матрицы нужно выбрать одно из двух правил:
 
@@ -238,7 +238,7 @@ Manifest должен попадать в Allure environment/labels вместе
 2. Перенести существующий стенд в `core-sqlite-local` без изменения тестов. Выполнено.
 3. Добавить PostgreSQL и remote runner. Выполнено: `core-postgres-local` и `prod-postgres-runner` проходят существующую core suite; runner API дополнительно подтверждает default/online/heartbeat contract.
 4. Добавить короткую DB-матрицу MySQL/MariaDB. Выполнено: профили `core-mysql-local` на MySQL 8.4 и `core-mariadb-local` на MariaDB 10.11 проходят ту же core suite после миграции чистой схемы; фактические image digests попадают в Allure.
-5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL. Выполнено: `upgrade-sqlite-local` и `upgrade-postgres-local` автоматически создают данные на `v2.19.6`, переключают server image на `v2.19.7` с сохранением БД и запускают verify/core suite. Оба профиля обнаружили блокирующую несовместимость миграции `v2.20.1`: колонки `access_key.task_id` и `access_key.expire_at` остаются в схеме, но отсутствуют в модели `v2.19.7`, из-за чего access key API возвращает 400. До исправления продукта upgrade jobs должны оставаться красными.
+5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL. Выполнено: `upgrade-sqlite-local` и `upgrade-postgres-local` создают данные на `v2.19.7`, переключают server image на `v2.19.8` с сохранением БД и запускают verify/core suite. Схема и ресурсы совместимы на обоих СУБД, но verify ловит terminal task status до полной записи output/stages; после cleanup в server log появляется FK violation. До исправления этой lifecycle-регрессии upgrade jobs должны оставаться красными.
 6. Затем выбирать между OIDC, LDAP и HA по частоте релевантных issues и доступной инфраструктуре.
 
 Так мы сначала защищаем типичную установку клиента и самые дорогие точки отказа, но сохраняем окружение понятным для одного инженера.

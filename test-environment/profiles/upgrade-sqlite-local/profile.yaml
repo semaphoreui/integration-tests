@@ -1,15 +1,15 @@
 id: upgrade-sqlite-local
-description: In-place Semaphore v2.19.6 to v2.19.7 upgrade with SQLite
+description: In-place Semaphore v2.19.7 to v2.19.8 upgrade with SQLite
 compose_file: compose.yml
 compose_project: semaphore-test-upgrade-sqlite-local
 readiness_url: http://localhost:3000/api/ping
 stand: semaphore
-semaphore_version: v2.19.7
-semaphore_image: semaphoreui/semaphore:v2.19.7
-source_commit: e9dc41a1de8a747569334f7a2b76c320b945d4f0
-previous_semaphore_version: v2.19.6
-previous_semaphore_image: semaphoreui/semaphore:v2.19.6
-previous_source_commit: ff0cf4cbaa5760ea57fb02973b9f909e619b1856
+semaphore_version: v2.19.8
+semaphore_image: semaphoreui/semaphore:v2.19.8
+source_commit: 3449a04f3bfa2522ec7fd60803f71b578c39f6b4
+previous_semaphore_version: v2.19.7
+previous_semaphore_image: semaphoreui/semaphore:v2.19.7
+previous_source_commit: e9dc41a1de8a747569334f7a2b76c320b945d4f0
 edition: community
 installation: docker-compose-upgrade
 architecture: native

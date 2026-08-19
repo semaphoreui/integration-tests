@@ -66,7 +66,7 @@ test-environment/profile down upgrade-sqlite-local
 test-environment/profile upgrade-test upgrade-postgres-local
 ```
 
-Текущий путь `v2.19.6 → v2.19.7` обнаруживает воспроизводимую несовместимость схемы access keys и остаётся красным до исправления продукта. Диагностика зафиксирована в `test-environment/upgrade-report.md`.
+Текущий N−1 путь — `v2.19.7 → v2.19.8`. Сохранённые данные и access keys читаются на SQLite и PostgreSQL, но upgrade gate остаётся красным из-за неполного task output после terminal status. Актуальная диагностика зафиксирована в `test-environment/v2.19.8-regression-report.md`; исторический schema-дефект пары `v2.19.6 → v2.19.7` — в `test-environment/upgrade-report.md`.
 
 ## CI
 
@@ -74,9 +74,9 @@ GitHub Actions разделены по стоимости и назначени�
 
 - `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite на `core-sqlite-local`;
 - `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB и production-like PostgreSQL с persistent runner;
-- `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.6 → v2.19.7` на SQLite и PostgreSQL.
+- `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.7 → v2.19.8` на SQLite и PostgreSQL.
 
-Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate и остаётся красным на подтверждённой несовместимости продукта — успешный job должен означать реальное восстановление upgrade path.
+Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
 
 После каждого CI, nightly matrix или release-upgrade запуска Allure автоматически собирается в готовый HTML-сайт и загружается как artifact `allure-html-<run>-<attempt>`. Каждый Allure-отчёт собирается в single-file mode: после скачивания достаточно распаковать архив и открыть `index.html` двойным кликом — локальный HTTP-сервер не нужен. Для matrix run стартовая страница содержит отдельный отчёт каждого профиля, поэтому результаты разных СУБД не смешиваются в retries. Публикация через GitHub Pages подготовлена, но приостановлена: текущий тариф не поддерживает Pages для private-репозитория.
 
@@ -90,7 +90,7 @@ project → access key → local Git repository → inventory → task template
 → unassigned project isolation
 ```
 
-После теста Bookwright LIFO cleanup удаляет проектные данные в обратном порядке. Для RBAC используется один стабильный fixture-пользователь `bookwright-rbac-guest`: повторные запуски переиспользуют его, потому что Semaphore v2.19.7 не позволяет удалить пользователя после создания login-сессии.
+После теста Bookwright LIFO cleanup удаляет проектные данные в обратном порядке. Для RBAC используется один стабильный fixture-пользователь `bookwright-rbac-guest`: повторные запуски переиспользуют его, потому что Semaphore не позволяет удалить пользователя после создания login-сессии.
 
 Отдельный RBAC-набор фиксирует встроенные контракты `manager` и `task_runner`. Manager может создавать проектные ресурсы и запускать задачи, но не может удалить проект или управлять участниками. Task runner может запускать задачи, но получает `403` при изменении ресурсов, проекта и состава участников.
 
