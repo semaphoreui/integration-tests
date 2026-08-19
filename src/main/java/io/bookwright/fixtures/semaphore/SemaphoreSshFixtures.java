@@ -1,6 +1,7 @@
 package io.bookwright.fixtures.semaphore;
 
 import io.bookwright.api.model.semaphore.AccessKeyRequest;
+import io.bookwright.api.model.semaphore.AccessKeyUpdateRequest;
 import io.bookwright.api.model.semaphore.InventoryRequest;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
@@ -15,9 +16,12 @@ import java.nio.file.Path;
 public record SemaphoreSshFixtures(
     ProjectRequest project,
     SshAccessKey validKey,
+    SshAccessKey rotatedKey,
     SshAccessKey invalidKey,
     Repository repository,
+    Repository rotatedRepository,
     Inventory inventory,
+    Inventory rotatedInventory,
     Template template,
     String successfulTaskStatus,
     String failedTaskStatus,
@@ -33,7 +37,13 @@ public record SemaphoreSshFixtures(
             "ssh",
             "fixture",
             "Bookwright-ssh-passphrase-42!",
-            readPrivateKey()),
+            readPrivateKey("id_ed25519")),
+        new SshAccessKey(
+            "bookwright-ssh-key-" + suffix,
+            "ssh",
+            "fixture",
+            "Bookwright-rotated-ssh-passphrase-42!",
+            readPrivateKey("id_ed25519_rotated")),
         new SshAccessKey(
             "bookwright-invalid-ssh-key-" + suffix,
             "ssh",
@@ -44,10 +54,20 @@ public record SemaphoreSshFixtures(
             "bookwright-ssh-repository-" + suffix,
             "ssh://fixture@ssh-fixture:22/repositories/ansible",
             "main"),
+        new Repository(
+            "bookwright-rotated-ssh-repository-" + suffix,
+            "ssh://fixture@ssh-fixture-rotated:22/repositories/ansible",
+            "main"),
         new Inventory(
             "bookwright-ssh-inventory-" + suffix,
             "[ssh_target]\n"
                 + "ssh-fixture ansible_connection=ssh ansible_user=fixture ansible_port=22 "
+                + "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'",
+            "static"),
+        new Inventory(
+            "bookwright-rotated-ssh-inventory-" + suffix,
+            "[ssh_target]\n"
+                + "ssh-fixture-rotated ansible_connection=ssh ansible_user=fixture ansible_port=22 "
                 + "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'",
             "static"),
         new Template("bookwright-ssh-template-" + suffix, "ssh.yml", "ansible", ""),
@@ -57,8 +77,8 @@ public record SemaphoreSshFixtures(
         "Failed updating repository");
   }
 
-  private static String readPrivateKey() {
-    Path path = Path.of("build", "test-fixtures", "ssh", "id_ed25519");
+  private static String readPrivateKey(String fileName) {
+    Path path = Path.of("build", "test-fixtures", "ssh", fileName);
     try {
       return Files.readString(path);
     } catch (IOException error) {
@@ -75,6 +95,17 @@ public record SemaphoreSshFixtures(
     public AccessKeyRequest request(long projectId) {
       return new AccessKeyRequest(
           name, type, projectId, null, new SshKeyRequest(login, passphrase, privateKey));
+    }
+
+    public AccessKeyUpdateRequest rotationRequest(long projectId, long keyId) {
+      return new AccessKeyUpdateRequest(
+          keyId,
+          name,
+          type,
+          projectId,
+          true,
+          null,
+          new SshKeyRequest(login, passphrase, privateKey));
     }
 
     @Override

@@ -86,4 +86,48 @@ class SshConnectivityTest {
         "structured failed SSH task output", structuredOutput, fixtures.invalidKey());
     SecretAssertions.absent("raw failed SSH task output", rawOutput, fixtures.invalidKey());
   }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Rotated SSH key replaces the old secret and restores task execution")
+  void rotatedSshKeyIsUsedByRepositoryAndInventory(ApiSteps api, SemaphoreSshFixtures fixtures) {
+    var project = api.semaphore().projects().createProject(fixtures.project());
+    var key = api.semaphore().accessKeys().createAndVerifyMasked(project.id(), fixtures.validKey());
+    var repository =
+        api.semaphore()
+            .repositories()
+            .create(project.id(), fixtures.rotatedRepository().request(project.id(), key.id()));
+    var inventory =
+        api.semaphore()
+            .inventories()
+            .create(project.id(), fixtures.rotatedInventory().request(project.id(), key.id()));
+    var template =
+        api.semaphore()
+            .templates()
+            .create(
+                project.id(),
+                fixtures.template().request(project.id(), repository.id(), inventory.id()));
+
+    var failedTask = api.semaphore().tasks().startAndWaitForFailure(project.id(), template.id());
+    var failedOutput = api.semaphore().tasks().getTaskOutputText(project.id(), failedTask.id());
+    assertThat(failedOutput).containsIgnoringCase(fixtures.cloneFailureMarker());
+    SecretAssertions.absent("pre-rotation task output", failedOutput, fixtures.validKey());
+
+    api.semaphore()
+        .accessKeys()
+        .rotateAndVerifyMasked(project.id(), key.id(), fixtures.rotatedKey());
+
+    var completedTask = api.semaphore().tasks().startAndWait(project.id(), template.id());
+    var structuredOutput =
+        api.semaphore().tasks().getTaskOutputText(project.id(), completedTask.id());
+    var rawOutput = api.semaphore().tasks().getTaskRawOutput(project.id(), completedTask.id());
+
+    assertThat(completedTask.status()).isEqualTo(fixtures.successfulTaskStatus());
+    assertThat(structuredOutput).contains(fixtures.outputMarker());
+    assertThat(rawOutput).contains(fixtures.outputMarker());
+    SecretAssertions.absent("rotated SSH task output", structuredOutput, fixtures.validKey());
+    SecretAssertions.absent("rotated SSH task output", structuredOutput, fixtures.rotatedKey());
+    SecretAssertions.absent("rotated SSH raw output", rawOutput, fixtures.validKey());
+    SecretAssertions.absent("rotated SSH raw output", rawOutput, fixtures.rotatedKey());
+  }
 }

@@ -6,6 +6,7 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- SSH access-key rotation coverage using isolated servers with distinct authorized keys.
 - GitHub Actions pull-request gate with framework checks and the SQLite core profile.
 - Daily PostgreSQL, MySQL, MariaDB, and persistent-runner configuration matrix.
 - Weekly and manually triggered SQLite/PostgreSQL release-upgrade verification.

@@ -128,6 +128,13 @@ public class AccessKeySteps {
     SecretAssertions.absent("SSH access-key collection response", listed.toString(), fixture);
   }
 
+  @Step("Rotate SSH access key {keyId} and verify API responses mask its new secrets")
+  public void rotateAndVerifyMasked(long projectId, long keyId, SshAccessKey fixture) {
+    Calls.expectStatus(
+        api.updateAccessKey(projectId, keyId, fixture.rotationRequest(projectId, keyId)), 204);
+    verifyMasked(projectId, keyId, fixture);
+  }
+
   private long requiredLong(com.fasterxml.jackson.databind.JsonNode document, String field) {
     if (!document.has(field) || !document.get(field).canConvertToLong()) {
       throw new IllegalStateException("Access-key response has no numeric '" + field + "'");

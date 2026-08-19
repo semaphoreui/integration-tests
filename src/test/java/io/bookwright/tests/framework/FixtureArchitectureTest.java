@@ -104,6 +104,8 @@ class FixtureArchitectureTest {
     SecretAssertions.absent("Semaphore SSH key diagnostics", sshKey.toString(), sshKey);
     SecretAssertions.absent(
         "Semaphore SSH request diagnostics", sshKey.request(1).toString(), sshKey);
+    SecretAssertions.absent(
+        "Semaphore SSH rotation diagnostics", sshKey.rotationRequest(1, 2).toString(), sshKey);
 
     assertThat(sauceDemo.toString()).contains("[REDACTED]");
     assertThat(local.toString()).contains("[REDACTED]");

@@ -18,4 +18,4 @@ auth: password
 git_client: cmd_git
 ssh_fixture_image: semaphore-test/ssh-fixture:alpine-3.22.1
 ssh_fixture_key: generated
-capabilities: core-api,task-execution,git-ssh,inventory-ssh,ssh-key-security
+capabilities: core-api,task-execution,git-ssh,inventory-ssh,ssh-key-rotation,ssh-key-security

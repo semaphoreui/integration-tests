@@ -58,7 +58,7 @@ test-environment/profile test prod-postgres-runner
 
 Runner регистрируется автоматически, сохраняет долгоживущий token в отдельном volume и через admin API назначается default runner. Отдельный API-тест подтверждает `active`, `registered`, `is_default`, `online` и heartbeat до запуска task-сценариев.
 
-SSH feature-профиль проверяет один зашифрованный access key сразу на двух клиентских границах: Git clone по SSH и подключение Ansible к удалённому target:
+SSH feature-профиль проверяет зашифрованный access key сразу на двух клиентских границах: Git clone по SSH и подключение Ansible к удалённому target:
 
 ```bash
 test-environment/profile down prod-postgres-runner
@@ -66,7 +66,7 @@ test-environment/profile up feature-ssh-local
 test-environment/profile test feature-ssh-local
 ```
 
-Изолированный SSH-сервер доступен только внутри Compose network. Положительный сценарий подтверждает удалённое выполнение playbook, отрицательный — полезную clone-диагностику с неверным ключом; оба дополнительно проверяют отсутствие private key и passphrase в API и task output.
+Два изолированных SSH-сервера доступны только внутри Compose network и принимают разные сгенерированные ключи. Положительный сценарий подтверждает удалённое выполнение playbook, отрицательный — полезную clone-диагностику с неверным ключом. Rotation-сценарий сначала получает отказ второго сервера со старым ключом, обновляет secret у того же access key через API и затем подтверждает успешные Git clone и Ansible SSH. Все сценарии проверяют отсутствие private key и passphrase в API и task output.
 
 Экспериментальный schedule-профиль воспроизводит реальное cron/`run_at` исполнение в non-UTC timezone:
 
@@ -121,7 +121,7 @@ project → access key → local Git repository → inventory → task template
 
 Git-набор проверяет выполнение задачи из явно выбранной ветки, диагностируемый отказ для отсутствующей ветки и недоступного HTTPS remote. Для authenticated clone дополнительно проверяется, что login/password не попадают в structured и raw task output.
 
-SSH-набор использует отдельный typed fixture и проверяет успешный Git clone по SSH, выполнение playbook на SSH target и безопасный отказ с неверным ключом. Зашифрованная тестовая пара ключей генерируется в игнорируемом `build/test-fixtures/ssh`; private key не входит ни в Git, ни в Docker build context.
+SSH-набор использует отдельный typed fixture и проверяет успешный Git clone по SSH, выполнение playbook на SSH target, безопасный отказ с неверным ключом и ротацию секрета без замены key ID. Две зашифрованные тестовые пары ключей генерируются в игнорируемом `build/test-fixtures/ssh`; private keys не входят ни в Git, ни в Docker build context. Строгая проверка `known_hosts` не тестируется на закреплённом `v2.19.8`, потому что соответствующая конфигурация присутствует только в более новом upstream `develop`.
 
 Task lifecycle-набор запускает безопасный long-running playbook, дожидается marker фактического выполнения и проверяет обычный stop и force-stop. В обоих случаях задача переходит в `stopped`, а шаг после паузы не выполняется.
 

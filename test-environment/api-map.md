@@ -138,7 +138,7 @@ Project
 
 Из Git-рисков P1 автоматизированы успешный запуск из явно выбранной ветки, отсутствующий ref и недоступный authenticated HTTPS remote. Ошибки приводят задачу в ожидаемый статус `error`, сохраняют полезную Git-диагностику и не раскрывают login/password в structured или raw output.
 
-Успешный SSH repository/access key автоматизирован в отдельном `feature-ssh-local`: один зашифрованный ключ используется для Git clone и Ansible SSH inventory, удалённый output подтверждён маркером. Negative-сценарий с неверным ключом проверяет диагностируемый отказ и отсутствие private key/passphrase в API responses, HTTP/Allure diagnostics, structured и raw task output.
+Успешный SSH repository/access key автоматизирован в отдельном `feature-ssh-local`: зашифрованный ключ используется для Git clone и Ansible SSH inventory, удалённый output подтверждён маркером. Negative-сценарий с неверным ключом проверяет диагностируемый отказ. Rotation-сценарий использует два SSH fixture с разными authorized keys: старый secret получает отказ на втором сервере, `PUT /keys/{id}` заменяет secret без изменения key ID, после чего Git clone и Ansible SSH проходят. Private keys/passphrases отсутствуют в API responses, HTTP/Allure diagnostics, structured и raw task output.
 
 Для встроенных ролей `manager` и `task_runner` автоматизированы точные permission bitmask и поведенческие границы. Обе роли могут запускать задачи; manager может управлять ресурсами, но не проектом и участниками; task runner не может изменять ресурсы, проект или участников.
 
@@ -148,4 +148,4 @@ Persistent remote runner автоматизирован отдельной API-�
 
 Schedule P1 расширен отдельным API-набором: backend cron validation, диагностируемые ошибки invalid cron/type/run-at, CRUD/update, active toggle, сохранение `run_at`, `delete_after_run` и task parameters, запрет создания для `task_runner`, а также контракт системной timezone. Реальное cron и `run_at` исполнение покрыто отдельным `feature-schedule-timezone`, но на `v2.19.8` оба сценария воспроизводят отсутствие автоматически созданной task. До Linux-подтверждения профиль оставлен вне CI matrix; доказательства собраны в `schedule-execution-defect.md`.
 
-Следующий шаг P1: подтвердить schedule execution defect в Linux CI/upstream и проверить исправление; затем SSH key rotation/known_hosts.
+Schedule execution defect подтверждён в Linux CI: `v2.19.8` не создаёт task ни для active cron, ни для `run_at`. SSH key rotation автоматизирована. Строгий `known_hosts` остаётся version-gated сценарием: соответствующая конфигурация отсутствует в `v2.19.8` и должна быть добавлена после перехода на релиз, содержащий текущую upstream-реализацию.

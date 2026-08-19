@@ -135,22 +135,29 @@ prepare_ssh_fixture() {
   command -v ssh-keygen >/dev/null 2>&1 || fail "ssh-keygen is required for profile '$profile_id'"
 
   ssh_fixture_dir="$repository_dir/build/test-fixtures/ssh"
-  ssh_private_key="$ssh_fixture_dir/id_ed25519"
-  ssh_public_key="$ssh_private_key.pub"
   mkdir -p "$ssh_fixture_dir"
 
-  if [ ! -s "$ssh_private_key" ] || [ ! -s "$ssh_public_key" ]; then
-    if [ -e "$ssh_private_key" ] || [ -e "$ssh_public_key" ]; then
-      fail "incomplete SSH fixture key pair in $ssh_fixture_dir; remove both files and retry"
+  for ssh_key_name in id_ed25519 id_ed25519_rotated; do
+    ssh_private_key="$ssh_fixture_dir/$ssh_key_name"
+    ssh_public_key="$ssh_private_key.pub"
+    if [ ! -s "$ssh_private_key" ] || [ ! -s "$ssh_public_key" ]; then
+      if [ -e "$ssh_private_key" ] || [ -e "$ssh_public_key" ]; then
+        fail "incomplete SSH fixture key pair for $ssh_key_name in $ssh_fixture_dir; remove both files and retry"
+      fi
+      if [ "$ssh_key_name" = "id_ed25519" ]; then
+        ssh_key_passphrase='Bookwright-ssh-passphrase-42!'
+      else
+        ssh_key_passphrase='Bookwright-rotated-ssh-passphrase-42!'
+      fi
+      ssh-keygen -q -t ed25519 -a 16 \
+        -N "$ssh_key_passphrase" \
+        -C "bookwright-test-only-$ssh_key_name" \
+        -f "$ssh_private_key"
     fi
-    ssh-keygen -q -t ed25519 -a 16 \
-      -N 'Bookwright-ssh-passphrase-42!' \
-      -C bookwright-test-only \
-      -f "$ssh_private_key"
-  fi
 
-  chmod 600 "$ssh_private_key"
-  chmod 644 "$ssh_public_key"
+    chmod 600 "$ssh_private_key"
+    chmod 644 "$ssh_public_key"
+  done
 }
 
 write_allure_environment() {
