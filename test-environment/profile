@@ -80,7 +80,14 @@ wait_for_setup() {
     setup_status=$(docker inspect --format '{{.State.Status}}' "$setup_container")
     if [ "$setup_status" != "exited" ]; then
       printf 'Waiting for profile setup service %s...\n' "$setup_service"
-      compose wait "$setup_service"
+      setup_attempt=0
+      while [ "$setup_status" != "exited" ] && [ "$setup_attempt" -lt 120 ]; do
+        sleep 1
+        setup_status=$(docker inspect --format '{{.State.Status}}' "$setup_container")
+        setup_attempt=$((setup_attempt + 1))
+      done
+      [ "$setup_status" = "exited" ] \
+        || fail "profile setup service '$setup_service' did not exit within 120 seconds"
     fi
 
     setup_exit_code=$(docker inspect --format '{{.State.ExitCode}}' "$setup_container")
