@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: ${{ fromJSON(inputs.include_schedule_investigation && '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-oidc-local","feature-schedule-timezone"]' || '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-oidc-local"]') }}
+        profile: ${{ fromJSON(inputs.include_schedule_investigation && '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-oidc-local","feature-ldap-tls","feature-schedule-timezone"]' || '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-oidc-local","feature-ldap-tls"]') }}
     env:
       PROFILE: ${{ matrix.profile }}
     steps:

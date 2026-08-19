@@ -8,8 +8,12 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 - SSH access-key rotation coverage using isolated servers with distinct authorized keys.
 - Browser-based OIDC discovery, callback, session, return-path, and external-user provisioning coverage through a pinned local Dex provider.
+- OIDC repeat-login, logout, local-account collision, and unavailable-provider coverage.
+- Pinned OpenLDAP LDAPS profile covering bind/search, provisioning, repeat login, logout, invalid credentials, and local-account collision.
+- Dynamic one-off runner profile covering webhook start, task execution, finish callback, and the runner process lifecycle.
+- Reproducer and source-level analysis for the `v2.19.8` defect where a successful one-off runner never exits.
 - GitHub Actions pull-request gate with framework checks and the SQLite core profile.
-- Daily PostgreSQL, MySQL, MariaDB, persistent-runner, SSH, and OIDC configuration matrix.
+- Daily PostgreSQL, MySQL, MariaDB, persistent-runner, SSH, OIDC, and LDAPS configuration matrix.
 - Weekly and manually triggered SQLite/PostgreSQL release-upgrade verification.
 - CI artifacts containing JUnit, HTML, Allure, and failure diagnostics.
 - Downloadable HTML site with a separate Allure report for every executed profile.

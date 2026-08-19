@@ -1,21 +1,31 @@
 package io.bookwright.fixtures.semaphore;
 
-/** Local-only Dex identity and expectations for the Semaphore OIDC feature profile. */
+/** Local-only Dex identities and expectations for the Semaphore OIDC feature profile. */
 public record SemaphoreOidcFixtures(
-    String providerName, String username, String email, String password, String returnPath) {
+    Login successfulLogin, Login localEmailConflict, Provider unavailableProvider) {
 
   public static SemaphoreOidcFixtures standard() {
     return new SemaphoreOidcFixtures(
-        "Bookwright Dex",
-        "oidc.user@bookwright.test",
-        "oidc.user@bookwright.test",
-        "Bookwright-OIDC-42!",
-        "/tokens");
+        new Login(
+            "Bookwright Dex",
+            new Account(
+                "oidc.user@bookwright.test", "oidc.user@bookwright.test", "Bookwright-OIDC-42!"),
+            "/tokens"),
+        new Login(
+            "Bookwright Dex",
+            new Account("admin@localhost", "admin@localhost", "Bookwright-OIDC-Conflict-42!"),
+            "/tokens"),
+        new Provider("Unavailable OIDC", "/tokens"));
   }
 
-  @Override
-  public String toString() {
-    return "SemaphoreOidcFixtures[providerName=%s, username=%s, email=%s, password=[REDACTED], returnPath=%s]"
-        .formatted(providerName, username, email, returnPath);
+  public record Login(String providerName, Account account, String returnPath) {}
+
+  public record Provider(String displayName, String returnPath) {}
+
+  public record Account(String username, String email, String password) {
+    @Override
+    public String toString() {
+      return "Account[username=%s, email=%s, password=[REDACTED]]".formatted(username, email);
+    }
   }
 }

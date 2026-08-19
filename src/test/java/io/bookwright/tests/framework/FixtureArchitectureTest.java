@@ -7,6 +7,7 @@ import io.bookwright.config.Configs;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreOidcFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
@@ -58,11 +59,21 @@ class FixtureArchitectureTest {
           "localhost ansible_connection=local",
           "smoke.yml",
           "Bookwright-ssh-passphrase-42!",
+          "ldap.user",
+          "ldap.user@bookwright.test",
+          "Bookwright-LDAP-42!",
+          "ldap.invalid",
+          "ldap.invalid@bookwright.test",
+          "Bookwright-LDAP-Wrong-42!",
+          "ldap-admin-conflict",
+          "Bookwright-LDAP-Conflict-42!",
           "ssh://fixture@ssh-fixture:22/repositories/ansible",
           "semaphore-bookwright-ssh-target-ok",
           "Bookwright Dex",
           "oidc.user@bookwright.test",
           "Bookwright-OIDC-42!",
+          "Bookwright-OIDC-Conflict-42!",
+          "Unavailable OIDC",
           "0 0 * * *");
 
   @Test
@@ -84,6 +95,7 @@ class FixtureArchitectureTest {
     LocalUserFixtures local = LocalUserFixtures.from(Configs.main());
     SemaphoreFixtures semaphore =
         SemaphoreFixtures.from(Configs.main(), new TestData(1L, 2L, "fixture-redaction"));
+    SemaphoreLdapFixtures ldap = SemaphoreLdapFixtures.standard();
     SemaphoreOidcFixtures oidc = SemaphoreOidcFixtures.standard();
     SemaphoreSshFixtures.SshAccessKey sshKey =
         new SemaphoreSshFixtures.SshAccessKey(
@@ -102,7 +114,22 @@ class FixtureArchitectureTest {
         "Semaphore fixture diagnostics", semaphore.toString(), semaphore.rbac().password());
     SecretAssertions.absent(
         "Semaphore fixture diagnostics", semaphore.toString(), semaphore.invalidLogin().password());
-    SecretAssertions.absent("Semaphore OIDC fixture diagnostics", oidc.toString(), oidc.password());
+    SecretAssertions.absent(
+        "Semaphore LDAP fixture diagnostics", ldap.toString(), ldap.successfulLogin().password());
+    SecretAssertions.absent(
+        "Semaphore LDAP fixture diagnostics", ldap.toString(), ldap.invalidPassword().password());
+    SecretAssertions.absent(
+        "Semaphore LDAP fixture diagnostics",
+        ldap.toString(),
+        ldap.localEmailConflict().password());
+    SecretAssertions.absent(
+        "Semaphore OIDC fixture diagnostics",
+        oidc.toString(),
+        oidc.successfulLogin().account().password());
+    SecretAssertions.absent(
+        "Semaphore OIDC fixture diagnostics",
+        oidc.toString(),
+        oidc.localEmailConflict().account().password());
     SecretAssertions.absent(
         "Semaphore upgrade fixture diagnostics",
         upgrade.toString(),
@@ -116,6 +143,7 @@ class FixtureArchitectureTest {
     assertThat(sauceDemo.toString()).contains("[REDACTED]");
     assertThat(local.toString()).contains("[REDACTED]");
     assertThat(semaphore.toString()).contains("[REDACTED]");
+    assertThat(ldap.toString()).contains("[REDACTED]");
     assertThat(oidc.toString()).contains("[REDACTED]");
     assertThat(upgrade.toString()).contains("[REDACTED]");
     assertThat(sshKey.toString()).contains("[REDACTED]");

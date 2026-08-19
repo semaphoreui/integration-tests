@@ -68,7 +68,7 @@ test-environment/profile test feature-ssh-local
 
 Два изолированных SSH-сервера доступны только внутри Compose network и принимают разные сгенерированные ключи. Положительный сценарий подтверждает удалённое выполнение playbook, отрицательный — полезную clone-диагностику с неверным ключом. Rotation-сценарий сначала получает отказ второго сервера со старым ключом, обновляет secret у того же access key через API и затем подтверждает успешные Git clone и Ansible SSH. Все сценарии проверяют отсутствие private key и passphrase в API и task output.
 
-OIDC feature-профиль выполняет полный браузерный вход через локальный Dex и проверяет callback, session, return path и provisioning external user:
+OIDC feature-профиль выполняет полный браузерный вход через локальный Dex и проверяет callback, session, return path, provisioning external user, повторный вход, logout, конфликт с локальным email и отказ недоступного provider:
 
 ```bash
 test-environment/profile down feature-ssh-local
@@ -76,13 +76,30 @@ test-environment/profile up feature-oidc-local
 test-environment/profile test feature-oidc-local
 ```
 
+LDAPS feature-профиль поднимает pinned OpenLDAP, выполняет service search и user bind по TLS, а затем проверяет provisioning/reuse external user, logout, неверный пароль и защиту локального account:
+
+```bash
+test-environment/profile down feature-oidc-local
+test-environment/profile up feature-ldap-tls
+test-environment/profile test feature-ldap-tls
+```
+
+Dynamic runner profile проверяет start/finish webhook, запуск отдельного one-off runner и реальное выполнение задачи:
+
+```bash
+test-environment/profile down feature-ldap-tls
+test-environment/profile up feature-dynamic-runner
+test-environment/profile test feature-dynamic-runner
+```
+
+На `v2.19.8` задача завершается успешно, но one-off runner не выходит после terminal progress. Профиль оставлен ручным красным reproducer и не входит в стабильную CI matrix. Анализ и вероятная причина находятся в `test-environment/dynamic-runner-one-off-exit-defect.md`.
+
 Экспериментальный schedule-профиль воспроизводит реальное cron/`run_at` исполнение в non-UTC timezone:
 
 ```bash
 test-environment/profile down feature-ssh-local
 test-environment/profile up feature-schedule-timezone
-test-environment/profile test feature-schedule-timezone \
-  --tests io.bookwright.tests.semaphore.ScheduledTaskExecutionTest
+test-environment/profile test feature-schedule-timezone
 ```
 
 На `v2.19.8` оба сценария локально воспроизводят дефект: активное расписание сохраняется, но task не создаётся. Профиль пока не включён в CI matrix; доказательства и ожидаемое поведение находятся в `test-environment/schedule-execution-defect.md`.
@@ -102,7 +119,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 GitHub Actions разделены по стоимости и назначению:
 
 - `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite на `core-sqlite-local`;
-- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH и OIDC feature-профили;
+- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH, OIDC и LDAPS feature-профили;
 - `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.7 → v2.19.8` на SQLite и PostgreSQL.
 
 Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
@@ -152,5 +169,6 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `test-environment/configuration-testing-overview.md` — матрица клиентских конфигураций и опорные профили;
 - `test-environment/smoke-report.md` — результаты проверки стенда.
 - `test-environment/schedule-execution-defect.md` — воспроизводимый дефект cron/run-at execution.
+- `test-environment/dynamic-runner-one-off-exit-defect.md` — воспроизводимый дефект завершения one-off runner.
 
 Исходный код Semaphore хранится локально в `/semaphore/` и исключён из этого репозитория.

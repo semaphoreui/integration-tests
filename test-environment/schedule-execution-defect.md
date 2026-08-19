@@ -49,8 +49,7 @@ Automated reproducer:
 
 ```bash
 test-environment/profile up feature-schedule-timezone
-test-environment/profile test feature-schedule-timezone \
-  --tests io.bookwright.tests.semaphore.ScheduledTaskExecutionTest
+test-environment/profile test feature-schedule-timezone
 ```
 
 ## Actual result

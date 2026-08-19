@@ -43,8 +43,19 @@ public class SemaphoreOidcLoginPage {
     page.waitForURL(config.uiBaseUrl() + returnPath);
   }
 
+  public void waitForLoginPage() {
+    page.waitForURL(config.uiBaseUrl() + "/auth/login");
+  }
+
   public int currentUserStatus() {
-    APIResponse response = page.context().request().get(config.apiBaseUrl() + "user");
+    return status(page.context().request().get(config.apiBaseUrl() + "user"));
+  }
+
+  public int logoutStatus() {
+    return status(page.context().request().post(config.apiBaseUrl() + "auth/logout"));
+  }
+
+  private int status(APIResponse response) {
     try {
       return response.status();
     } finally {

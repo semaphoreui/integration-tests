@@ -4,7 +4,7 @@
 
 Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
 
-Доступны пять опорных профилей и три feature-профиля:
+Доступны пять опорных профилей и пять feature-профилей:
 
 | Профиль | СУБД | Назначение |
 |---|---|---|
@@ -14,8 +14,10 @@ Manifest профиля находится в `profiles/<profile>/profile.yaml`.
 | `core-mariadb-local` | MariaDB 10.11 | проверка совместимости MariaDB через MySQL dialect |
 | `prod-postgres-runner` | PostgreSQL 14.3 | production-like server → DB → persistent remote runner |
 | `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target и защита key material |
-| `feature-oidc-local` | SQLite | реальный browser login через локальный Dex, callback и provisioning external user |
+| `feature-oidc-local` | SQLite | browser login через Dex, session/logout, provisioning и negative account/provider scenarios |
+| `feature-ldap-tls` | SQLite | LDAPS bind/search, provisioning/reuse user, logout и negative credential/account scenarios |
 | `feature-schedule-timezone` | SQLite | cron/run-at execution в `Pacific/Kiritimati`; локальный defect reproducer |
+| `feature-dynamic-runner` | SQLite | webhook-launched one-off runner; defect reproducer для незавершающегося процесса |
 
 Общая конфигурация Semaphore и Git fixture находится в `compose.base.yml`, а профили добавляют только DB/execution-specific overlay. Все публикуют Semaphore на порту `3000`, поэтому одновременно должен быть запущен только один профиль.
 
@@ -125,8 +127,7 @@ test-environment/profile test feature-ssh-local
 ```bash
 test-environment/profile down feature-ssh-local
 test-environment/profile up feature-schedule-timezone
-test-environment/profile test feature-schedule-timezone \
-  --tests io.bookwright.tests.semaphore.ScheduledTaskExecutionTest
+test-environment/profile test feature-schedule-timezone
 ```
 
 Профиль задаёт `SEMAPHORE_SCHEDULE_TIMEZONE=Pacific/Kiritimati`, передаёт ту же зону в test JVM и записывает её в Allure environment. Тесты рассчитывают ближайший cron в этой зоне и отдельный `run_at`, затем ожидают автоматически созданную task по `schedule_id` и её успешный output.
@@ -141,7 +142,29 @@ test-environment/profile up feature-oidc-local
 test-environment/profile test feature-oidc-local
 ```
 
-Профиль запускает pinned Dex `v2.45.1` и браузерный `uiTest`. Сценарий проверяет отображение настроенного провайдера, ввод credentials на стороне IdP, OAuth callback, Semaphore session через `/api/user`, возврат на исходный `/tokens` и создание non-admin external user. `SEMAPHORE_WEB_ROOT` задан явно, а claims `username`/`name` маппятся на `email`, потому что локальный Dex connector не выдаёт `preferred_username`.
+Профиль запускает pinned Dex `v2.45.1` и браузерный `uiTest`. Positive path проверяет provider button, credentials на IdP, OAuth callback, Semaphore session через `/api/user`, возврат на `/tokens` и provisioning non-admin external user. Повторный вход доказывает reuse того же user ID, logout очищает session, а отдельные negative paths защищают локальный account при совпадении email и не создают session при отказе discovery. `SEMAPHORE_WEB_ROOT` задан явно, а claims `username`/`name` маппятся на `email`, потому что локальный Dex connector не выдаёт `preferred_username`.
+
+## LDAPS feature-профиль
+
+```bash
+test-environment/profile down feature-oidc-local
+test-environment/profile up feature-ldap-tls
+test-environment/profile test feature-ldap-tls
+```
+
+Профиль запускает pinned OpenLDAP `1.5.0` с самоподписанным TLS и тремя directory users. Semaphore подключается по LDAPS `636`, делает service bind, search по `uid`, user bind и mapping `uid`/`cn`/`mail`. Четыре сценария проверяют provisioning external user, reuse того же ID после logout, отказ неверного пароля без provisioning и защиту локального admin при совпадении email.
+
+## Dynamic one-off runner
+
+```bash
+test-environment/profile down feature-ldap-tls
+test-environment/profile up feature-dynamic-runner
+test-environment/profile test feature-dynamic-runner
+```
+
+Профиль регистрирует global runner с webhook, назначает его default и на `start` запускает отдельный `semaphore runner start --no-config` с `SEMAPHORE_RUNNER_ONE_OFF=true`. Launcher записывает события `webhook_start`, `runner_started`, `webhook_finish` и фактический exit code процесса, но сам процесс не останавливает.
+
+На `v2.19.8` task успешно выполняется и сервер вызывает `finish`, однако runner остаётся жив. Тест намеренно красный, потому что ожидает `runner_exited` с кодом `0`. Профиль не входит в обычную CI matrix; полная репродукция и анализ исходного кода — в `dynamic-runner-one-off-exit-defect.md`.
 
 ## Обновление N-1 → current
 
@@ -164,7 +187,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 | Workflow | Триггер | Профили |
 |---|---|---|
 | `CI` | pull request и push в `main` | `core-sqlite-local` после framework quality gate |
-| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-oidc-local` |
+| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-oidc-local`, `feature-ldap-tls` |
 | `Release upgrade` | воскресенье `03:30 UTC`, вручную | `upgrade-sqlite-local`, `upgrade-postgres-local` |
 
 Каждый matrix profile работает на отдельном runner, поэтому общий порт `3000` не создаёт конфликтов. После выполнения workflow сохраняет JUnit/HTML/Allure artifacts, при ошибке добавляет `profile ps` и конечный снимок Compose logs, а затем удаляет только контейнеры и volumes выбранного профиля.

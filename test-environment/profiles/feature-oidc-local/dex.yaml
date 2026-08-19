@@ -25,3 +25,8 @@ staticPasswords:
     hash: $2y$10$083AJsRwhLY53laxO1YKjueHo0C2KvzSlSgPugUp5xWCiE0AquTTe
     username: oidc.user@bookwright.test
     userID: 2d3f3c3a-493f-4b65-b617-13f07414c28e
+  - email: admin@localhost
+    # bcrypt hash for the local-only conflict credential stored in SemaphoreOidcFixtures
+    hash: $2y$10$KoyJAV23DRbseGM7J5zN6ud0m1Ug1f5ZHwkBG5mfQ.MHAGng/6w.W
+    username: admin@localhost
+    userID: fa0d5bc1-9ccb-43f2-a140-d983bb9751c3

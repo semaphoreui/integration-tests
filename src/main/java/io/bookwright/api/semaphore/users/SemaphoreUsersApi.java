@@ -13,6 +13,9 @@ import retrofit2.http.Path;
 
 public interface SemaphoreUsersApi {
 
+  @GET("user")
+  Call<User> getCurrentUser();
+
   @POST("users")
   Call<User> createUser(@Body UserRequest request);
 

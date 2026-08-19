@@ -19,4 +19,4 @@ auth: password,oidc
 oidc_provider: dex-v2.45.1
 oidc_image: ghcr.io/dexidp/dex:v2.45.1-alpine
 git_client: cmd_git
-capabilities: oidc-discovery,oidc-browser-login,oidc-user-provisioning,oidc-return-path
+capabilities: oidc-discovery,oidc-browser-login,oidc-user-provisioning,oidc-return-path,oidc-repeat-login,oidc-logout,oidc-local-account-conflict,oidc-provider-failure

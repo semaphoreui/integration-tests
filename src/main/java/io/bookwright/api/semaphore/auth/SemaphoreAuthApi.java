@@ -9,4 +9,7 @@ public interface SemaphoreAuthApi {
 
   @POST("auth/login")
   Call<Void> login(@Body LoginRequest request);
+
+  @POST("auth/logout")
+  Call<Void> logout();
 }

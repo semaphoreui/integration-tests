@@ -43,15 +43,26 @@ public class AuthSteps {
 
   @Step("Login as isolated Semaphore user")
   public SemaphoreSessionApis loginAs(SemaphoreTestUser account) {
+    return loginAs(new LoginRequest(account.user().username(), account.password()));
+  }
+
+  @Step("Login with isolated Semaphore credentials")
+  public SemaphoreSessionApis loginAs(LoginRequest request) {
     var retrofit = RetrofitFactory.create(config.apiBaseUrl());
     var isolatedAuth = retrofit.create(SemaphoreAuthApi.class);
-    Calls.expectStatus(
-        isolatedAuth.login(new LoginRequest(account.user().username(), account.password())), 204);
+    Calls.expectStatus(isolatedAuth.login(request), 204);
     return new SemaphoreSessionApis(
+        isolatedAuth,
         retrofit.create(SemaphoreProjectsApi.class),
         retrofit.create(SemaphoreAccessKeysApi.class),
         retrofit.create(SemaphoreSchedulesApi.class),
         retrofit.create(SemaphoreTasksApi.class),
         retrofit.create(SemaphoreUsersApi.class));
+  }
+
+  @Step("Log out isolated Semaphore session")
+  public void logout(SemaphoreSessionApis session) {
+    Calls.expectStatus(session.auth().logout(), 204);
+    Calls.expectStatus(session.users().getCurrentUser(), 401);
   }
 }

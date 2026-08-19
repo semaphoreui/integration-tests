@@ -44,6 +44,10 @@ public interface MainConfig extends Config {
   @DefaultValue("true")
   boolean uiHeadless();
 
+  @Key("runner.fixture.base.url")
+  @DefaultValue("http://localhost:3003")
+  String runnerFixtureBaseUrl();
+
   @Key("teardown.failOnError")
   @DefaultValue("true")
   boolean teardownFailOnError();

@@ -3,7 +3,7 @@ services:
     environment:
       SEMAPHORE_WEB_ROOT: http://localhost:3000
       SEMAPHORE_OIDC_PROVIDERS: >-
-        {"dex":{"client_id":"semaphore","client_secret":"semaphore-test-client-secret","provider_url":"http://dex.localhost:5556/dex","redirect_url":"http://localhost:3000/api/auth/oidc/dex/redirect","display_name":"Bookwright Dex","username_claim":"email","name_claim":"email","return_via_state":true}}
+        {"dex":{"client_id":"semaphore","client_secret":"semaphore-test-client-secret","provider_url":"http://dex.localhost:5556/dex","redirect_url":"http://localhost:3000/api/auth/oidc/dex/redirect","display_name":"Bookwright Dex","username_claim":"email","name_claim":"email","return_via_state":true},"unavailable":{"client_id":"unavailable","client_secret":"unavailable-test-client-secret","provider_url":"http://127.0.0.1:1/oidc","redirect_url":"http://localhost:3000/api/auth/oidc/unavailable/redirect","display_name":"Unavailable OIDC","username_claim":"email","name_claim":"email","return_via_state":true}}
     extra_hosts:
       - "dex.localhost:host-gateway"
     depends_on:

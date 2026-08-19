@@ -58,6 +58,7 @@ select_profile() {
   [ -n "$selected_schedule_timezone" ] || selected_schedule_timezone=UTC
   selected_test_task=$(manifest_value test_task)
   [ -n "$selected_test_task" ] || selected_test_task=apiTest
+  selected_test_class=$(manifest_value test_class)
 
   case "$selected_test_task" in
     apiTest|uiTest) ;;
@@ -218,6 +219,9 @@ write_allure_environment() {
     fi
     printf 'auth=%s\n' "$(manifest_value auth)"
     printf 'test.task=%s\n' "$selected_test_task"
+    if [ -n "$selected_test_class" ]; then
+      printf 'test.class=%s\n' "$selected_test_class"
+    fi
     oidc_provider=$(manifest_value oidc_provider)
     if [ -n "$oidc_provider" ]; then
       printf 'auth.oidc.provider=%s\n' "$oidc_provider"
@@ -227,6 +231,12 @@ write_allure_environment() {
       oidc_image_reference=$(docker image inspect "$oidc_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
       [ -n "$oidc_image_reference" ] || oidc_image_reference=$oidc_image
       printf 'auth.oidc.image=%s\n' "$oidc_image_reference"
+    fi
+    ldap_image=$(manifest_value ldap_image)
+    if [ -n "$ldap_image" ]; then
+      ldap_image_reference=$(docker image inspect "$ldap_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+      [ -n "$ldap_image_reference" ] || ldap_image_reference=$ldap_image
+      printf 'auth.ldap.image=%s\n' "$ldap_image_reference"
     fi
     printf 'git.client=%s\n' "$(manifest_value git_client)"
     printf 'capabilities=%s\n' "$(manifest_value capabilities)"
@@ -286,11 +296,15 @@ case "$action" in
     write_allure_environment
     (
       cd "$repository_dir"
-      ./gradlew "$selected_test_task" \
-        -DSTAND="$stand" \
-        -DSEMAPHORE_PROFILE="$profile_id" \
-        -DSEMAPHORE_SCHEDULE_TIMEZONE="$selected_schedule_timezone" \
+      set -- "$selected_test_task" \
+        "-DSTAND=$stand" \
+        "-DSEMAPHORE_PROFILE=$profile_id" \
+        "-DSEMAPHORE_SCHEDULE_TIMEZONE=$selected_schedule_timezone" \
         "$@"
+      if [ -n "$selected_test_class" ]; then
+        set -- "$@" --tests "$selected_test_class"
+      fi
+      ./gradlew "$@"
     )
     ;;
   upgrade-test)

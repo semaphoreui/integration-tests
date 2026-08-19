@@ -1,0 +1,55 @@
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_USE_REMOTE_RUNNER: "true"
+      SEMAPHORE_RUNNER_REGISTRATION_TOKEN: bookwright-dynamic-runner-registration-token
+
+  dynamic-runner:
+    image: semaphoreui/runner:v2.19.8
+    entrypoint: ["python3", "/dynamic-runner-launcher.py"]
+    restart: unless-stopped
+    ports:
+      - "3003:8080"
+    environment:
+      SEMAPHORE_WEB_ROOT: http://semaphore:3000
+      SEMAPHORE_RUNNER_API_URL: http://semaphore:3000/internal
+      SEMAPHORE_RUNNER_REGISTRATION_TOKEN: bookwright-dynamic-runner-registration-token
+      SEMAPHORE_RUNNER_TOKEN_FILE: /var/lib/semaphore/runner_token.txt
+      SEMAPHORE_RUNNER_NAME: bookwright-dynamic-runner
+      SEMAPHORE_RUNNER_WEBHOOK: http://dynamic-runner:8080/webhook
+      SEMAPHORE_RUNNER_ENABLED: "true"
+      SEMAPHORE_RUNNER_ONE_OFF: "true"
+      SEMAPHORE_RUNNER_MAX_PARALLEL_TASKS: "1"
+    depends_on:
+      semaphore:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "test -s /var/lib/semaphore/runner_token.txt && python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)\"",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 45
+    volumes:
+      - dynamic-runner-data:/var/lib/semaphore
+      - fixture-repository:/fixtures/ansible:ro
+      - ./profiles/feature-dynamic-runner/dynamic-runner-launcher.py:/dynamic-runner-launcher.py:ro
+
+  dynamic-runner-configure:
+    image: semaphoreui/runner:v2.19.8
+    entrypoint: ["python3", "/configure-runner.py"]
+    environment:
+      SEMAPHORE_API_URL: http://semaphore:3000/api
+      SEMAPHORE_ADMIN: admin
+      SEMAPHORE_ADMIN_PASSWORD: test-password
+      SEMAPHORE_TEST_RUNNER_NAME: bookwright-dynamic-runner
+    depends_on:
+      dynamic-runner:
+        condition: service_healthy
+    volumes:
+      - ./profiles/prod-postgres-runner/configure-runner.py:/configure-runner.py:ro
+
+volumes:
+  dynamic-runner-data:

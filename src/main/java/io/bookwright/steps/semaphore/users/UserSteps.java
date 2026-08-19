@@ -38,6 +38,11 @@ public class UserSteps {
     return Calls.body(api.getUsers(), 200, "users");
   }
 
+  @Step("Get current isolated Semaphore user")
+  public User currentUser(SemaphoreSessionApis session) {
+    return Calls.body(session.users().getCurrentUser(), 200, "current user");
+  }
+
   @Step("Create Semaphore user")
   public User create(UserRequest request) {
     try {
