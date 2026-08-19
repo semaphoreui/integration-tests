@@ -1,6 +1,6 @@
 # Карта API для первой автоматизации
 
-**Версия стенда:** Semaphore UI `v2.19.7`  
+**Версия стенда:** Semaphore UI `v2.19.8`
 **Источники:** `api-docs.yml`, `api/router.go`, read-only запросы к локальному стенду
 
 ## Общая картина
@@ -144,4 +144,6 @@ Project
 
 Persistent remote runner автоматизирован отдельной API-группой и production-like профилем PostgreSQL. Проверяются регистрация, `active`, `is_default`, `online`, heartbeat и выполнение всей существующей task suite вне server process. Обнаруженный конфигурационный контракт: global runner после авторегистрации не становится default автоматически, а задачи без tag выбирают только `is_default=true` runners.
 
-Следующее расширение P1: SSH key и cron validation/timezone.
+Schedule P1 расширен отдельным API-набором: backend cron validation, диагностируемые ошибки invalid cron/type/run-at, CRUD/update, active toggle, сохранение `run_at`, `delete_after_run` и task parameters, запрет создания для `task_runner`, а также контракт системной timezone. Реальное срабатывание по cron, DST-переход и delete-after-run после исполнения остаются отдельными временными сценариями, чтобы не замедлять основной PR gate.
+
+Следующее расширение P1: успешный SSH repository/access key и реальное срабатывание schedule в выделенном timezone-профиле.

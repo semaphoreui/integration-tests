@@ -128,6 +128,7 @@ public record SemaphoreFixtures(
   public record Templates(Template primary, Template longRunning) {}
 
   public record Schedule(String name, String cronFormat, boolean active, String type) {
+
     public ScheduleRequest request(long projectId, long templateId) {
       return new ScheduleRequest(name, projectId, templateId, cronFormat, active, type);
     }

@@ -66,7 +66,7 @@ test-environment/profile down upgrade-sqlite-local
 test-environment/profile upgrade-test upgrade-postgres-local
 ```
 
-Текущий N−1 путь — `v2.19.7 → v2.19.8`. Сохранённые данные и access keys читаются на SQLite и PostgreSQL, но upgrade gate остаётся красным из-за неполного task output после terminal status. Актуальная диагностика зафиксирована в `test-environment/v2.19.8-regression-report.md`; исторический schema-дефект пары `v2.19.6 → v2.19.7` — в `test-environment/upgrade-report.md`.
+Текущий N−1 путь — `v2.19.7 → v2.19.8`. Сохранённые данные и access keys читаются на SQLite и PostgreSQL; оба upgrade-профиля прошли в Linux CI 2026-08-19. Локальные прогоны ранее ловили неполный task output после terminal status, поэтому сценарий остаётся отдельным наблюдаемым gate. Диагностика зафиксирована в `test-environment/v2.19.8-regression-report.md`; исторический schema-дефект пары `v2.19.6 → v2.19.7` — в `test-environment/upgrade-report.md`.
 
 ## CI
 
@@ -115,6 +115,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `semaphore-testing-component-map.md` — карта компонентов;
 - `outputs/issues-assessment/` — полный реестр issues;
 - `test-environment/api-map.md` — карта API и приоритеты автоматизации;
+- `test-environment/legacy-qa-review.md` — разбор старых UI-тестов и ручных сценариев;
 - `test-environment/configuration-testing-overview.md` — матрица клиентских конфигураций и опорные профили;
 - `test-environment/smoke-report.md` — результаты проверки стенда.
 

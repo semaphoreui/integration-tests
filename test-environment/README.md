@@ -117,7 +117,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 
 Команда удаляет только volumes выбранного upgrade-профиля, поднимает N-1, создаёт связанный persisted fixture и выполняет задачу. Затем она пересоздаёт только server на текущем image, проверяет сохранённые project/access key/repository/inventory/template/schedule/task output, повторно выполняет старый template и запускает обычную core suite. Оба image references и digests записываются в Allure environment.
 
-На паре `v2.19.7` → `v2.19.8` оба профиля успешно читают сохранённые project/access key/repository/inventory/template/schedule/task и повторно выполняют template. Однако job остаётся красным: terminal `success` публикуется раньше полного task output, а после test cleanup server получает FK violation при поздней записи stage. Подробности — в `v2.19.8-regression-report.md`; исторический schema-дефект `v2.19.6` → `v2.19.7` сохранён в `upgrade-report.md`.
+На паре `v2.19.7` → `v2.19.8` оба профиля успешно читают сохранённые project/access key/repository/inventory/template/schedule/task и повторно выполняют template. Оба профиля прошли в Linux CI 2026-08-19. На локальном Docker ранее воспроизводилась гонка: terminal `success` появлялся раньше полного task output, а после test cleanup server получал FK violation при поздней записи stage. Поэтому upgrade workflow остаётся отдельным наблюдаемым gate. Подробности — в `v2.19.8-regression-report.md`; исторический schema-дефект `v2.19.6` → `v2.19.7` сохранён в `upgrade-report.md`.
 
 ## CI-профили
 

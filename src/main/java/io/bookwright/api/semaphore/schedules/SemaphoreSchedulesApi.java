@@ -1,6 +1,8 @@
 package io.bookwright.api.semaphore.schedules;
 
+import io.bookwright.api.model.semaphore.CronValidationRequest;
 import io.bookwright.api.model.semaphore.Schedule;
+import io.bookwright.api.model.semaphore.ScheduleActiveRequest;
 import io.bookwright.api.model.semaphore.ScheduleRequest;
 import java.util.List;
 import retrofit2.Call;
@@ -8,6 +10,7 @@ import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Path;
 
 public interface SemaphoreSchedulesApi {
@@ -18,9 +21,24 @@ public interface SemaphoreSchedulesApi {
   @GET("project/{projectId}/schedules")
   Call<List<Schedule>> getSchedules(@Path("projectId") long projectId);
 
+  @POST("project/{projectId}/schedules/validate")
+  Call<Void> validateCron(@Path("projectId") long projectId, @Body CronValidationRequest request);
+
   @GET("project/{projectId}/schedules/{scheduleId}")
   Call<Schedule> getSchedule(
       @Path("projectId") long projectId, @Path("scheduleId") long scheduleId);
+
+  @PUT("project/{projectId}/schedules/{scheduleId}")
+  Call<Void> updateSchedule(
+      @Path("projectId") long projectId,
+      @Path("scheduleId") long scheduleId,
+      @Body ScheduleRequest request);
+
+  @PUT("project/{projectId}/schedules/{scheduleId}/active")
+  Call<Void> setScheduleActive(
+      @Path("projectId") long projectId,
+      @Path("scheduleId") long scheduleId,
+      @Body ScheduleActiveRequest request);
 
   @DELETE("project/{projectId}/schedules/{scheduleId}")
   Call<Void> deleteSchedule(@Path("projectId") long projectId, @Path("scheduleId") long scheduleId);
