@@ -28,9 +28,11 @@ public final class SecretSanitizer {
           "cookie",
           "credential",
           "password",
+          "passcode",
           "passwd",
           "passphrase",
           "private_key",
+          "recovery_code",
           "token",
           "secret");
 
@@ -121,7 +123,7 @@ public final class SecretSanitizer {
           .properties()
           .forEach(
               entry -> {
-                if (isSensitive(entry.getKey())) {
+                if (isSensitive(entry.getKey()) || isSensitiveValue(entry.getValue())) {
                   object.put(entry.getKey(), REDACTED);
                 } else {
                   redact(entry.getValue());
@@ -137,5 +139,9 @@ public final class SecretSanitizer {
     return SENSITIVE_MARKERS.stream().anyMatch(normalized::contains)
         || normalized.contains("api_key")
         || normalized.contains("apikey");
+  }
+
+  private static boolean isSensitiveValue(JsonNode value) {
+    return value.isTextual() && value.textValue().startsWith("otpauth://");
   }
 }

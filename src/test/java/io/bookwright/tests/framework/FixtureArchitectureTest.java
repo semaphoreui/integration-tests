@@ -10,7 +10,9 @@ import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreOidcFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreSurveyFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreVariableGroupFixtures;
 import io.bookwright.util.TestData;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -101,6 +103,10 @@ class FixtureArchitectureTest {
         new SemaphoreSshFixtures.SshAccessKey(
             "fixture-key", "ssh", "fixture", "ssh-passphrase-secret", "ssh-private-key-secret");
     SemaphoreUpgradeFixtures upgrade = SemaphoreUpgradeFixtures.standard();
+    SemaphoreVariableGroupFixtures variableGroup =
+        SemaphoreVariableGroupFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
+    SemaphoreSurveyFixtures survey =
+        SemaphoreSurveyFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
 
     SecretAssertions.absent(
         "SauceDemo fixture diagnostics", sauceDemo.toString(), sauceDemo.standardUser().password());
@@ -139,6 +145,20 @@ class FixtureArchitectureTest {
         "Semaphore SSH request diagnostics", sshKey.request(1).toString(), sshKey);
     SecretAssertions.absent(
         "Semaphore SSH rotation diagnostics", sshKey.rotationRequest(1, 2).toString(), sshKey);
+    SecretAssertions.absent(
+        "Semaphore Variable Group fixture diagnostics",
+        variableGroup.toString(),
+        variableGroup.variableSecret().value());
+    SecretAssertions.absent(
+        "Semaphore Variable Group request diagnostics",
+        variableGroup.createRequest(1).toString(),
+        variableGroup.environmentSecret().value());
+    SecretAssertions.absent(
+        "Semaphore survey fixture diagnostics", survey.toString(), survey.taskSecret().value());
+    SecretAssertions.absent(
+        "Semaphore survey task request diagnostics",
+        survey.taskRequest(1).toString(),
+        survey.taskSecret().value());
 
     assertThat(sauceDemo.toString()).contains("[REDACTED]");
     assertThat(local.toString()).contains("[REDACTED]");
@@ -147,6 +167,8 @@ class FixtureArchitectureTest {
     assertThat(oidc.toString()).contains("[REDACTED]");
     assertThat(upgrade.toString()).contains("[REDACTED]");
     assertThat(sshKey.toString()).contains("[REDACTED]");
+    assertThat(variableGroup.toString()).contains("[REDACTED]");
+    assertThat(survey.toString()).contains("[REDACTED]");
   }
 
   private void inspect(Path root, List<String> violations) throws IOException {

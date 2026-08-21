@@ -7,6 +7,7 @@ import io.bookwright.api.semaphore.templates.SemaphoreTemplatesApi;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
+import java.io.IOException;
 import java.util.List;
 
 public class TemplateSteps {
@@ -28,6 +29,29 @@ public class TemplateSteps {
         "Delete Semaphore task template " + template.id(),
         () -> Calls.expectStatus(api.deleteTemplate(projectId, template.id()), 204));
     return template;
+  }
+
+  @Step("Verify Semaphore rejects invalid template {request.name}")
+  public void verifyRejected(
+      long projectId, TemplateRequest request, String expectedValidationError) {
+    var response = Calls.response(api.createTemplate(projectId, request));
+    Calls.expectStatus(response, 400);
+    try (var body = response.errorBody()) {
+      String diagnostic = body == null ? "" : body.string();
+      if (!diagnostic.contains(expectedValidationError)) {
+        throw new IllegalStateException(
+            "Template validation response did not contain '%s'. Body: %s"
+                .formatted(expectedValidationError, diagnostic));
+      }
+    } catch (IOException error) {
+      throw new IllegalStateException(
+          "Could not read Semaphore template validation response", error);
+    }
+  }
+
+  @Step("Get Semaphore template {templateId} in project {projectId}")
+  public Template get(long projectId, long templateId) {
+    return Calls.body(api.getTemplate(projectId, templateId), 200, "task template");
   }
 
   @Step("Find required template {name} in Semaphore project {projectId}")

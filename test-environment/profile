@@ -14,6 +14,7 @@ Usage:
   test-environment/profile up <profile>
   test-environment/profile test <profile> [Gradle arguments]
   test-environment/profile upgrade-test <profile>
+  test-environment/profile encryption-rotation-test <profile>
   test-environment/profile ps <profile>
   test-environment/profile logs <profile> [--follow]
   test-environment/profile down <profile>
@@ -25,6 +26,10 @@ therefore requires the explicit --yes confirmation.
 upgrade-test is available only for upgrade profiles. It recreates that profile's
 isolated volumes, seeds data on N-1, switches the server image to current and
 verifies the persisted data and task execution.
+
+encryption-rotation-test is available only for encryption rotation profiles. It
+creates data with the old primary key, hot-reloads a new primary, rekeys database
+secrets, removes the retired key and verifies the persisted task fixture.
 EOF
 }
 
@@ -59,9 +64,15 @@ select_profile() {
   selected_test_task=$(manifest_value test_task)
   [ -n "$selected_test_task" ] || selected_test_task=apiTest
   selected_test_class=$(manifest_value test_class)
+  selected_api_base_url=$(manifest_value api_base_url)
+  selected_ui_base_url=$(manifest_value ui_base_url)
+  selected_ui_ignore_https_errors=$(manifest_value ui_ignore_https_errors)
+  [ -n "$selected_ui_ignore_https_errors" ] || selected_ui_ignore_https_errors=false
+  selected_tls_fixture=$(manifest_value tls_fixture)
+  selected_encryption_fixture=$(manifest_value encryption_fixture)
 
   case "$selected_test_task" in
-    apiTest|uiTest) ;;
+    apiTest|uiTest|totpTest|encryptionRotationTest) ;;
     *) fail "unsupported test_task '$selected_test_task' in $manifest_file" ;;
   esac
 
@@ -109,7 +120,12 @@ wait_for_setup() {
 await_ready() {
   attempt=0
   while [ "$attempt" -lt 60 ]; do
-    if [ "$(curl --silent --show-error --max-time 2 "$readiness_url" 2>/dev/null || true)" = "pong" ]; then
+    if [ "$selected_tls_fixture" = "generated" ]; then
+      readiness_response=$(curl --silent --show-error --max-time 2 --cacert "$tls_certificate" "$readiness_url" 2>/dev/null || true)
+    else
+      readiness_response=$(curl --silent --show-error --max-time 2 "$readiness_url" 2>/dev/null || true)
+    fi
+    if [ "$readiness_response" = "pong" ]; then
       printf 'Profile %s is ready at %s\n' "$profile_id" "$readiness_url"
       return 0
     fi
@@ -168,6 +184,89 @@ prepare_ssh_fixture() {
   done
 }
 
+prepare_tls_fixture() {
+  [ "$selected_tls_fixture" = "generated" ] || return 0
+  command -v openssl >/dev/null 2>&1 || fail "openssl is required for profile '$profile_id'"
+  configure_java
+
+  tls_fixture_dir="$repository_dir/build/test-fixtures/proxy-tls"
+  tls_private_key="$tls_fixture_dir/localhost-key.pem"
+  tls_certificate="$tls_fixture_dir/localhost-cert.pem"
+  tls_truststore="$tls_fixture_dir/localhost-truststore.p12"
+  mkdir -p "$tls_fixture_dir"
+
+  if [ ! -s "$tls_private_key" ] || [ ! -s "$tls_certificate" ]; then
+    if [ -e "$tls_private_key" ] || [ -e "$tls_certificate" ]; then
+      fail "incomplete TLS fixture in $tls_fixture_dir; remove the directory and retry"
+    fi
+    openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
+      -keyout "$tls_private_key" \
+      -out "$tls_certificate" \
+      -config "$profiles_dir/feature-proxy-oidc/openssl.cnf"
+  fi
+
+  chmod 600 "$tls_private_key"
+  chmod 644 "$tls_certificate"
+
+  if [ ! -s "$tls_truststore" ]; then
+    if [ -n "${JAVA_HOME:-}" ]; then
+      keytool_command="$JAVA_HOME/bin/keytool"
+    else
+      keytool_command=$(command -v keytool || true)
+    fi
+    [ -x "$keytool_command" ] || fail "keytool is required for profile '$profile_id'"
+    "$keytool_command" -importcert -noprompt \
+      -alias bookwright-proxy-localhost \
+      -file "$tls_certificate" \
+      -keystore "$tls_truststore" \
+      -storetype PKCS12 \
+      -storepass changeit
+  fi
+}
+
+prepare_encryption_fixture() {
+  [ "$selected_encryption_fixture" = "generated" ] || return 0
+  command -v openssl >/dev/null 2>&1 || fail "openssl is required for profile '$profile_id'"
+
+  encryption_fixture_dir="$repository_dir/build/test-fixtures/encryption-rotation"
+  encryption_keys_dir="$encryption_fixture_dir/keys"
+  encryption_keys_file="$encryption_fixture_dir/keys.yaml"
+  old_encryption_key="$encryption_keys_dir/old-primary.key"
+  new_encryption_key="$encryption_keys_dir/new-primary.key"
+  mkdir -p "$encryption_keys_dir"
+
+  if [ ! -s "$old_encryption_key" ]; then
+    openssl rand -base64 -out "$old_encryption_key" 32
+  fi
+  if [ ! -s "$new_encryption_key" ]; then
+    openssl rand -base64 -out "$new_encryption_key" 32
+  fi
+  # Disposable test keys are world-readable inside this isolated profile so the
+  # host and the non-root container user can share the same bind mount on Linux/macOS.
+  chmod 644 "$old_encryption_key" "$new_encryption_key"
+}
+
+write_encryption_keyset() {
+  active_key=$1
+  include_old_key=$2
+  temporary_keys_file="$encryption_keys_file.tmp"
+
+  {
+    printf 'keys:\n'
+    if [ "$include_old_key" = "true" ]; then
+      printf '  old-primary:\n'
+      printf '    file: /run/semaphore-encryption/keys/old-primary.key\n'
+    fi
+    printf '  new-primary:\n'
+    printf '    file: /run/semaphore-encryption/keys/new-primary.key\n'
+    printf 'active:\n'
+    printf '  secret_key: %s\n' "$active_key"
+    printf '  option_key: %s\n' "$active_key"
+  } > "$temporary_keys_file"
+  chmod 644 "$temporary_keys_file"
+  mv "$temporary_keys_file" "$encryption_keys_file"
+}
+
 write_allure_environment() {
   allure_dir="$repository_dir/build/allure-results"
   mkdir -p "$allure_dir"
@@ -222,6 +321,15 @@ write_allure_environment() {
     if [ -n "$selected_test_class" ]; then
       printf 'test.class=%s\n' "$selected_test_class"
     fi
+    if [ -n "$selected_api_base_url" ]; then
+      printf 'api.base.url=%s\n' "$selected_api_base_url"
+    fi
+    if [ -n "$selected_ui_base_url" ]; then
+      printf 'ui.base.url=%s\n' "$selected_ui_base_url"
+    fi
+    if [ "$selected_tls_fixture" = "generated" ]; then
+      printf 'tls.termination=reverse-proxy-self-signed\n'
+    fi
     oidc_provider=$(manifest_value oidc_provider)
     if [ -n "$oidc_provider" ]; then
       printf 'auth.oidc.provider=%s\n' "$oidc_provider"
@@ -237,6 +345,12 @@ write_allure_environment() {
       ldap_image_reference=$(docker image inspect "$ldap_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
       [ -n "$ldap_image_reference" ] || ldap_image_reference=$ldap_image
       printf 'auth.ldap.image=%s\n' "$ldap_image_reference"
+    fi
+    proxy_image=$(manifest_value proxy_image)
+    if [ -n "$proxy_image" ]; then
+      proxy_image_reference=$(docker image inspect "$proxy_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+      [ -n "$proxy_image_reference" ] || proxy_image_reference=$proxy_image
+      printf 'proxy.image=%s\n' "$proxy_image_reference"
     fi
     printf 'git.client=%s\n' "$(manifest_value git_client)"
     printf 'capabilities=%s\n' "$(manifest_value capabilities)"
@@ -264,6 +378,28 @@ run_upgrade_phase() {
   )
 }
 
+run_encryption_rotation_phase() {
+  phase=$1
+  (
+    cd "$repository_dir"
+    ./gradlew encryptionRotationTest \
+      -DSTAND="$stand" \
+      -DSEMAPHORE_PROFILE="$profile_id" \
+      -DSEMAPHORE_SCHEDULE_TIMEZONE="$selected_schedule_timezone" \
+      -DSEMAPHORE_ENCRYPTION_ROTATION_PHASE="$phase"
+  )
+}
+
+assert_vault_state() {
+  output=$1
+  expected=$2
+  description=$3
+  case "$output" in
+    *"$expected"*) ;;
+    *) fail "$description; expected vault output to contain '$expected'" ;;
+  esac
+}
+
 action=${1:-}
 
 case "$action" in
@@ -282,14 +418,23 @@ case "$action" in
   up)
     select_profile "${2:-}"
     prepare_ssh_fixture
+    prepare_tls_fixture
+    prepare_encryption_fixture
+    if [ "$selected_encryption_fixture" = "generated" ] && [ ! -s "$encryption_keys_file" ]; then
+      write_encryption_keyset old-primary true
+    fi
     compose up --detach
     wait_for_setup
     await_ready
     ;;
   test)
     select_profile "${2:-}"
+    [ "$selected_encryption_fixture" != "generated" ] \
+      || fail "profile '$profile_id' requires: test-environment/profile encryption-rotation-test $profile_id"
     shift 2
     prepare_ssh_fixture
+    prepare_tls_fixture
+    prepare_encryption_fixture
     wait_for_setup
     await_ready
     configure_java
@@ -300,7 +445,19 @@ case "$action" in
         "-DSTAND=$stand" \
         "-DSEMAPHORE_PROFILE=$profile_id" \
         "-DSEMAPHORE_SCHEDULE_TIMEZONE=$selected_schedule_timezone" \
+        "-Dui.ignore.https.errors=$selected_ui_ignore_https_errors" \
         "$@"
+      if [ -n "$selected_api_base_url" ]; then
+        set -- "$@" "-Dapi.base.url=$selected_api_base_url"
+      fi
+      if [ -n "$selected_ui_base_url" ]; then
+        set -- "$@" "-Dui.base.url=$selected_ui_base_url"
+      fi
+      if [ "$selected_tls_fixture" = "generated" ]; then
+        set -- "$@" \
+          "-Djavax.net.ssl.trustStore=$tls_truststore" \
+          "-Djavax.net.ssl.trustStorePassword=changeit"
+      fi
       if [ -n "$selected_test_class" ]; then
         set -- "$@" --tests "$selected_test_class"
       fi
@@ -335,6 +492,57 @@ case "$action" in
         -DSEMAPHORE_PROFILE="$profile_id" \
         -DSEMAPHORE_SCHEDULE_TIMEZONE="$selected_schedule_timezone"
     )
+    ;;
+  encryption-rotation-test)
+    select_profile "${2:-}"
+    [ "$selected_encryption_fixture" = "generated" ] \
+      || fail "profile '$profile_id' does not define encryption_fixture: generated"
+    configure_java
+    prepare_encryption_fixture
+
+    compose down --volumes --remove-orphans
+    write_encryption_keyset old-primary true
+    compose up --detach
+    wait_for_setup
+    await_ready
+    run_encryption_rotation_phase seed
+
+    write_encryption_keyset new-primary true
+    sleep 2
+    run_encryption_rotation_phase rotated
+
+    vault_before_rekey=$(compose exec -T semaphore semaphore vault check)
+    printf '%s\n' "$vault_before_rekey"
+    assert_vault_state "$vault_before_rekey" "retired, rekey pending" \
+      "vault check did not find data encrypted by the retired key"
+    assert_vault_state "$vault_before_rekey" "1 rows — active" \
+      "vault check did not find the secret written by the new active key"
+    retired_key_id=$(
+      printf '%s\n' "$vault_before_rekey" \
+        | sed -n 's/^  \([^:]*\): [0-9][0-9]* rows — retired, rekey pending$/\1/p' \
+        | sed -n '1p'
+    )
+    [ -n "$retired_key_id" ] || fail "vault check did not expose the retired key id"
+
+    compose exec -T semaphore semaphore vault rekey --backup /tmp/bookwright-rekey-backup.jsonl
+    vault_after_rekey=$(compose exec -T semaphore semaphore vault check)
+    printf '%s\n' "$vault_after_rekey"
+    assert_vault_state "$vault_after_rekey" "$retired_key_id: 0 rows — retired, SAFE TO REMOVE" \
+      "vault check did not declare key $retired_key_id safe to remove"
+    assert_vault_state "$vault_after_rekey" "2 rows — active" \
+      "vault rekey did not move both secrets to the active key"
+
+    write_encryption_keyset new-primary false
+    sleep 2
+    vault_without_retired=$(compose exec -T semaphore semaphore vault check)
+    printf '%s\n' "$vault_without_retired"
+    assert_vault_state "$vault_without_retired" "2 rows — active" \
+      "vault check failed after the retired key was removed"
+    write_allure_environment
+    if ! run_encryption_rotation_phase verify; then
+      compose logs --tail 120 semaphore >&2 || true
+      fail "encryption rotation verification failed for '$profile_id'; containers and volumes were retained for diagnosis"
+    fi
     ;;
   ps)
     select_profile "${2:-}"

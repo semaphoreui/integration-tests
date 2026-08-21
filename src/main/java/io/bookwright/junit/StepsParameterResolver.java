@@ -9,12 +9,16 @@ import io.bookwright.di.UiModule;
 import io.bookwright.fixtures.database.HotelDatabaseFixtures;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreEncryptionRotationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreOidcFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreScheduleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreSurveyFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTotpFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreVariableGroupFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.steps.DbSteps;
 import io.bookwright.steps.UiSteps;
@@ -44,12 +48,16 @@ public class StepsParameterResolver implements ParameterResolver {
         || type == SauceDemoFixtures.class
         || type == LocalUserFixtures.class
         || type == HotelDatabaseFixtures.class
+        || type == SemaphoreEncryptionRotationFixtures.class
         || type == SemaphoreFixtures.class
         || type == SemaphoreLdapFixtures.class
         || type == SemaphoreOidcFixtures.class
         || type == SemaphoreScheduleFixtures.class
         || type == SemaphoreSshFixtures.class
+        || type == SemaphoreSurveyFixtures.class
+        || type == SemaphoreTotpFixtures.class
         || type == SemaphoreUpgradeFixtures.class
+        || type == SemaphoreVariableGroupFixtures.class
         || SUPPORTED.contains(type);
   }
 
@@ -72,6 +80,9 @@ public class StepsParameterResolver implements ParameterResolver {
     if (type == HotelDatabaseFixtures.class) {
       return HotelDatabaseFixtures.seeded();
     }
+    if (type == SemaphoreEncryptionRotationFixtures.class) {
+      return SemaphoreEncryptionRotationFixtures.standard();
+    }
     if (type == SemaphoreFixtures.class) {
       return SemaphoreFixtures.from(
           io.bookwright.config.Configs.main(), TestDataExtension.getOrCreate(extensionContext));
@@ -88,8 +99,17 @@ public class StepsParameterResolver implements ParameterResolver {
     if (type == SemaphoreSshFixtures.class) {
       return SemaphoreSshFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
+    if (type == SemaphoreSurveyFixtures.class) {
+      return SemaphoreSurveyFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
+    if (type == SemaphoreTotpFixtures.class) {
+      return SemaphoreTotpFixtures.standard();
+    }
     if (type == SemaphoreUpgradeFixtures.class) {
       return SemaphoreUpgradeFixtures.standard();
+    }
+    if (type == SemaphoreVariableGroupFixtures.class) {
+      return SemaphoreVariableGroupFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == TestUser.class) {
       return UserFixtureExtension.require(extensionContext);

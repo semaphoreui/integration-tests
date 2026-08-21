@@ -5,6 +5,7 @@ import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.ProjectMemberRequest;
 import io.bookwright.api.model.semaphore.User;
 import io.bookwright.api.model.semaphore.UserRequest;
+import io.bookwright.api.model.semaphore.UserTotp;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.SemaphoreUserNotFoundException;
 import io.bookwright.api.semaphore.users.SemaphoreUsersApi;
@@ -41,6 +42,37 @@ public class UserSteps {
   @Step("Get current isolated Semaphore user")
   public User currentUser(SemaphoreSessionApis session) {
     return Calls.body(session.users().getCurrentUser(), 200, "current user");
+  }
+
+  @Step("Get full Semaphore user {userId}")
+  public User getUser(long userId) {
+    return Calls.body(api.getUser(userId), 200, "Semaphore user");
+  }
+
+  @Step("Enable TOTP for isolated Semaphore user {userId}")
+  public UserTotp enableTotp(SemaphoreSessionApis session, long userId) {
+    UserTotp totp = Calls.body(session.users().enableTotp(userId), 200, "TOTP enrollment");
+    teardown.push(
+        "Disable TOTP %d for Semaphore user %d".formatted(totp.id(), userId),
+        () -> disableTotpIfPresent(userId, totp.id()));
+    return totp;
+  }
+
+  @Step("Ensure TOTP is disabled for Semaphore user {user.id}")
+  public void ensureTotpDisabled(User user) {
+    User fullUser = getUser(user.id());
+    if (fullUser.totp() != null) {
+      disableTotpIfPresent(fullUser.id(), fullUser.totp().id());
+    }
+  }
+
+  private void disableTotpIfPresent(long userId, long totpId) {
+    var response = Calls.response(api.disableTotp(userId, totpId));
+    if (response.code() != 204 && response.code() != 400) {
+      throw new IllegalStateException(
+          "TOTP cleanup for user %d expected HTTP 204 or 400 but received %d"
+              .formatted(userId, response.code()));
+    }
   }
 
   @Step("Create Semaphore user")

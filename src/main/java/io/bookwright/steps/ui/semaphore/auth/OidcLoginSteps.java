@@ -25,6 +25,11 @@ public class OidcLoginSteps {
     page.login(login.providerName(), login.account().email(), login.account().password());
     page.waitForReturnPath(login.returnPath());
     assertThat(page.currentUserStatus()).as("OIDC browser session status").isEqualTo(200);
+    assertThat(page.sessionCookie())
+        .as("OIDC browser session cookie")
+        .returns(true, cookie -> cookie.httpOnly)
+        .returns(page.publicOriginUsesHttps(), cookie -> cookie.secure)
+        .returns("/", cookie -> cookie.path);
   }
 
   @Step("Log out from the Semaphore OIDC session")

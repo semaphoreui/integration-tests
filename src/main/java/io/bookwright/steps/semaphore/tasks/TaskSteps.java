@@ -28,8 +28,12 @@ public class TaskSteps {
 
   @Step("Start Semaphore task from template {templateId}")
   public Task startTask(long projectId, long templateId) {
-    Task task =
-        Calls.body(api.startTask(projectId, new TaskRequest(templateId)), 201, "started task");
+    return startTask(projectId, new TaskRequest(templateId));
+  }
+
+  @Step("Start Semaphore task from template {request.templateId} with launch parameters")
+  public Task startTask(long projectId, TaskRequest request) {
+    Task task = Calls.body(api.startTask(projectId, request), 201, "started task");
     teardown.push(
         "Delete Semaphore task " + task.id(),
         () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
@@ -57,6 +61,12 @@ public class TaskSteps {
   @Step("Start Semaphore task from template {templateId} and wait for success")
   public Task startAndWait(long projectId, long templateId) {
     return waitUntilTaskSucceeds(projectId, startTask(projectId, templateId).id());
+  }
+
+  @Step(
+      "Start Semaphore task from template {request.templateId} with launch parameters and wait for success")
+  public Task startAndWait(long projectId, TaskRequest request) {
+    return waitUntilTaskSucceeds(projectId, startTask(projectId, request).id());
   }
 
   @Step("Start Semaphore task as isolated user from template {templateId} and wait for success")

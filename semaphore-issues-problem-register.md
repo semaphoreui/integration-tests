@@ -61,6 +61,14 @@
 
 ## Следующий проход
 
+### Локально найдено: survey enum default не валидируется в `v2.19.8`
+
+Black-box API-прогон подтвердил, что template с enum `default_value` вне `values` создаётся с `201` и сохраняет некорректное значение. В upstream это уже исправлено commit [`eb29c3e8`](https://github.com/semaphoreui/semaphore/commit/eb29c3e802df4890dc803709954dc373ae8968b2), входящим в `v2.20.0-alpha1`: добавлена backend-валидация совместимости survey type/default/values. Полный reproducer и критерий переключения регрессионной проверки находятся в `test-environment/survey-default-validation-defect.md`.
+
+### Regression status: #2293
+
+API baseline для rename Variable Group secret добавлен и проходит на SQLite и PostgreSQL `v2.19.8`: новое имя сохраняется, старое значение продолжает работать в реальной Ansible task, plaintext отсутствует в API и output. Это подтверждает backend persistence, но исходная жалоба была на UI, поэтому issue нельзя считать полностью закрытым без отдельной browser-проверки payload формы Environment.
+
 1. Разобрать оставшиеся открытые bug-issues по компонентам без глубокого анализа fix.
 2. Выбрать по 3–5 наиболее содержательных тикетов из кластеров `TASKS/SCHEDULES`, `AUTH/RBAC`, `SECRETS`, `REPOSITORIES`, `RUNNERS` и `MIGRATIONS`.
 3. Для выбранных закрытых тикетов проверить timeline, PR, commit и текущий код.

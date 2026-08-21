@@ -4,7 +4,7 @@
 
 Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
 
-Доступны пять опорных профилей и пять feature-профилей:
+Доступны пять опорных профилей и восемь feature-профилей:
 
 | Профиль | СУБД | Назначение |
 |---|---|---|
@@ -15,7 +15,10 @@ Manifest профиля находится в `profiles/<profile>/profile.yaml`.
 | `prod-postgres-runner` | PostgreSQL 14.3 | production-like server → DB → persistent remote runner |
 | `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target и защита key material |
 | `feature-oidc-local` | SQLite | browser login через Dex, session/logout, provisioning и negative account/provider scenarios |
+| `feature-proxy-oidc` | PostgreSQL 14.3 | OIDC через NGINX, HTTPS и non-root public path `/semaphore` |
 | `feature-ldap-tls` | SQLite | LDAPS bind/search, provisioning/reuse user, logout и negative credential/account scenarios |
+| `feature-totp-local` | SQLite | API и browser TOTP: Security/QR, challenge, invalid passcode и recovery lifecycle |
+| `feature-encryption-rotation` | PostgreSQL 14.3 | hot reload keyring, mixed-key reads, vault rekey и удаление retired key |
 | `feature-schedule-timezone` | SQLite | cron/run-at execution в `Pacific/Kiritimati`; локальный defect reproducer |
 | `feature-dynamic-runner` | SQLite | webhook-launched one-off runner; defect reproducer для незавершающегося процесса |
 
@@ -144,6 +147,18 @@ test-environment/profile test feature-oidc-local
 
 Профиль запускает pinned Dex `v2.45.1` и браузерный `uiTest`. Positive path проверяет provider button, credentials на IdP, OAuth callback, Semaphore session через `/api/user`, возврат на `/tokens` и provisioning non-admin external user. Повторный вход доказывает reuse того же user ID, logout очищает session, а отдельные negative paths защищают локальный account при совпадении email и не создают session при отказе discovery. `SEMAPHORE_WEB_ROOT` задан явно, а claims `username`/`name` маппятся на `email`, потому что локальный Dex connector не выдаёт `preferred_username`.
 
+## HTTPS proxy + OIDC feature-профиль
+
+```bash
+test-environment/profile down feature-oidc-local
+test-environment/profile up feature-proxy-oidc
+test-environment/profile test feature-proxy-oidc
+```
+
+Профиль использует PostgreSQL 14.3, Dex и pinned NGINX `1.27.5-alpine`. Semaphore публикуется как `https://localhost:3443/semaphore`; proxy сохраняет subpath и поддерживает WebSocket upgrade. Lifecycle генерирует localhost certificate и PKCS12 truststore в `build/test-fixtures/proxy-tls`, передаёт truststore только test JVM и ждёт readiness через доверенный HTTPS endpoint.
+
+Тот же OIDC-набор проверяет discovery, callback, return path, provisioning/reuse, logout и negative account/provider paths. После успешного входа отдельно подтверждаются `HttpOnly`, `Secure` и cookie path `/`. Сертификат, truststore и private key являются disposable fixtures и не входят в Git.
+
 ## LDAPS feature-профиль
 
 ```bash
@@ -153,6 +168,20 @@ test-environment/profile test feature-ldap-tls
 ```
 
 Профиль запускает pinned OpenLDAP `1.5.0` с самоподписанным TLS и тремя directory users. Semaphore подключается по LDAPS `636`, делает service bind, search по `uid`, user bind и mapping `uid`/`cn`/`mail`. Четыре сценария проверяют provisioning external user, reuse того же ID после logout, отказ неверного пароля без provisioning и защиту локального admin при совпадении email.
+
+## TOTP feature-профиль
+
+```bash
+test-environment/profile down feature-ldap-tls
+test-environment/profile up feature-totp-local
+test-environment/profile test feature-totp-local
+```
+
+Профиль явно включает TOTP и recovery и запускает общий `totpTest`. API-сценарий создаёт отдельного non-admin пользователя, выполняет self-enrollment, получает `otpauth://` material, проверяет состояние `TOTP_REQUIRED`, отказ изменённого passcode и успешный вход с RFC 6238-кодом. Затем recovery code восстанавливает сессию и удаляет старую TOTP-привязку; повторный enrollment выпускает новый recovery code, а старый получает `INVALID_RECOVERY_CODE`.
+
+Независимый browser-сценарий включает TOTP через вкладку Security, проверяет загрузку QR и показ recovery code, выходит из сессии, проходит password → challenge flow с отрицательной и положительной проверкой passcode, а затем использует UI recovery form. API после восстановления подтверждает удаление TOTP-привязки.
+
+OTP secret, passcode и recovery code не попадают в HTTP attachments и raw Allure result JSON. Шаги принимают redacted request-объекты: одного визуального `hidden`-режима Allure недостаточно, поскольку он оставляет исходное значение внутри downloadable artifact. Для browser-сценария при падении сохраняется только безопасная browser diagnostics; screenshot, HTML и Playwright trace отключены, потому что могут содержать QR, recovery code или введённый passcode.
 
 ## Dynamic one-off runner
 
@@ -165,6 +194,16 @@ test-environment/profile test feature-dynamic-runner
 Профиль регистрирует global runner с webhook, назначает его default и на `start` запускает отдельный `semaphore runner start --no-config` с `SEMAPHORE_RUNNER_ONE_OFF=true`. Launcher записывает события `webhook_start`, `runner_started`, `webhook_finish` и фактический exit code процесса, но сам процесс не останавливает.
 
 На `v2.19.8` task успешно выполняется и сервер вызывает `finish`, однако runner остаётся жив. Тест намеренно красный, потому что ожидает `runner_exited` с кодом `0`. Профиль не входит в обычную CI matrix; полная репродукция и анализ исходного кода — в `dynamic-runner-one-off-exit-defect.md`.
+
+## Rotation ключей шифрования БД
+
+```bash
+test-environment/profile encryption-rotation-test feature-encryption-rotation
+```
+
+Специализированная команда пересоздаёт только volumes этого профиля и проводит три фазы на PostgreSQL. Сначала Semaphore создаёт зашифрованный `login_password` access key и выполняет template со старым primary. Затем keyring атомарно переключается на новый primary без рестарта: старый secret по-прежнему читается, а новый записывается уже с другим key ID. Команда `semaphore vault check` должна показать одновременно `retired, rekey pending` и `active`.
+
+После `semaphore vault rekey --backup` lifecycle требует для конкретного старого key ID состояние `0 rows — retired, SAFE TO REMOVE`, убирает его из keyring и снова запускает сохранённый template. Финальная фаза также создаёт новый secret, поэтому проверяет и чтение rekeyed ciphertext, и запись после удаления retired key. Сгенерированные test-only keys находятся в игнорируемом `build/test-fixtures/encryption-rotation` и не входят в Git.
 
 ## Обновление N-1 → current
 
@@ -187,7 +226,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 | Workflow | Триггер | Профили |
 |---|---|---|
 | `CI` | pull request и push в `main` | `core-sqlite-local` после framework quality gate |
-| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-oidc-local`, `feature-ldap-tls` |
+| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation` |
 | `Release upgrade` | воскресенье `03:30 UTC`, вручную | `upgrade-sqlite-local`, `upgrade-postgres-local` |
 
 Каждый matrix profile работает на отдельном runner, поэтому общий порт `3000` не создаёт конфликтов. После выполнения workflow сохраняет JUnit/HTML/Allure artifacts, при ошибке добавляет `profile ps` и конечный снимок Compose logs, а затем удаляет только контейнеры и volumes выбранного профиля.

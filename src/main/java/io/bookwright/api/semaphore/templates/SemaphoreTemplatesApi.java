@@ -18,6 +18,10 @@ public interface SemaphoreTemplatesApi {
   @POST("project/{projectId}/templates")
   Call<Template> createTemplate(@Path("projectId") long projectId, @Body TemplateRequest request);
 
+  @GET("project/{projectId}/templates/{templateId}")
+  Call<Template> getTemplate(
+      @Path("projectId") long projectId, @Path("templateId") long templateId);
+
   @DELETE("project/{projectId}/templates/{templateId}")
   Call<Void> deleteTemplate(@Path("projectId") long projectId, @Path("templateId") long templateId);
 }

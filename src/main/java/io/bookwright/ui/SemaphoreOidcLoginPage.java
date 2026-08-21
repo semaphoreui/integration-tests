@@ -5,11 +5,15 @@ import com.microsoft.playwright.APIResponse;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.Cookie;
 import io.bookwright.config.MainConfig;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 public class SemaphoreOidcLoginPage {
+
+  private static final String SESSION_COOKIE = "semaphore";
 
   private final Page page;
   private final MainConfig config;
@@ -48,11 +52,22 @@ public class SemaphoreOidcLoginPage {
   }
 
   public int currentUserStatus() {
-    return status(page.context().request().get(config.apiBaseUrl() + "user"));
+    return status(page.context().request().get(config.uiBaseUrl() + "/api/user"));
   }
 
   public int logoutStatus() {
-    return status(page.context().request().post(config.apiBaseUrl() + "auth/logout"));
+    return status(page.context().request().post(config.uiBaseUrl() + "/api/auth/logout"));
+  }
+
+  public Cookie sessionCookie() {
+    return page.context().cookies().stream()
+        .filter(cookie -> SESSION_COOKIE.equals(cookie.name))
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("OIDC login did not create a session cookie"));
+  }
+
+  public boolean publicOriginUsesHttps() {
+    return "https".equalsIgnoreCase(URI.create(config.uiBaseUrl()).getScheme());
   }
 
   private int status(APIResponse response) {

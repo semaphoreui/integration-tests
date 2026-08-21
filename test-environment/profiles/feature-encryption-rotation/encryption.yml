@@ -1,0 +1,8 @@
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_ACCESS_KEY_ENCRYPTION: ""
+      SEMAPHORE_ENCRYPTION_KEYS_FILE: /run/semaphore-encryption/keys.yaml
+      SEMAPHORE_ENCRYPTION_KEYS_POLL_INTERVAL: 1s
+    volumes:
+      - ../build/test-fixtures/encryption-rotation:/run/semaphore-encryption:ro

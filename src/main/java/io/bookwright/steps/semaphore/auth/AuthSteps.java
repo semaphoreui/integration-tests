@@ -4,6 +4,8 @@ import com.google.inject.Inject;
 import io.bookwright.api.RetrofitFactory;
 import io.bookwright.api.model.semaphore.LoginRequest;
 import io.bookwright.api.model.semaphore.SemaphoreTestUser;
+import io.bookwright.api.model.semaphore.TotpPasscodeRequest;
+import io.bookwright.api.model.semaphore.TotpRecoveryRequest;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.api.semaphore.auth.SemaphoreAuthApi;
@@ -14,6 +16,8 @@ import io.bookwright.api.semaphore.users.SemaphoreUsersApi;
 import io.bookwright.config.MainConfig;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
+import java.io.IOException;
+import retrofit2.Call;
 
 public class AuthSteps {
 
@@ -60,9 +64,56 @@ public class AuthSteps {
         retrofit.create(SemaphoreUsersApi.class));
   }
 
+  @Step("Verify isolated Semaphore session requires TOTP")
+  public void requireTotpChallenge(SemaphoreSessionApis session) {
+    expectAuthError(session.users().getCurrentUser(), 401, "TOTP_REQUIRED", "TOTP challenge");
+  }
+
+  @Step("Verify invalid TOTP passcode is rejected")
+  public void invalidTotpIsRejected(SemaphoreSessionApis session, TotpPasscodeRequest request) {
+    expectAuthError(
+        session.auth().verifyTotp(request), 401, "INVALID_PASSCODE", "invalid TOTP passcode");
+  }
+
+  @Step("Complete isolated Semaphore TOTP challenge")
+  public void verifyTotp(SemaphoreSessionApis session, TotpPasscodeRequest request) {
+    Calls.expectStatus(session.auth().verifyTotp(request), 200);
+  }
+
+  @Step("Verify consumed TOTP recovery code is rejected")
+  public void invalidRecoveryCodeIsRejected(
+      SemaphoreSessionApis session, TotpRecoveryRequest request) {
+    expectAuthError(
+        session.auth().recoverTotp(request),
+        401,
+        "INVALID_RECOVERY_CODE",
+        "invalid TOTP recovery code");
+  }
+
+  @Step("Recover isolated Semaphore TOTP session")
+  public void recoverTotp(SemaphoreSessionApis session, TotpRecoveryRequest request) {
+    Calls.expectStatus(session.auth().recoverTotp(request), 204);
+  }
+
   @Step("Log out isolated Semaphore session")
   public void logout(SemaphoreSessionApis session) {
     Calls.expectStatus(session.auth().logout(), 204);
     Calls.expectStatus(session.users().getCurrentUser(), 401);
+  }
+
+  private void expectAuthError(
+      Call<?> call, int expectedStatus, String expectedError, String operation) {
+    var response = Calls.response(call);
+    String body;
+    try {
+      body = response.errorBody() == null ? "" : response.errorBody().string();
+    } catch (IOException error) {
+      throw new IllegalStateException("Could not read " + operation + " response", error);
+    }
+    if (response.code() != expectedStatus || !body.contains(expectedError)) {
+      throw new IllegalStateException(
+          "%s expected HTTP %d with %s but received HTTP %d: %s"
+              .formatted(operation, expectedStatus, expectedError, response.code(), body));
+    }
   }
 }

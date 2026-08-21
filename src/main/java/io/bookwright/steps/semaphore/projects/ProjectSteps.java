@@ -25,10 +25,15 @@ public class ProjectSteps {
   @Step("Create isolated Semaphore project")
   public Project createProject(ProjectRequest request) {
     Project project = Calls.body(api.createProject(request), 201, "created project");
+    deleteAfterTest(project);
+    return project;
+  }
+
+  @Step("Delete Semaphore project {project.id} after the test")
+  public void deleteAfterTest(Project project) {
     teardown.push(
         "Delete Semaphore project " + project.id(),
         () -> Calls.expectStatus(api.deleteProject(project.id()), 204));
-    return project;
   }
 
   @Step("Find required Semaphore project {name}")

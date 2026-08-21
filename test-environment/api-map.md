@@ -123,10 +123,12 @@ Project
 4. RBAC для manager, task_runner и guest.
 5. Запрет доступа к ресурсам другого проекта.
 6. Stop/force stop и параллельный запуск задач.
+7. Variable Groups: смешанные JSON/ENV/secret values, rename persistence и безопасное task execution.
+8. Survey variables и launch-time overrides: metadata, persistence, secret masking, arguments и Ansible params.
 
 ### P2 — расширение
 
-1. Variable Groups и secret storage.
+1. Secret storage.
 2. Integrations и webhooks.
 3. Runners. Базовый persistent remote runner автоматизирован; остаются disconnect/reconnect, capacity и one-off режимы.
 4. Workflows.
@@ -147,5 +149,9 @@ Project
 Persistent remote runner автоматизирован отдельной API-группой и production-like профилем PostgreSQL. Проверяются регистрация, `active`, `is_default`, `online`, heartbeat и выполнение всей существующей task suite вне server process. Обнаруженный конфигурационный контракт: global runner после авторегистрации не становится default автоматически, а задачи без tag выбирают только `is_default=true` runners.
 
 Schedule P1 расширен отдельным API-набором: backend cron validation, диагностируемые ошибки invalid cron/type/run-at, CRUD/update, active toggle, сохранение `run_at`, `delete_after_run` и task parameters, запрет создания для `task_runner`, а также контракт системной timezone. Реальное cron и `run_at` исполнение покрыто отдельным `feature-schedule-timezone`, но на `v2.19.8` оба сценария воспроизводят отсутствие автоматически созданной task. До Linux-подтверждения профиль оставлен вне CI matrix; доказательства собраны в `schedule-execution-defect.md`.
+
+Variable Groups покрыты отдельным API-набором: create/get/list, смешанные JSON extra vars и ENV, secrets типов `var`/`env`, переименование secret с сохранением значения, backend validation пустого имени и реальное Ansible execution. Секреты проверяются внутри playbook по SHA-256 под `no_log` и отсутствуют в API responses, structured/raw output и Allure diagnostics. Набор зелёный на SQLite и PostgreSQL `v2.19.8`; API persistence для сценария #2293 работает, браузерный payload остаётся отдельной UI-проверкой.
+
+Survey/task override API-набор сохраняет enum/int/string/env/secret definitions и выполняет задачу с launch environment/secret, template/task arguments и Ansible params на SQLite и PostgreSQL. Проверяются persisted template/task payloads, реальный marker и отсутствие survey secret в structured/raw output. Неподдерживаемый target отклоняется с `400`. `v2.19.8` при этом принимает enum default вне values; defect и upstream fix `eb29c3e8` описаны в `survey-default-validation-defect.md`.
 
 Schedule execution defect подтверждён в Linux CI: `v2.19.8` не создаёт task ни для active cron, ни для `run_at`. SSH key rotation автоматизирована. Строгий `known_hosts` остаётся version-gated сценарием: соответствующая конфигурация отсутствует в `v2.19.8` и должна быть добавлена после перехода на релиз, содержащий текущую upstream-реализацию.

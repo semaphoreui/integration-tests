@@ -9,4 +9,7 @@ public record Task(
     String status,
     @JsonProperty("commit_hash") String commitHash,
     @JsonProperty("schedule_id") Long scheduleId,
-    String message) {}
+    String message,
+    String environment,
+    String arguments,
+    AnsibleTaskParameters params) {}

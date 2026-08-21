@@ -117,10 +117,13 @@ fun Test.configureBookwrightTestRuntime() {
         "STAND",
         "SEMAPHORE_PROFILE",
         "SEMAPHORE_SCHEDULE_TIMEZONE",
+        "SEMAPHORE_ENCRYPTION_ROTATION_PHASE",
         "SEMAPHORE_UPGRADE_PHASE",
         "DB_PASSWORD",
         "SSH_PASSWORD",
         "test.seed",
+        "javax.net.ssl.trustStore",
+        "javax.net.ssl.trustStorePassword",
     ).forEach { key ->
         (System.getProperty(key) ?: System.getenv(key))?.let { systemProperty(key, it) }
     }
@@ -173,10 +176,25 @@ tasks.register<Test>("upgradeTest") {
     filter { includeTestsMatching("io.bookwright.tests.semaphore.UpgradeCompatibilityTest") }
 }
 
+tasks.register<Test>("encryptionRotationTest") {
+    group = "verification"
+    description = "Runs one phase of the Semaphore database-encryption key rotation scenario."
+    filter { includeTestsMatching("io.bookwright.tests.semaphore.EncryptionKeyRotationTest") }
+}
+
 tasks.register<Test>("uiTest") {
     group = "verification"
     description = "Runs Playwright product scenarios."
     filter { includeTestsMatching("io.bookwright.tests.ui.*") }
+}
+
+tasks.register<Test>("totpTest") {
+    group = "verification"
+    description = "Runs the Semaphore API and browser TOTP lifecycle scenarios."
+    filter {
+        includeTestsMatching("io.bookwright.tests.semaphore.SemaphoreTotpAuthenticationTest")
+        includeTestsMatching("io.bookwright.tests.ui.semaphore.SemaphoreTotpLoginTest")
+    }
 }
 
 tasks.register<JavaExec>("playwrightInstallChromium") {

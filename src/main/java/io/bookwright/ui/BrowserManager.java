@@ -106,7 +106,11 @@ public final class BrowserManager {
   public static Page page(UserSession userSession, String applicationBaseUrl) {
     if (TEST_CONTEXT.get() == null) {
       BrowserContext context =
-          browser().newContext(new Browser.NewContextOptions().setViewportSize(1920, 1080));
+          browser()
+              .newContext(
+                  new Browser.NewContextOptions()
+                      .setViewportSize(1920, 1080)
+                      .setIgnoreHTTPSErrors(Configs.main().uiIgnoreHttpsErrors()));
       if (userSession != null) {
         if (applicationBaseUrl == null || applicationBaseUrl.isBlank()) {
           context.close();

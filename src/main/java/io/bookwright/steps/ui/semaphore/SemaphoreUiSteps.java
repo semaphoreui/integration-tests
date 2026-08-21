@@ -2,6 +2,7 @@ package io.bookwright.steps.ui.semaphore;
 
 import com.google.inject.Inject;
 import io.bookwright.steps.ui.semaphore.auth.OidcLoginSteps;
+import io.bookwright.steps.ui.semaphore.auth.TotpLoginSteps;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
@@ -9,4 +10,5 @@ import lombok.experimental.Accessors;
 @Accessors(fluent = true)
 public class SemaphoreUiSteps {
   @Inject private OidcLoginSteps oidc;
+  @Inject private TotpLoginSteps totp;
 }

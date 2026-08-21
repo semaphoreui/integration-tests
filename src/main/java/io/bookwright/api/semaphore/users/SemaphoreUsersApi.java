@@ -3,6 +3,7 @@ package io.bookwright.api.semaphore.users;
 import io.bookwright.api.model.semaphore.ProjectMemberRequest;
 import io.bookwright.api.model.semaphore.User;
 import io.bookwright.api.model.semaphore.UserRequest;
+import io.bookwright.api.model.semaphore.UserTotp;
 import java.util.List;
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -21,6 +22,15 @@ public interface SemaphoreUsersApi {
 
   @GET("users")
   Call<List<User>> getUsers();
+
+  @GET("users/{userId}")
+  Call<User> getUser(@Path("userId") long userId);
+
+  @POST("users/{userId}/2fas/totp")
+  Call<UserTotp> enableTotp(@Path("userId") long userId);
+
+  @DELETE("users/{userId}/2fas/totp/{totpId}")
+  Call<Void> disableTotp(@Path("userId") long userId, @Path("totpId") long totpId);
 
   @DELETE("users/{userId}")
   Call<Void> deleteUser(@Path("userId") long userId);

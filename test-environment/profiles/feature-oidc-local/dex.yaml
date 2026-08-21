@@ -17,6 +17,7 @@ staticClients:
     secret: semaphore-test-client-secret
     redirectURIs:
       - http://localhost:3000/api/auth/oidc/dex/redirect
+      - https://localhost:3443/semaphore/api/auth/oidc/dex/redirect
 
 enablePasswordDB: true
 staticPasswords:

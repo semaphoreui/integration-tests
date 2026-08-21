@@ -76,6 +76,24 @@ test-environment/profile up feature-oidc-local
 test-environment/profile test feature-oidc-local
 ```
 
+Production-like OIDC-вариант повторяет тот же контракт через pinned NGINX, HTTPS и non-root public URL `/semaphore` на PostgreSQL:
+
+```bash
+test-environment/profile down feature-oidc-local
+test-environment/profile up feature-proxy-oidc
+test-environment/profile test feature-proxy-oidc
+```
+
+TLS certificate и JVM truststore генерируются локально в игнорируемом `build/test-fixtures`. Тест дополнительно проверяет `Secure`, `HttpOnly` и path session cookie, routing API/assets через subpath и возврат OIDC callback на public HTTPS origin.
+
+Ротация database encryption keyring проверяется отдельным трёхфазным lifecycle на PostgreSQL:
+
+```bash
+test-environment/profile encryption-rotation-test feature-encryption-rotation
+```
+
+Сценарий переключает primary без рестарта, подтверждает одновременное чтение старого и запись нового ciphertext, выполняет `vault check`/`vault rekey`, удаляет retired key и повторно выполняет сохранённый template. Test-only key material генерируется в игнорируемом `build/test-fixtures/encryption-rotation`.
+
 LDAPS feature-профиль поднимает pinned OpenLDAP, выполняет service search и user bind по TLS, а затем проверяет provisioning/reuse external user, logout, неверный пароль и защиту локального account:
 
 ```bash
@@ -83,6 +101,16 @@ test-environment/profile down feature-oidc-local
 test-environment/profile up feature-ldap-tls
 test-environment/profile test feature-ldap-tls
 ```
+
+TOTP MFA проверяется отдельным self-contained профилем:
+
+```bash
+test-environment/profile down feature-ldap-tls
+test-environment/profile up feature-totp-local
+test-environment/profile test feature-totp-local
+```
+
+Общий `totpTest` покрывает API self-enrollment, `TOTP_REQUIRED`, неверный и корректный RFC 6238 passcode, recovery, повторный enrollment и отказ уже использованного recovery code. Browser-сценарий отдельно проверяет Security settings, QR/recovery-code rendering, challenge и recovery form. OTP material редактируется в HTTP и raw Allure JSON, а чувствительные browser artifacts при падении не публикуются.
 
 Dynamic runner profile проверяет start/finish webhook, запуск отдельного one-off runner и реальное выполнение задачи:
 
@@ -119,7 +147,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 GitHub Actions разделены по стоимости и назначению:
 
 - `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite на `core-sqlite-local`;
-- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH, OIDC и LDAPS feature-профили;
+- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH, прямой и HTTPS/subpath OIDC, LDAPS, TOTP и ротацию database encryption keyring;
 - `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.7 → v2.19.8` на SQLite и PostgreSQL.
 
 Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
@@ -144,13 +172,17 @@ project → access key → local Git repository → inventory → task template
 
 Отдельный security smoke создаёт `login_password` access key с уникальным маркером, использует его как inventory credential при выполнении задачи и проверяет отсутствие plaintext в create/get/list API, структурированном и raw task output, Allure и JUnit artifacts.
 
+Variable Group-набор создаёт смешанную группу с JSON extra vars, ENV и секретами типов `var`/`env`, переименовывает сохранённый secret без замены значения и реально выполняет `variables.yml`. Playbook проверяет секреты по SHA-256 под `no_log` и выводит только безопасный marker; тест отдельно контролирует create/get/list API и structured/raw output. Тот же контракт прошёл на SQLite и PostgreSQL `v2.19.8`; пустое имя ENV-переменной получает диагностируемый `400`.
+
+Survey/task override-набор сохраняет в template enum, integer, string, env-target и secret survey variables, затем запускает `survey-overrides.yml` с переопределёнными значениями, template/task arguments и Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. Task действительно выполняется на SQLite и PostgreSQL, secret проверяется по SHA-256 под `no_log` и отсутствует в structured/raw output. Неподдерживаемый survey target получает `400`. Отдельно зафиксирован gap `v2.19.8`: enum default вне списка принимается backend-ом; исправление уже есть в upstream `v2.20.0-alpha1`.
+
 Git-набор проверяет выполнение задачи из явно выбранной ветки, диагностируемый отказ для отсутствующей ветки и недоступного HTTPS remote. Для authenticated clone дополнительно проверяется, что login/password не попадают в structured и raw task output.
 
 SSH-набор использует отдельный typed fixture и проверяет успешный Git clone по SSH, выполнение playbook на SSH target, безопасный отказ с неверным ключом и ротацию секрета без замены key ID. Две зашифрованные тестовые пары ключей генерируются в игнорируемом `build/test-fixtures/ssh`; private keys не входят ни в Git, ни в Docker build context. Строгая проверка `known_hosts` не тестируется на закреплённом `v2.19.8`, потому что соответствующая конфигурация присутствует только в более новом upstream `develop`.
 
 Task lifecycle-набор запускает безопасный long-running playbook, дожидается marker фактического выполнения и проверяет обычный stop и force-stop. В обоих случаях задача переходит в `stopped`, а шаг после паузы не выполняется.
 
-Ansible-код берётся только из доверенных fixtures `test-environment/fixtures/ansible/smoke.yml` и `long-running.yml`, упакованных Compose в локальный read-only Git volume с ветками `main` и `bookwright-fixture-ref`. Внешний код при API-запуске не исполняется.
+Ansible-код берётся только из доверенных `test-environment/fixtures/ansible`, упакованных Compose в локальный read-only Git volume с ветками `main` и `bookwright-fixture-ref`. Внешний код при API-запуске не исполняется.
 
 Полный набор инфраструктурных self-tests Bookwright и продуктовых тестов Semaphore:
 

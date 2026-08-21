@@ -12,6 +12,7 @@ import io.bookwright.steps.semaphore.system.SystemSteps;
 import io.bookwright.steps.semaphore.tasks.TaskSteps;
 import io.bookwright.steps.semaphore.templates.TemplateSteps;
 import io.bookwright.steps.semaphore.users.UserSteps;
+import io.bookwright.steps.semaphore.variablegroups.VariableGroupSteps;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
@@ -31,4 +32,5 @@ public class SemaphoreSteps {
   @Inject private TaskSteps tasks;
   @Inject private ScheduleSteps schedules;
   @Inject private UserSteps users;
+  @Inject private VariableGroupSteps variableGroups;
 }

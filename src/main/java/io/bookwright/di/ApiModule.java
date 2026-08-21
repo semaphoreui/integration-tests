@@ -18,6 +18,7 @@ import io.bookwright.api.semaphore.system.SemaphoreSystemApi;
 import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
 import io.bookwright.api.semaphore.templates.SemaphoreTemplatesApi;
 import io.bookwright.api.semaphore.users.SemaphoreUsersApi;
+import io.bookwright.api.semaphore.variablegroups.SemaphoreVariableGroupsApi;
 import io.bookwright.api.testenvironment.runners.DynamicRunnerLauncherApi;
 import io.bookwright.config.Configs;
 import io.bookwright.config.MainConfig;
@@ -169,6 +170,12 @@ public class ApiModule extends AbstractModule {
   @Singleton
   SemaphoreUsersApi semaphoreUsersApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreUsersApi.class);
+  }
+
+  @Provides
+  @Singleton
+  SemaphoreVariableGroupsApi semaphoreVariableGroupsApi(@Named("semaphore") Retrofit retrofit) {
+    return retrofit.create(SemaphoreVariableGroupsApi.class);
   }
 
   @Provides

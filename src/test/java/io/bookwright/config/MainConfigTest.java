@@ -52,6 +52,12 @@ class MainConfigTest {
                 .getAnnotation(Config.DefaultValue.class)
                 .value())
         .isEqualTo("true");
+    assertThat(
+            MainConfig.class
+                .getMethod("uiIgnoreHttpsErrors")
+                .getAnnotation(Config.DefaultValue.class)
+                .value())
+        .isEqualTo("false");
   }
 
   private void restore(String key, String previous) {

@@ -79,6 +79,8 @@ Semaphore читает JSON/YAML config и environment variables; путь за�
 
 Источник: [Configuration](https://semaphoreui.com/docs/admin-guide/configuration).
 
+Active-active HA требует Enterprise subscription: community build оставляет task state in-memory и не предоставляет Redis-backed node registry, distributed claims, schedule deduplication и Pub/Sub. Поэтому два community container с общей PostgreSQL нельзя считать HA — они создадут ложную зелёную проверку и риск двойного исполнения. Полноценный `enterprise-ha` профиль откладывается до получения test subscription key. Источник: [High Availability](https://semaphoreui.com/docs/admin-guide/ha).
+
 ### Авторизация
 
 Возможные режимы:
@@ -141,16 +143,18 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 | `feature-ssh-local` | SQLite, два локальных SSH server с разными зашифрованными test keys | Git clone и Ansible target по SSH, key rotation, negative auth и защита секретов | nightly |
 | `feature-oidc-local` | SQLite и pinned локальный Dex | Discovery, browser login, callback, session/logout, return path, provisioning, repeat login, local-email conflict и provider failure | nightly |
 | `feature-ldap-tls` | SQLite и pinned OpenLDAP с TLS | LDAPS service/user bind, search/mapping, provisioning/reuse, logout, invalid password и local-email conflict | nightly |
+| `feature-totp-local` | SQLite, password auth и TOTP recovery | API lifecycle; browser Security/QR, challenge, invalid/valid passcode и recovery form | nightly |
 | `feature-schedule-timezone` | SQLite, `Pacific/Kiritimati`, local execution | Реальное cron/run-at исполнение и связь schedule → task | вручную; defect reproducer |
-| `proxy-oidc` | PostgreSQL, reverse proxy TLS, non-root web path, OIDC provider | Callback URL, cookies, redirects, account mapping и RBAC | nightly/по расписанию |
-| `ha-two-node` | два server nodes, PostgreSQL, Redis, remote runner | Очередь, session/state consistency и отказ одного node | по расписанию |
+| `feature-proxy-oidc` | PostgreSQL, NGINX TLS, non-root web path, Dex | Callback URL, Secure cookie, redirects, account mapping и negative paths | nightly |
+| `feature-encryption-rotation` | PostgreSQL, file keyring с двумя test-only AES keys | Hot reload primary, mixed-key reads, `vault check`, backup/rekey, удаление retired key и post-rekey execution | nightly |
+| `enterprise-ha-two-node` | два Enterprise server nodes, PostgreSQL, Redis, remote runner | Очередь, session/state consistency и отказ одного node | после получения test subscription |
 | `feature-dynamic-runner` | SQLite и one-off runner, запущенный через webhook | Start/finish webhook, ровно одна задача и завершение runner process | вручную; defect reproducer |
 | `pro-docker-executor` | Pro runner с Docker executor | Изоляция task container, лимиты, cleanup, secret hydration | при наличии Pro, nightly |
 | `pro-k8s-executor` | Helm/Pro runner с Kubernetes executor | pod lifecycle, service account, pull secret и cleanup | при наличии Pro/K8s, release |
 
-Базовые пять профилей и пять feature-профилей реализованы. `feature-oidc-local` и `feature-ldap-tls` дают зелёные positive и negative auth paths без размножения по DB-матрице. `feature-schedule-timezone` воспроизводит отсутствие cron/run-at tasks, а `feature-dynamic-runner` — незавершающийся one-off runner после успешной task. Оба профиля остаются ручными красными reproducer. Следующий infrastructure-профиль — HA.
+Базовые пять профилей и восемь feature-профилей реализованы. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls` и `feature-totp-local` дают зелёные positive и negative auth paths без размножения по всей DB-матрице; proxy-вариант дополнительно фиксирует HTTPS/subpath/cookie contract, а TOTP — passcode/recovery lifecycle. `feature-encryption-rotation` проверяет zero-downtime смену primary, rekey и безопасное удаление retired key. `feature-schedule-timezone` воспроизводит отсутствие cron/run-at tasks, а `feature-dynamic-runner` — незавершающийся one-off runner после успешной task. Оба профиля остаются ручными красными reproducer. HA исследован и корректно отложен как Enterprise-only вместо небезопасной community-имитации.
 
-CI-распределение также реализовано: `core-sqlite-local` входит в pull-request gate после framework quality checks; остальные четыре базовых профиля, `feature-ssh-local`, `feature-oidc-local` и `feature-ldap-tls` запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate.
+CI-распределение также реализовано: `core-sqlite-local` входит в pull-request gate после framework quality checks; остальные четыре базовых профиля, `feature-ssh-local`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local` и `feature-encryption-rotation` запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate.
 
 ## Какие тесты где запускать
 
@@ -166,7 +170,8 @@ CI-распределение также реализовано: `core-sqlite-lo
 | реальное cron/run-at execution | — | — | — | — | — | `feature-schedule-timezone`, defect |
 | constraints, schedules, cleanup, clean migration | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | secrets и отсутствие утечек | ✓ | ✓ | ✓ | ✓ | ✓ | encryption/storage расширяют набор |
-| OIDC/LDAP/MFA | — | — | — | — | — | OIDC: `feature-oidc-local`; LDAP: `feature-ldap-tls`; MFA — будущий профиль |
+| database encryption key rotation | — | — | — | — | — | `feature-encryption-rotation` |
+| OIDC/LDAP/MFA | — | — | — | — | — | OIDC: `feature-oidc-local`, `feature-proxy-oidc`; LDAP: `feature-ldap-tls`; MFA: `feature-totp-local` |
 | HA/failover | — | — | — | — | — | только HA profile |
 
 Знак `—` означает сознательное исключение, а не неизвестное покрытие. Это важно фиксировать, иначе матрица со временем снова превратится в неявный полный перебор.
@@ -225,7 +230,7 @@ Manifest должен попадать в Allure environment/labels вместе
 ./test-environment/profile down core-sqlite-local
 ```
 
-Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-oidc-local`, `feature-ldap-tls`, `feature-schedule-timezone`, `feature-dynamic-runner` и upgrade-профилей: она управляет Compose lifecycle, ждёт readiness/setup services, запускает выбранный в manifest API/UI test task и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
+Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-schedule-timezone`, `feature-dynamic-runner` и upgrade-профилей: она управляет Compose lifecycle, генерирует локальные SSH/TLS/encryption fixtures при необходимости, ждёт readiness/setup services, запускает выбранный test lifecycle и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
 
 ## Обнаруженный риск воспроизводимости
 
@@ -250,6 +255,10 @@ Manifest должен попадать в Allure environment/labels вместе
 8. Добавить OIDC feature-профиль. Выполнено: pinned Dex, discovery, browser login, callback, session/logout, return path, provisioning, repeat login, local-email conflict и provider failure проходят локально на `v2.19.8`.
 9. Добавить LDAP с TLS. Выполнено: pinned OpenLDAP, LDAPS service/user bind, search/mapping, provisioning/reuse, logout, invalid password и local-email conflict проходят локально на `v2.19.8`.
 10. Добавить dynamic one-off runner. Выполнено как ручной reproducer: webhook запускает runner, task завершается успешно и `finish` webhook приходит, но процесс не выходит на `v2.19.8`. Вероятная недостижимость exit condition зафиксирована в `dynamic-runner-one-off-exit-defect.md`; профиль не добавлен в зелёную CI matrix.
-11. Следующий infrastructure-профиль — HA на PostgreSQL/Redis с двумя server nodes и remote runner.
+11. Добавить HTTPS reverse proxy, non-root web path и OIDC. Выполнено: `feature-proxy-oidc` на PostgreSQL/Nginx/Dex проверяет routing `/semaphore`, trusted TLS API, browser callback/return path и `Secure`/`HttpOnly` session cookie.
+12. Исследовать HA. Выполнено: active-active требует Enterprise subscription и Redis-backed overlay, отсутствующий в community build. Реализация отложена до получения test key; два community nodes не используются как ложный HA stand.
+13. Добавить rotation database encryption keyring. Выполнено: `feature-encryption-rotation` на PostgreSQL создаёт secrets со старым primary, hot-reload переключает запись на новый key ID, `vault check` подтверждает mixed state, `vault rekey --backup` мигрирует ciphertext, после чего retired key удаляется и сохранённый template выполняется повторно.
+14. Добавить MFA. Выполнено: `feature-totp-local` проверяет self-enrollment, challenge после password login, invalid/valid RFC 6238 passcode, recovery, повторный enrollment и отказ уже использованного recovery code. TOTP secret и коды исключены из HTTP и Allure artifacts.
+15. Расширить TOTP browser-flow. Выполнено: отдельный UI account включает TOTP в Security settings, проверяет QR/recovery-code rendering, проходит challenge с invalid/valid passcode и восстанавливается через recovery form. Чувствительные UI artifacts при падении не публикуются.
 
 Так мы сначала защищаем типичную установку клиента и самые дорогие точки отказа, но сохраняем окружение понятным для одного инженера.

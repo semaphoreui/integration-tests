@@ -119,6 +119,25 @@ class SafeHttpReportingInterceptorTest {
   }
 
   @Test
+  void redactsTotpEnrollmentAndVerificationMaterial() {
+    String report =
+        SecretSanitizer.body(
+            """
+            {
+              "url": "otpauth://totp/Semaphore:user?secret=BASE32SECRET",
+              "recovery_code": "recovery-secret",
+              "passcode": "123456",
+              "status": "ready"
+            }
+            """,
+            MediaType.get("application/json"));
+
+    assertThat(report)
+        .contains("ready", SecretSanitizer.REDACTED)
+        .doesNotContain("BASE32SECRET", "recovery-secret", "123456");
+  }
+
+  @Test
   void omitsUnsupportedAndMalformedBodiesInsteadOfRiskingSecretExposure() {
     assertThat(SecretSanitizer.body("plain-secret", MediaType.get("text/plain")))
         .isEqualTo(SecretSanitizer.OMITTED_BODY);

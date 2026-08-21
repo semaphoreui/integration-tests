@@ -1,0 +1,57 @@
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_WEB_ROOT: https://localhost:3443/semaphore
+      SEMAPHORE_OIDC_PROVIDERS: >-
+        {"dex":{"client_id":"semaphore","client_secret":"semaphore-test-client-secret","provider_url":"http://dex.localhost:5556/dex","redirect_url":"https://localhost:3443/semaphore/api/auth/oidc/dex/redirect","display_name":"Bookwright Dex","username_claim":"email","name_claim":"email","return_via_state":true},"unavailable":{"client_id":"unavailable","client_secret":"unavailable-test-client-secret","provider_url":"http://127.0.0.1:1/oidc","redirect_url":"https://localhost:3443/semaphore/api/auth/oidc/unavailable/redirect","display_name":"Unavailable OIDC","username_claim":"email","name_claim":"email","return_via_state":true}}
+    extra_hosts:
+      - "dex.localhost:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dex:
+        condition: service_healthy
+
+  dex:
+    image: ghcr.io/dexidp/dex:v2.45.1-alpine
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    ports:
+      - "5556:5556"
+    volumes:
+      - ./profiles/feature-oidc-local/dex.yaml:/etc/dex/config.yaml:ro
+      - dex-data:/var/dex
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:5556/dex/.well-known/openid-configuration >/dev/null",
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    restart: unless-stopped
+
+  proxy:
+    image: nginx:1.27.5-alpine
+    ports:
+      - "3443:443"
+    volumes:
+      - ./profiles/feature-proxy-oidc/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../build/test-fixtures/proxy-tls/localhost-cert.pem:/etc/nginx/tls/localhost-cert.pem:ro
+      - ../build/test-fixtures/proxy-tls/localhost-key.pem:/etc/nginx/tls/localhost-key.pem:ro
+    depends_on:
+      semaphore:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-check-certificate -qO- https://127.0.0.1/semaphore/api/ping | grep -q pong",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 45
+    restart: unless-stopped
+
+volumes:
+  dex-data:
