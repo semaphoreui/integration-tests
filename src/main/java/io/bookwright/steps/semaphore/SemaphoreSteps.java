@@ -3,6 +3,8 @@ package io.bookwright.steps.semaphore;
 import com.google.inject.Inject;
 import io.bookwright.steps.semaphore.accesskeys.AccessKeySteps;
 import io.bookwright.steps.semaphore.auth.AuthSteps;
+import io.bookwright.steps.semaphore.backups.BackupSteps;
+import io.bookwright.steps.semaphore.integrations.IntegrationSteps;
 import io.bookwright.steps.semaphore.inventories.InventorySteps;
 import io.bookwright.steps.semaphore.projects.ProjectSteps;
 import io.bookwright.steps.semaphore.repositories.RepositorySteps;
@@ -23,11 +25,13 @@ public class SemaphoreSteps {
 
   @Inject private SystemSteps system;
   @Inject private AuthSteps auth;
+  @Inject private BackupSteps backups;
   @Inject private ProjectSteps projects;
   @Inject private AccessKeySteps accessKeys;
   @Inject private RepositorySteps repositories;
   @Inject private RunnerSteps runners;
   @Inject private InventorySteps inventories;
+  @Inject private IntegrationSteps integrations;
   @Inject private TemplateSteps templates;
   @Inject private TaskSteps tasks;
   @Inject private ScheduleSteps schedules;

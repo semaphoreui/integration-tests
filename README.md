@@ -32,6 +32,12 @@ test-environment/profile test core-sqlite-local
 
 Команда сама проверяет readiness и добавляет точную конфигурацию стенда в Allure environment. Остановка с сохранением SQLite volume: `test-environment/profile down core-sqlite-local`. Полное удаление состояния требует явной команды `test-environment/profile clean core-sqlite-local --yes`.
 
+Короткий browser smoke на том же стенде проверяет password login, запуск подготовленного executable template через UI и обязательность project name до отправки запроса:
+
+```bash
+./gradlew uiTest -DSTAND=semaphore -DSEMAPHORE_PROFILE=core-sqlite-local
+```
+
 Тот же набор выполняется без копирования тестов на PostgreSQL, MySQL и MariaDB. Профили используют общий порт и запускаются последовательно:
 
 ```bash
@@ -56,7 +62,11 @@ test-environment/profile up prod-postgres-runner
 test-environment/profile test prod-postgres-runner
 ```
 
-Runner регистрируется автоматически, сохраняет долгоживущий token в отдельном volume и через admin API назначается default runner. Отдельный API-тест подтверждает `active`, `registered`, `is_default`, `online` и heartbeat до запуска task-сценариев.
+Runner регистрируется автоматически, сохраняет долгоживущий token в отдельном volume и через admin API назначается default runner. API-тесты подтверждают `active`, `registered`, `is_default`, `online`, heartbeat, exact tag routing по persisted `used_runner_id` и capacity `1`: второй task остаётся в `waiting`, пока первый занимает runner.
+
+При отсутствии подходящего активного runner поведение отличается от capacity: `v2.19.8` переводит task в `error: no runners available`, а не сохраняет в очереди. Это воспроизведено для временно отключённого matching runner и несуществующего tag; подробности находятся в `test-environment/runner-unavailable-routing-defect.md`.
+
+Ещё одно отличие remote execution: `v2.19.8` теряет secret survey variables перед dispatch, поэтому задача получает undefined variable. Профиль содержит безопасный known-defect canary без вывода значения; исправление upstream #4086 уже входит в `v2.20.0-alpha1`. Доказательства и критерий переключения на positive regression описаны в `test-environment/remote-runner-survey-secrets-defect.md`.
 
 SSH feature-профиль проверяет зашифрованный access key сразу на двух клиентских границах: Git clone по SSH и подключение Ansible к удалённому target:
 
@@ -146,7 +156,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 
 GitHub Actions разделены по стоимости и назначению:
 
-- `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite на `core-sqlite-local`;
+- `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite и короткий Chromium UI smoke на `core-sqlite-local`;
 - `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH, прямой и HTTPS/subpath OIDC, LDAPS, TOTP и ротацию database encryption keyring;
 - `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.7 → v2.19.8` на SQLite и PostgreSQL.
 
@@ -174,7 +184,15 @@ project → access key → local Git repository → inventory → task template
 
 Variable Group-набор создаёт смешанную группу с JSON extra vars, ENV и секретами типов `var`/`env`, переименовывает сохранённый secret без замены значения и реально выполняет `variables.yml`. Playbook проверяет секреты по SHA-256 под `no_log` и выводит только безопасный marker; тест отдельно контролирует create/get/list API и structured/raw output. Тот же контракт прошёл на SQLite и PostgreSQL `v2.19.8`; пустое имя ENV-переменной получает диагностируемый `400`.
 
-Survey/task override-набор сохраняет в template enum, integer, string, env-target и secret survey variables, затем запускает `survey-overrides.yml` с переопределёнными значениями, template/task arguments и Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. Task действительно выполняется на SQLite и PostgreSQL, secret проверяется по SHA-256 под `no_log` и отсутствует в structured/raw output. Неподдерживаемый survey target получает `400`. Отдельно зафиксирован gap `v2.19.8`: enum default вне списка принимается backend-ом; исправление уже есть в upstream `v2.20.0-alpha1`.
+Survey/task override-набор сохраняет в template enum, integer, string, env-target и secret survey variables, затем запускает `survey-overrides.yml` с переопределёнными значениями, template/task arguments и Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. Task действительно выполняется на SQLite и PostgreSQL с local execution, secret проверяется по SHA-256 под `no_log` и отсутствует в structured/raw output. Persistent runner на `v2.19.8` теряет survey secret перед dispatch; это покрыто отдельным canary до перехода на upstream #4086. Неподдерживаемый survey target получает `400`. Также зафиксирован gap `v2.19.8`: enum default вне списка принимается backend-ом; исправление уже есть в upstream `v2.20.0-alpha1`.
+
+Webhook integration-набор создаёт token-authenticated searchable integration, project alias, header matcher и extractors из JSON body/header. Запросы с неверным token или event не запускают task, а валидный webhook возвращает task identifiers, сохраняет связь через `integration_id` и реально передаёт extracted значения в Ansible playbook. Token хранится в `login_password` access key и редактируется в API/Allure diagnostics.
+
+Project backup/restore-набор экспортирует конфигурацию с access keys, repository, inventory, template и schedule после реального task execution. Backup не содержит plaintext authentication secret и task history; восстановленный проект получает новые ID с корректно перелинкованными ресурсами, после чего его template снова успешно выполняется. Workflows и external Secret Storage management не имитируются на Community image: обе возможности отключены feature flags и требуют Pro test subscription для честного e2e.
+
+Negative restore checks подтверждают запрет операции для non-admin и отклонение отсутствующей repository-ссылки. На `v2.19.8` найден общий off-by-one дефект duplicate validation: документ с двумя одинаковыми именами repository принимается и создаёт оба ресурса; canary и source boundary описаны в `test-environment/project-backup-restore-validation-defect.md`.
+
+Concurrency-набор создаёт template с `allow_parallel_tasks=true`, чтобы не смешивать project limit с template-lock. При `max_parallel_tasks=1` первая задача доходит до marker, а вторая стабильно остаётся в `waiting`; после освобождения слота она запускается. После API-обновления проекта до лимита `2` две задачи одновременно достигают marker и обе корректно останавливаются.
 
 Git-набор проверяет выполнение задачи из явно выбранной ветки, диагностируемый отказ для отсутствующей ветки и недоступного HTTPS remote. Для authenticated clone дополнительно проверяется, что login/password не попадают в structured и raw task output.
 
@@ -202,5 +220,8 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `test-environment/smoke-report.md` — результаты проверки стенда.
 - `test-environment/schedule-execution-defect.md` — воспроизводимый дефект cron/run-at execution.
 - `test-environment/dynamic-runner-one-off-exit-defect.md` — воспроизводимый дефект завершения one-off runner.
+- `test-environment/runner-unavailable-routing-defect.md` — fail-fast вместо recoverable queue при отсутствии matching runner.
+- `test-environment/remote-runner-survey-secrets-defect.md` — потеря secret survey variables при remote dispatch.
+- `test-environment/survey-default-validation-defect.md` — отсутствие enum default validation в `v2.19.8`.
 
 Исходный код Semaphore хранится локально в `/semaphore/` и исключён из этого репозитория.

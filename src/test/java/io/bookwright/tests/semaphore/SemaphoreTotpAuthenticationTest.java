@@ -14,10 +14,12 @@ import io.bookwright.util.TotpCodes;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 @Api
 @OwnerDanil
 @Feature("Semaphore TOTP authentication")
+@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "feature-totp-local")
 class SemaphoreTotpAuthenticationTest {
 
   @Test

@@ -15,7 +15,9 @@ public record TemplateRequest(
     String arguments,
     @JsonProperty("allow_override_args_in_task") boolean allowOverrideArgsInTask,
     @JsonProperty("survey_vars") List<SurveyVariable> surveyVariables,
-    @JsonProperty("task_params") AnsibleTemplateParameters taskParameters) {
+    @JsonProperty("task_params") AnsibleTemplateParameters taskParameters,
+    @JsonProperty("runner_tag") String runnerTag,
+    @JsonProperty("allow_parallel_tasks") boolean allowParallelTasks) {
 
   public TemplateRequest(
       String name,
@@ -38,6 +40,8 @@ public record TemplateRequest(
         null,
         false,
         List.of(),
-        null);
+        null,
+        null,
+        false);
   }
 }

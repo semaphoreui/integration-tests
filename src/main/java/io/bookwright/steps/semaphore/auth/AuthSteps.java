@@ -9,6 +9,7 @@ import io.bookwright.api.model.semaphore.TotpRecoveryRequest;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.api.semaphore.auth.SemaphoreAuthApi;
+import io.bookwright.api.semaphore.backups.SemaphoreBackupsApi;
 import io.bookwright.api.semaphore.projects.SemaphoreProjectsApi;
 import io.bookwright.api.semaphore.schedules.SemaphoreSchedulesApi;
 import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
@@ -57,6 +58,7 @@ public class AuthSteps {
     Calls.expectStatus(isolatedAuth.login(request), 204);
     return new SemaphoreSessionApis(
         isolatedAuth,
+        retrofit.create(SemaphoreBackupsApi.class),
         retrofit.create(SemaphoreProjectsApi.class),
         retrofit.create(SemaphoreAccessKeysApi.class),
         retrofit.create(SemaphoreSchedulesApi.class),

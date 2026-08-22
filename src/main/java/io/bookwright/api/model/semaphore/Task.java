@@ -12,4 +12,6 @@ public record Task(
     String message,
     String environment,
     String arguments,
-    AnsibleTaskParameters params) {}
+    AnsibleTaskParameters params,
+    @JsonProperty("integration_id") Long integrationId,
+    @JsonProperty("used_runner_id") Long usedRunnerId) {}

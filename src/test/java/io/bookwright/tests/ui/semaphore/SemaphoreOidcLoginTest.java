@@ -12,11 +12,13 @@ import io.bookwright.steps.UiSteps;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 @Ui
 @Smoke
 @OwnerDanil
 @Feature("Semaphore OIDC authentication")
+@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "feature-(oidc-local|proxy-oidc)")
 class SemaphoreOidcLoginTest {
 
   @Test

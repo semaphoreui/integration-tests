@@ -30,7 +30,8 @@ class StateOwnershipArchitectureTest {
             "testData",
             "booking",
             "semaphoreRbacUser",
-            "semaphoreProject")
+            "semaphoreProject",
+            "semaphoreTemplate")
         .doesNotContain("get", "put", "getRequired");
   }
 

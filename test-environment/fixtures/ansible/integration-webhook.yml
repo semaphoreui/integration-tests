@@ -1,0 +1,14 @@
+---
+- name: Semaphore webhook integration fixture
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Verify values extracted from webhook body and headers
+      ansible.builtin.assert:
+        that:
+          - webhook_release == '2026.08'
+          - webhook_trace == 'trace-2026-08'
+
+    - name: Emit safe webhook proof
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-webhook-ok

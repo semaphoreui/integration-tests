@@ -52,7 +52,7 @@ MariaDB использует MySQL dialect, но upstream CI запускает 
 - выполнение задач локально процессом сервера;
 - выполнение на отдельно зарегистрированном remote runner.
 
-Runner может быть постоянным или one-off. Для динамического one-off runner сервер умеет вызывать webhook, после чего созданный runner регистрируется и забирает задачу. Есть ограничения параллельности и привязка runner к проекту; tags относятся к Pro-возможностям.
+Runner может быть постоянным или one-off. Для динамического one-off runner сервер умеет вызывать webhook, после чего созданный runner регистрируется и забирает задачу. Есть ограничения параллельности и привязка runner к проекту. Global runner tags и exact routing подтверждены на Community `v2.19.8`; Docker/Kubernetes executors остаются Pro-возможностями.
 
 В конфигурации runner обнаружены executor:
 
@@ -135,7 +135,7 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 
 | ID | Конфигурация | Зачем | Запуск |
 |---|---|---|---|
-| `core-sqlite-local` | release Docker image, SQLite, local execution, env config, password auth, `cmd_git` | Самый дешёвый smoke и удобная локальная разработка | каждый PR |
+| `core-sqlite-local` | release Docker image, SQLite, local execution, env config, password auth, `cmd_git` | API baseline; browser password login, task launch и client validation | каждый PR |
 | `core-postgres-local` | Docker Compose, PostgreSQL 14.3, local execution | Black-box совместимость PostgreSQL и миграций без runner-specific переменных | nightly |
 | `prod-postgres-runner` | Docker Compose, PostgreSQL, отдельный persistent runner с local executor, config file | Наиболее полезная проверка production-like границы server ↔ DB ↔ runner | nightly; после стабилизации — PR gate |
 | `core-mysql-local` | Docker Compose, MySQL 8.4, local execution | Black-box совместимость MySQL и миграций | nightly |
@@ -154,7 +154,7 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 
 Базовые пять профилей и восемь feature-профилей реализованы. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls` и `feature-totp-local` дают зелёные positive и negative auth paths без размножения по всей DB-матрице; proxy-вариант дополнительно фиксирует HTTPS/subpath/cookie contract, а TOTP — passcode/recovery lifecycle. `feature-encryption-rotation` проверяет zero-downtime смену primary, rekey и безопасное удаление retired key. `feature-schedule-timezone` воспроизводит отсутствие cron/run-at tasks, а `feature-dynamic-runner` — незавершающийся one-off runner после успешной task. Оба профиля остаются ручными красными reproducer. HA исследован и корректно отложен как Enterprise-only вместо небезопасной community-имитации.
 
-CI-распределение также реализовано: `core-sqlite-local` входит в pull-request gate после framework quality checks; остальные четыре базовых профиля, `feature-ssh-local`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local` и `feature-encryption-rotation` запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate.
+CI-распределение также реализовано: API baseline и короткий Chromium UI smoke на `core-sqlite-local` входят в pull-request gate после framework quality checks; остальные четыре базовых профиля, `feature-ssh-local`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local` и `feature-encryption-rotation` запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate.
 
 ## Какие тесты где запускать
 
@@ -165,6 +165,10 @@ CI-распределение также реализовано: `core-sqlite-lo
 | RBAC и project isolation | ✓ | ✓ | ✓ | ✓ | ✓ | auth profiles расширяют набор |
 | task stop/force-stop | local | local | remote | local | local | runner profiles |
 | runner registration/default/heartbeat | — | — | ✓ | — | — | runner profiles |
+| project max parallel / queue admission | ✓ | planned | ✓ | planned | planned | core profiles |
+| runner exact tag / capacity / used runner | — | — | ✓ | — | — | `prod-postgres-runner` |
+| unavailable matching runner recovery | — | — | defect: task error | — | — | `runner-unavailable-routing-defect.md` |
+| secret survey variable dispatch | local ✓ | local ✓ | defect: value lost | local ✓ | local ✓ | `remote-runner-survey-secrets-defect.md` |
 | dynamic start/finish webhook и one-off exit | — | — | — | — | — | `feature-dynamic-runner`, defect |
 | Git over SSH, SSH inventory и key rotation | — | — | — | — | — | `feature-ssh-local` |
 | реальное cron/run-at execution | — | — | — | — | — | `feature-schedule-timezone`, defect |

@@ -109,7 +109,9 @@ public record SemaphoreSurveyFixtures(
         templateArguments,
         true,
         surveyVariables,
-        templateParameters);
+        templateParameters,
+        null,
+        false);
   }
 
   public TemplateRequest invalidTemplateRequest(
@@ -137,7 +139,9 @@ public record SemaphoreSurveyFixtures(
         templateArguments,
         true,
         List.of(invalid),
-        templateParameters);
+        templateParameters,
+        null,
+        false);
   }
 
   public TaskRequest taskRequest(long templateId) {

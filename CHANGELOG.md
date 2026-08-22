@@ -18,9 +18,18 @@ All notable changes to the Semaphore UI test automation project are documented i
 - TOTP self-enrollment, login challenge, invalid passcode, recovery, and recovery-code rotation coverage.
 - TOTP secret, passcode, and recovery-code redaction in both HTTP attachments and raw Allure step parameters.
 - Browser TOTP enrollment through Security settings, QR rendering, challenge, invalid passcode, and recovery-form coverage with sensitive failure artifacts suppressed.
+- Core browser smoke for password login, launching an API-provisioned executable template, and client-side project-name validation without a create request.
 - Variable Group API coverage for mixed JSON/ENV/secret values, secret rename persistence, task execution, masking, and empty-name validation.
 - Survey-variable and launch-time override coverage for enum/int/string/env/secret values, template/task arguments, Ansible params, persistence, execution, and secret masking.
 - Reproducer and upstream fix trace for the `v2.19.8` backend gap that accepts enum defaults outside their allowed survey values.
+- Project queue coverage proving `max_parallel_tasks` admission at limits one and two with a parallel-capable template.
+- Persistent runner routing coverage for exact tags, `used_runner_id`, capacity re-queueing, active-state recovery through a fresh task, and unmatched tags.
+- Reproducer and source-level boundary for tasks failing instead of waiting when no matching active runner is available.
+- Persistent-runner canary and upstream fix trace for survey secrets being lost during remote dispatch on `v2.19.8`.
+- Webhook integration coverage for token authentication, project-alias matcher routing, body/header extraction, task linkage, and ignored invalid requests.
+- Project backup/restore round-trip coverage for resource relinking, omitted task history and authentication secrets, and post-restore task execution.
+- Documented Pro subscription boundaries for Workflows and external Secret Storage management in the Community image.
+- Reproducer and source-level analysis for project restore accepting duplicate resource names because of an off-by-one validation boundary.
 - GitHub Actions pull-request gate with framework checks and the SQLite core profile.
 - Daily PostgreSQL, MySQL, MariaDB, persistent-runner, SSH, OIDC, LDAPS, TOTP, and encryption-rotation configuration matrix.
 - Weekly and manually triggered SQLite/PostgreSQL release-upgrade verification.

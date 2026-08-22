@@ -26,8 +26,8 @@
 
 | Старый сценарий | Текущее покрытие | Решение |
 |---|---|---|
-| Task success через UI | Бизнес-цепочка полностью покрыта API | Позже переписать один короткий UI smoke без demo-проекта |
-| Stop while waiting | Нет точного state-specific покрытия | Backlog task concurrency |
+| Task success через UI | Покрыто | Короткий UI smoke запускает API-подготовленный executable template без demo-проекта и подтверждает success через API |
+| Stop while waiting | Покрыто через queue/capacity | Waiting admission и dequeue проверены; отдельный UI stop не нужен |
 | Stop while cloning | Есть clone failure и stop running, но не их пересечение | Backlog task lifecycle |
 | Stop while running | Покрыто обычным stop и force-stop | Старый код не нужен |
 | Variable Group с пустым key | Покрыто API | Оставить будущую UI validation-проверку |
@@ -44,7 +44,7 @@
 | TC-004 | User lifecycle | Частично | Create/reuse fixture есть; добавить deactivate/reactivate |
 | TC-005 | API token | Backlog | P1 auth/security |
 | TC-006 | Project create | Покрыто | Не дублировать |
-| TC-007 | Max parallel tasks | Backlog | P1 concurrency/queue |
+| TC-007 | Max parallel tasks | Покрыто | Лимиты 1→2, waiting admission, slot release и одновременный running автоматизированы |
 | TC-008 | Backup/restore | Backlog | P2 migration/recovery |
 | TC-009 | Delete project dependencies | Частично | Cleanup есть; добавить негативный контракт зависимостей |
 | TC-010 | SSH Git repository | Покрыто | Локальный SSH Git fixture, negative auth и rotation автоматизированы |
@@ -59,13 +59,13 @@
 | TC-019 | TF_VAR secrets | Внешний | После Terraform profile |
 | TC-020 | Ansible template execution | Покрыто | Не дублировать |
 | TC-021 | Build/deploy chain | Backlog | P2 workflows |
-| TC-022 | Survey variables | Покрыто API | Enum/int/string/env/secret metadata, persistence, execution и backend target validation; UI widgets/required остаются browser-проверкой |
+| TC-022 | Survey variables | Покрыто API с дефектом | Enum/int/string/env/secret metadata, persistence, local execution и backend target validation; `v2.19.8` теряет secret при remote dispatch; UI widgets/required остаются browser-проверкой |
 | TC-023 | Task overrides | Покрыто API | Launch values, template/task arguments и Ansible limit/tags/skip-tags/diff/skip-galaxy реально выполняются |
 | TC-024 | Stop task | Покрыто | Обычный stop и force-stop детерминированы marker-ом |
 | TC-025 | Cron schedule | Частично | CRUD/validation/toggle добавлены; реальное fire и DST вынести в slow profile |
 | TC-026 | Run-at schedule | Частично | Payload/validation добавлены; fire/delete-after-run вынести в slow profile |
-| TC-027 | Runner registration | Покрыто | Persistent runner проверяет status и heartbeat |
-| TC-028 | Runner tags | Backlog | P1 runner routing/capacity |
+| TC-027 | Runner registration | Частично | Registration/status/heartbeat покрыты; offline recovery воспроизводит `error` вместо ожидаемого waiting |
+| TC-028 | Runner tags | Покрыто с дефектом | Exact tag и used_runner_id проходят, busy runner requeue работает; unavailable/unmatched tag завершается error |
 | TC-029 | GitHub integration | Внешний | Нужен webhook receiver и управляемый GitHub event fixture |
 | TC-030 | Task Runner RBAC | Покрыто | Permission mask и запрещённые mutations проверяются |
 
@@ -78,6 +78,6 @@
 1. Schedules contract и validation — текущая реализация.
 2. Локальный SSH Git/inventory fixture без внешней сети.
 3. Variable Groups, survey variables и launch-time overrides — выполнено на API.
-4. Queue/max parallel и runner tags — следующий блок.
-5. Минимальные UI smoke: login, запуск task, одна клиентская validation.
+4. Queue/max parallel и runner tags — выполнено; unavailable runner recovery и потеря survey secret при remote dispatch зафиксированы отдельными reproducer/canary.
+5. Минимальные UI smoke — выполнено: password login, запуск task и client-side project-name validation без POST.
 6. Отдельные feature profiles для Vault, Terraform и webhook integration.

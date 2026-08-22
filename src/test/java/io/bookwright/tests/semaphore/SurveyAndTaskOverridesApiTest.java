@@ -14,6 +14,8 @@ import io.bookwright.steps.ApiSteps;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 @Api
 @OwnerDanil
@@ -22,6 +24,7 @@ class SurveyAndTaskOverridesApiTest {
 
   @Test
   @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_PROJECT_EXISTS})
+  @DisabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "prod-postgres-runner")
   @DisplayName("Survey values and launch-time overrides reach the Ansible task")
   void surveyValuesAndTaskOverridesExecute(
       ApiSteps api, TestStore store, SemaphoreFixtures core, SemaphoreSurveyFixtures fixture) {
@@ -45,6 +48,9 @@ class SurveyAndTaskOverridesApiTest {
     var template = api.semaphore().templates().get(project.id(), created.id());
     var task =
         api.semaphore().tasks().startAndWait(project.id(), fixture.taskRequest(template.id()));
+    api.semaphore()
+        .tasks()
+        .waitUntilTaskOutputContains(project.id(), task.id(), fixture.outputMarker());
     var structuredOutput = api.semaphore().tasks().getTaskOutputText(project.id(), task.id());
     var rawOutput = api.semaphore().tasks().getTaskRawOutput(project.id(), task.id());
 
@@ -60,6 +66,40 @@ class SurveyAndTaskOverridesApiTest {
     SecretAssertions.absent(
         "structured survey task output", structuredOutput, fixture.taskSecret().value());
     SecretAssertions.absent("raw survey task output", rawOutput, fixture.taskSecret().value());
+  }
+
+  @Test
+  @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_PROJECT_EXISTS})
+  @EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "prod-postgres-runner")
+  @DisplayName("Remote runner loses secret survey values before upstream fix #4086")
+  void remoteRunnerLosesSurveySecret(
+      ApiSteps api, TestStore store, SemaphoreFixtures core, SemaphoreSurveyFixtures fixture) {
+    var project = store.semaphoreProject();
+    var key =
+        api.semaphore().accessKeys().create(project.id(), core.accessKey().request(project.id()));
+    var repository =
+        api.semaphore()
+            .repositories()
+            .create(project.id(), core.repositories().primary().request(project.id(), key.id()));
+    var inventory =
+        api.semaphore()
+            .inventories()
+            .create(project.id(), core.inventory().request(project.id(), key.id()));
+    var template =
+        api.semaphore()
+            .templates()
+            .create(
+                project.id(),
+                fixture.templateRequest(project.id(), repository.id(), inventory.id()));
+    var failed =
+        api.semaphore()
+            .tasks()
+            .startAndWaitForFailure(project.id(), fixture.taskRequest(template.id()));
+    var output = api.semaphore().tasks().getTaskOutputText(project.id(), failed.id());
+
+    assertThat(output).contains(fixture.taskSecret().name(), "is undefined");
+    SecretAssertions.absent(
+        "remote runner survey task output", output, fixture.taskSecret().value());
   }
 
   @Test

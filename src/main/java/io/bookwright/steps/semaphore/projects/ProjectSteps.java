@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
+import io.bookwright.api.model.semaphore.ProjectUpdateRequest;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.projects.SemaphoreProjectsApi;
 import io.bookwright.teardown.TeardownStorage;
@@ -52,6 +53,12 @@ public class ProjectSteps {
   @Step("Get Semaphore project {projectId}")
   public Project getProject(long projectId) {
     return Calls.body(api.getProject(projectId), 200, "project");
+  }
+
+  @Step("Update Semaphore project {projectId}")
+  public Project updateProject(long projectId, ProjectUpdateRequest request) {
+    Calls.expectStatus(api.updateProject(projectId, request), 204);
+    return getProject(projectId);
   }
 
   @Step("Get current role in Semaphore project {projectId}")

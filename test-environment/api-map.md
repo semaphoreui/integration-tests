@@ -33,7 +33,9 @@
 | Stop task | `POST /tasks/{id}/stop` | 204 | Обычная и принудительная остановка |
 | Schedules | CRUD `/api/project/{project_id}/schedules` | 200/201/204 | cron, `run_at`, active, timezone/DST, task params |
 | Project users | CRUD `/api/project/{project_id}/users` | 200/204 | Роли owner/manager/task_runner/guest и project isolation |
-| Global runners | `GET /api/runners` | 200 | Регистрация, active/default flags, online status и heartbeat |
+| Global runners | `GET/PUT /api/runners/{id}`, `GET /api/runner_tags` | 200/204 | Регистрация, active/default, heartbeat, tags, capacity и routing |
+| Integrations | CRUD `/api/project/{project_id}/integrations`, aliases, matchers, values; `POST /api/integrations/{alias}` | 200/201/204 | Token auth, matcher routing, body/header extraction, связь с task и безопасный отказ |
+| Project backup | `GET /api/project/{project_id}/backup`, `POST /api/projects/restore` | 200 | Перенос связей ресурсов, отсутствие task history и authentication secrets, исполнимость восстановленного template |
 | Cleanup | DELETE созданных ресурсов и проекта | 204 | Удаление в обратном порядке и отсутствие остаточных данных |
 
 ## Зависимости ресурсов
@@ -46,7 +48,9 @@ Project
 ├── Variable Group
 └── Task Template ──> Repository + Inventory + Variable Group
     ├── Task ──> Status + Output
-    └── Schedule ──> Cron/Run-at + Task Parameters
+    ├── Schedule ──> Cron/Run-at + Task Parameters
+    └── Integration ──> Auth Key + Matcher + Extracted Values + Public Alias
+        └── Webhook ──> Task + Extracted Ansible Variables
 ```
 
 Это определяет порядок создания тестовых данных и обратный порядок очистки.
@@ -122,17 +126,17 @@ Project
 3. Schedule: cron, run-at, timezone/DST и параметры задачи.
 4. RBAC для manager, task_runner и guest.
 5. Запрет доступа к ресурсам другого проекта.
-6. Stop/force stop и параллельный запуск задач.
+6. Stop/force stop, project `max_parallel_tasks` и параллельный запуск задач.
 7. Variable Groups: смешанные JSON/ENV/secret values, rename persistence и безопасное task execution.
 8. Survey variables и launch-time overrides: metadata, persistence, secret masking, arguments и Ansible params.
 
 ### P2 — расширение
 
-1. Secret storage.
-2. Integrations и webhooks.
-3. Runners. Базовый persistent remote runner автоматизирован; остаются disconnect/reconnect, capacity и one-off режимы.
-4. Workflows.
-5. Backup/restore и миграционные сценарии.
+1. Secret storage. External storage management является Pro-функцией; Community API сообщает выключенный feature flag и не даёт честного Vault/OpenBao/AWS/Azure сценария без test subscription.
+2. Integrations и webhooks. Token auth, project alias routing, header matcher, body/header extraction и реальный task execution автоматизированы; HMAC/GitHub/Bitbucket/Basic auth остаются расширением.
+3. Runners. Registration/default/heartbeat, exact tag routing и capacity автоматизированы; unavailable recovery и one-off остаются известными дефектами.
+4. Workflows. DAG execution является Pro-функцией: Community controller — документированный stub, поэтому e2e отложен до test subscription.
+5. Backup/restore и миграционные сценарии. Project backup/restore round trip автоматизирован; release upgrade SQLite/PostgreSQL покрыт отдельно.
 
 ## Текущий статус и ближайшее расширение
 
@@ -146,12 +150,20 @@ Project
 
 Обычный stop и force-stop автоматизированы на long-running Ansible fixture. Запрос отправляется после marker фактического начала playbook; затем проверяются terminal `stopped` и отсутствие marker шага после паузы.
 
-Persistent remote runner автоматизирован отдельной API-группой и production-like профилем PostgreSQL. Проверяются регистрация, `active`, `is_default`, `online`, heartbeat и выполнение всей существующей task suite вне server process. Обнаруженный конфигурационный контракт: global runner после авторегистрации не становится default автоматически, а задачи без tag выбирают только `is_default=true` runners.
+Persistent remote runner автоматизирован отдельной API-группой и production-like профилем PostgreSQL. Проверяются регистрация, `active`, `is_default`, `online`, heartbeat и выполнение task suite вне server process. Exact tag сохраняется и выбирает ожидаемый `used_runner_id`; при capacity `1` второй matching task возвращается в `waiting` и запускается после освобождения слота. При отсутствии matching active runner `v2.19.8` вместо recoverable waiting завершает задачу с `error: no runners available`; доказательства и code boundary находятся в `runner-unavailable-routing-defect.md`. Secret survey variables также теряются на границе remote dispatch; canary и upstream #4086 описаны в `remote-runner-survey-secrets-defect.md`.
+
+Project concurrency покрыта независимо от runner capacity: parallel-capable template при project limit `1` удерживает вторую задачу в `waiting`, после stop первая освобождает слот; update проекта до `2` разрешает двум задачам одновременно дойти до running marker. Это защищает create/update persistence и queue admission без таймингового предположения о моменте POST.
 
 Schedule P1 расширен отдельным API-набором: backend cron validation, диагностируемые ошибки invalid cron/type/run-at, CRUD/update, active toggle, сохранение `run_at`, `delete_after_run` и task parameters, запрет создания для `task_runner`, а также контракт системной timezone. Реальное cron и `run_at` исполнение покрыто отдельным `feature-schedule-timezone`, но на `v2.19.8` оба сценария воспроизводят отсутствие автоматически созданной task. До Linux-подтверждения профиль оставлен вне CI matrix; доказательства собраны в `schedule-execution-defect.md`.
 
 Variable Groups покрыты отдельным API-набором: create/get/list, смешанные JSON extra vars и ENV, secrets типов `var`/`env`, переименование secret с сохранением значения, backend validation пустого имени и реальное Ansible execution. Секреты проверяются внутри playbook по SHA-256 под `no_log` и отсутствуют в API responses, structured/raw output и Allure diagnostics. Набор зелёный на SQLite и PostgreSQL `v2.19.8`; API persistence для сценария #2293 работает, браузерный payload остаётся отдельной UI-проверкой.
 
-Survey/task override API-набор сохраняет enum/int/string/env/secret definitions и выполняет задачу с launch environment/secret, template/task arguments и Ansible params на SQLite и PostgreSQL. Проверяются persisted template/task payloads, реальный marker и отсутствие survey secret в structured/raw output. Неподдерживаемый target отклоняется с `400`. `v2.19.8` при этом принимает enum default вне values; defect и upstream fix `eb29c3e8` описаны в `survey-default-validation-defect.md`.
+Survey/task override API-набор сохраняет enum/int/string/env/secret definitions и выполняет задачу с launch environment/secret, template/task arguments и Ansible params на SQLite и PostgreSQL local execution. Проверяются persisted template/task payloads, реальный marker и отсутствие survey secret в structured/raw output. На persistent runner `v2.19.8` positive path заменён known-defect canary: secret не достигает executor; fix #4086 уже находится в `v2.20.0-alpha1`. Неподдерживаемый target отклоняется с `400`. `v2.19.8` также принимает enum default вне values; defect и upstream fix `eb29c3e8` описаны в `survey-default-validation-defect.md`.
+
+Webhook integrations покрыты отдельным domain API и steps. Сквозной сценарий создаёт token-authenticated searchable integration, общий project alias, header matcher и два extractor для JSON body/header. Неверный token и несовпавший matcher возвращают публичный `204` без task headers; валидный webhook создаёт task, возвращает `X-Semaphore-*` identifiers, сохраняет `integration_id` и передаёт extracted значения в Ansible variables. Access-key secret остаётся замаскированным в API и HTTP/Allure diagnostics.
+
+Project backup/restore покрыт отдельным domain API и steps. Round trip экспортирует проект с access keys, repository, inventory, template, schedule и уже выполненной task, проверяет отсутствие plaintext login/password в JSON, меняет только имя проекта и восстанавливает конфигурацию. Новые resource IDs и все ссылки между ними проверяются, task history не переносится, а восстановленный template успешно выполняет доверенный playbook.
+
+Negative restore contract проверяет `401` для non-admin и `400` для отсутствующей repository-ссылки. Отдельный canary фиксирует дефект `v2.19.8`: backup с двумя одинаковыми repository names принимается с `200` из-за условия `n > 2` в общем duplicate validator; восстановленный проект действительно содержит оба объекта. Подробности находятся в `project-backup-restore-validation-defect.md`.
 
 Schedule execution defect подтверждён в Linux CI: `v2.19.8` не создаёт task ни для active cron, ни для `run_at`. SSH key rotation автоматизирована. Строгий `known_hosts` остаётся version-gated сценарием: соответствующая конфигурация отсутствует в `v2.19.8` и должна быть добавлена после перехода на релиз, содержащий текущую upstream-реализацию.

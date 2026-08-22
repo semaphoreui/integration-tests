@@ -66,6 +66,14 @@ test-environment/profile up core-sqlite-local
 test-environment/profile test core-sqlite-local
 ```
 
+После поднятия того же профиля минимальный browser smoke запускается отдельно:
+
+```bash
+./gradlew uiTest -DSTAND=semaphore -DSEMAPHORE_PROFILE=core-sqlite-local
+```
+
+Он проверяет password login, реальный запуск API-подготовленного template через форму и client-side validation пустого project name. Validation-сценарий дополнительно доказывает, что `POST /api/projects` не отправлялся.
+
 Список профилей и manifest выбранного профиля:
 
 ```bash
@@ -112,6 +120,8 @@ test-environment/profile test prod-postgres-runner
 Git fixture монтируется по одинаковому пути `/fixtures/ansible` в server и runner. Иначе локальный repository был бы доступен server, но отсутствовал бы в реальной среде исполнения задачи.
 
 API-набор дополнительно проверяет, что runner активен, зарегистрирован, назначен default, имеет статус `online` и отправляет heartbeat. Успешные task/output и stop/force-stop сценарии при включённом remote mode подтверждают фактическое выполнение на runner.
+
+На `v2.19.8` профиль также содержит known-defect canary: secret survey variable теряется перед remote dispatch, хотя тот же launch проходит при local execution. Canary не печатает значение секрета; upstream-исправление #4086 и критерий удаления workaround описаны в `remote-runner-survey-secrets-defect.md`.
 
 ## SSH feature-профиль
 
@@ -225,7 +235,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 
 | Workflow | Триггер | Профили |
 |---|---|---|
-| `CI` | pull request и push в `main` | `core-sqlite-local` после framework quality gate |
+| `CI` | pull request и push в `main` | API suite и Chromium UI smoke на `core-sqlite-local` после framework quality gate |
 | `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation` |
 | `Release upgrade` | воскресенье `03:30 UTC`, вручную | `upgrade-sqlite-local`, `upgrade-postgres-local` |
 

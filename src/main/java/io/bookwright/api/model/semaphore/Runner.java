@@ -8,6 +8,7 @@ public record Runner(
     long id,
     @JsonProperty("project_id") Long projectId,
     String name,
+    String webhook,
     boolean active,
     @JsonProperty("is_default") boolean defaultRunner,
     boolean registered,

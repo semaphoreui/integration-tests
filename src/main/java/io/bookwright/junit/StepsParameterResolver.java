@@ -9,10 +9,14 @@ import io.bookwright.di.UiModule;
 import io.bookwright.fixtures.database.HotelDatabaseFixtures;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreBackupFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreConcurrencyFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreEncryptionRotationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreIntegrationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreOidcFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreRunnerRoutingFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreScheduleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSurveyFixtures;
@@ -49,9 +53,13 @@ public class StepsParameterResolver implements ParameterResolver {
         || type == LocalUserFixtures.class
         || type == HotelDatabaseFixtures.class
         || type == SemaphoreEncryptionRotationFixtures.class
+        || type == SemaphoreBackupFixtures.class
+        || type == SemaphoreConcurrencyFixtures.class
         || type == SemaphoreFixtures.class
+        || type == SemaphoreIntegrationFixtures.class
         || type == SemaphoreLdapFixtures.class
         || type == SemaphoreOidcFixtures.class
+        || type == SemaphoreRunnerRoutingFixtures.class
         || type == SemaphoreScheduleFixtures.class
         || type == SemaphoreSshFixtures.class
         || type == SemaphoreSurveyFixtures.class
@@ -83,15 +91,27 @@ public class StepsParameterResolver implements ParameterResolver {
     if (type == SemaphoreEncryptionRotationFixtures.class) {
       return SemaphoreEncryptionRotationFixtures.standard();
     }
+    if (type == SemaphoreBackupFixtures.class) {
+      return SemaphoreBackupFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
+    if (type == SemaphoreConcurrencyFixtures.class) {
+      return SemaphoreConcurrencyFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
     if (type == SemaphoreFixtures.class) {
       return SemaphoreFixtures.from(
           io.bookwright.config.Configs.main(), TestDataExtension.getOrCreate(extensionContext));
+    }
+    if (type == SemaphoreIntegrationFixtures.class) {
+      return SemaphoreIntegrationFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreLdapFixtures.class) {
       return SemaphoreLdapFixtures.standard();
     }
     if (type == SemaphoreOidcFixtures.class) {
       return SemaphoreOidcFixtures.standard();
+    }
+    if (type == SemaphoreRunnerRoutingFixtures.class) {
+      return SemaphoreRunnerRoutingFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreScheduleFixtures.class) {
       return SemaphoreScheduleFixtures.from(TestDataExtension.getOrCreate(extensionContext));
