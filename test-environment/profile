@@ -455,8 +455,8 @@ case "$action" in
       fi
       if [ "$selected_tls_fixture" = "generated" ]; then
         set -- "$@" \
-          "-Djavax.net.ssl.trustStore=$tls_truststore" \
-          "-Djavax.net.ssl.trustStorePassword=changeit"
+          "-Dbookwright.test.ssl.trustStore=$tls_truststore" \
+          "-Dbookwright.test.ssl.trustStorePassword=changeit"
       fi
       if [ -n "$selected_test_class" ]; then
         set -- "$@" --tests "$selected_test_class"

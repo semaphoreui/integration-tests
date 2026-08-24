@@ -122,10 +122,14 @@ fun Test.configureBookwrightTestRuntime() {
         "DB_PASSWORD",
         "SSH_PASSWORD",
         "test.seed",
-        "javax.net.ssl.trustStore",
-        "javax.net.ssl.trustStorePassword",
     ).forEach { key ->
         (System.getProperty(key) ?: System.getenv(key))?.let { systemProperty(key, it) }
+    }
+    mapOf(
+        "bookwright.test.ssl.trustStore" to "javax.net.ssl.trustStore",
+        "bookwright.test.ssl.trustStorePassword" to "javax.net.ssl.trustStorePassword",
+    ).forEach { (source, target) ->
+        System.getProperty(source)?.let { systemProperty(target, it) }
     }
     val configPrefixes = listOf("api.", "ui.", "db.", "ssh.", "runner.", "teardown.", "local.booking.", "local.user.")
     System.getProperties().stringPropertyNames()
