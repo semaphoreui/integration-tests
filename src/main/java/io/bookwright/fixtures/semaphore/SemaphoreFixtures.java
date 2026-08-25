@@ -64,7 +64,17 @@ public record SemaphoreFixtures(
         new Templates(
             new Template("bookwright-build-template-" + suffix, "smoke.yml", "ansible", ""),
             new Template(
-                "bookwright-stoppable-template-" + suffix, "long-running.yml", "ansible", "")),
+                "bookwright-stoppable-template-" + suffix, "long-running.yml", "ansible", ""),
+            new Template(
+                "bookwright-shell-output-template-" + suffix,
+                "bash/capture-output/normal.sh",
+                "bash",
+                ""),
+            new Template(
+                "bookwright-background-shell-output-template-" + suffix,
+                "bash/capture-output/background.sh",
+                "bash",
+                "")),
         new Schedule("bookwright-nightly-schedule-" + suffix, "0 0 * * *", false, ""),
         Rbac.standard(),
         new Expectations(
@@ -75,7 +85,9 @@ public record SemaphoreFixtures(
             "semaphore-bookwright-smoke-ok",
             "Failed updating repository",
             "semaphore-bookwright-stop-ready",
-            "semaphore-bookwright-stop-completed"));
+            "semaphore-bookwright-stop-completed",
+            "stdout",
+            "stderr"));
   }
 
   public record Projects(
@@ -125,7 +137,11 @@ public record SemaphoreFixtures(
     }
   }
 
-  public record Templates(Template primary, Template longRunning) {}
+  public record Templates(
+      Template primary,
+      Template longRunning,
+      Template shellOutput,
+      Template backgroundShellOutput) {}
 
   public record Schedule(String name, String cronFormat, boolean active, String type) {
     public ScheduleRequest request(long projectId, long templateId) {
@@ -181,5 +197,7 @@ public record SemaphoreFixtures(
       String outputMarker,
       String cloneFailureMarker,
       String stopReadyMarker,
-      String stopCompletedMarker) {}
+      String stopCompletedMarker,
+      String shellStdoutMarker,
+      String shellStderrMarker) {}
 }

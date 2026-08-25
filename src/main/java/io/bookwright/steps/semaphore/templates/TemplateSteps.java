@@ -20,7 +20,7 @@ public class TemplateSteps {
     this.teardown = teardown;
   }
 
-  @Step("Create Ansible task template in Semaphore project {projectId}")
+  @Step("Create task template in Semaphore project {projectId}")
   public Template create(long projectId, TemplateRequest request) {
     Template template =
         Calls.body(api.createTemplate(projectId, request), 201, "created task template");
