@@ -67,7 +67,7 @@ select_profile() {
 
 compose() {
   SEMAPHORE_IMAGE="$selected_semaphore_image" \
-    docker compose --project-name "$compose_project" --file "$compose_file" "$@"
+    docker-compose --project-name "$compose_project" --file "$compose_file" "$@"
 }
 
 wait_for_setup() {

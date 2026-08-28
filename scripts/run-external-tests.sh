@@ -106,7 +106,8 @@ fi
 echo "Запуск тестов против Semaphore: $api_base_url"
 echo "UI: $ui_base_url"
 
-cd "$script_dir"
+cd "$script_dir/.."
+echo $(pwd)
 
 ./gradlew externalTest \
     -DSTAND=external \

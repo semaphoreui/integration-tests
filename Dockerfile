@@ -40,6 +40,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# Установка docker-compose бинарного файла
+RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
+    chmod +x /usr/local/bin/docker-compose
+
 # Проверка установки Java и установка JAVA_HOME
 RUN java_path=$(dirname $(dirname $(readlink -f $(which java)))) && \
     echo "export JAVA_HOME=$java_path" >> /etc/profile.d/java.sh && \
@@ -79,5 +83,5 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
     CMD java -version && docker --version
 
 # Точка входа по умолчанию
-ENTRYPOINT ["/bin/bash"]
-CMD ["-c", "echo 'Semaphore test runner ready. Run: ./run-external-tests.sh or ./gradlew externalTest'"]
+# ENTRYPOINT ["/bin/bash"]
+# CMD ["-c", "echo 'Semaphore test runner ready. Run: ./run-external-tests.sh or ./gradlew externalTest'"]

@@ -12,7 +12,7 @@
 .DS_Store
 
 # Build
-build/
+# build/
 .gradle/
 *.class
 *.jar

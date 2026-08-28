@@ -16,6 +16,7 @@ services:
       UI_BASE_URL: http://host.docker.internal:3000
       API_PASSWORD: admin
       UI_PASSWORD: admin
+      PROJECT_DIR: /workspace
 
     ports:
       - "8080:8080"  

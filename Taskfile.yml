@@ -7,25 +7,25 @@ tasks:
   test:external:
     desc: "Запуск тестов против запущенного Semaphore UI"
     cmds:
-      - ./scripts/run-external-tests.sh {{.CLI_ARGS}}
+      - docker compose run test-runner ./scripts/run-external-tests.sh {{.CLI_ARGS}}
   sqlite:up:
     cmds:
-      - test-environment/profile up core-sqlite-local
+      - docker compose run test-runner ./test-environment/profile up core-sqlite-local
     status:
       - docker ps --filter "name={{.SEMAPHORE_CONTAINER_NAME}}" --filter "status=running" | grep -q {{.SEMAPHORE_CONTAINER_NAME}}
   sqlite:test:
     deps:
       - sqlite:up
     cmds:
-      - test-environment/profile test core-sqlite-local
+      - docker compose run test-runner ./test-environment/profile test core-sqlite-local
   sqlite:down:
     deps:
       - sqlite:up
     cmds:
-      - test-environment/profile down core-sqlite-local
+      - docker compose run test-runner ./test-environment/profile down core-sqlite-local
   sqlite:clean:
     cmds:
-      - test-environment/profile clean core-sqlite-local --yes
+      - docker compose run test-runner ./test-environment/profile clean core-sqlite-local --yes
   sqlite:
     cmds:
       - task: sqlite:up
@@ -34,46 +34,46 @@ tasks:
 
   mysql:up:
     cmds:
-      - test-environment/profile up core-mysql-local
+      - docker compose run test-runner ./test-environment/profile up core-mysql-local
     status:
       - docker ps --filter "name={{.SEMAPHORE_CONTAINER_NAME}}" --filter "status=running" | grep -q {{.SEMAPHORE_CONTAINER_NAME}}
   mysql:test:
     deps:
       - mysql:up
     cmds:
-      - test-environment/profile test core-mysql-local
+      - docker compose run test-runner ./test-environment/profile test core-mysql-local
   mysql:down:
     deps:
       - mysql:up
     cmds:
-      - test-environment/profile down core-mysql-local
+      - docker compose run test-runner ./test-environment/profile down core-mysql-local
   mysql:clean:
     cmds:
-      - test-environment/profile clean core-mysql-local --yes
+      - docker compose run test-runner ./test-environment/profile clean core-mysql-local --yes
   mysql:
     cmds:
       - task: mysql:up
       - task: mysql:test
       - task: mysql:down
-  
+
   mariadb:up:
     cmds:
-      - test-environment/profile up core-mariadb-local
-    status: 
+      - docker compose run test-runner ./test-environment/profile up core-mariadb-local
+    status:
       - docker ps --filter "name={{.SEMAPHORE_CONTAINER_NAME}}" --filter "status=running" | grep -q {{.SEMAPHORE_CONTAINER_NAME}}
   mariadb:test:
     deps:
       - mariadb:up
-    cmds: 
-      - test-environment/profile test core-mariadb-local
+    cmds:
+      - docker compose run test-runner ./test-environment/profile test core-mariadb-local
   mariadb:down:
     deps:
       - mariadb:up
     cmds:
-      - test-environment/profile down core-mariadb-local
+      - docker compose run test-runner ./test-environment/profile down core-mariadb-local
   mariadb:clean:
     cmds:
-      - test-environment/profile clean core-mariadb-local --yes
+      - docker compose run test-runner ./test-environment/profile clean core-mariadb-local --yes
   mariadb:
     cmds:
       - task: mariadb:up
@@ -82,16 +82,16 @@ tasks:
 
   prod:up:
     cmds:
-      - test-environment/profile up prod-postgres-runner
+      - docker compose run test-runner ./test-environment/profile up prod-postgres-runner
   prod:test:
     cmds:
-      - test-environment/profile test prod-postgres-runner
+      - docker compose run test-runner ./test-environment/profile test prod-postgres-runner
   prod:down:
     cmds:
-      - test-environment/profile down prod-postgres-runner
+      - docker compose run test-runner ./test-environment/profile down prod-postgres-runner
   prod:clean:
     cmds:
-      - test-environment/profile clean prod-postgres-runner --yes
+      - docker compose run test-runner ./test-environment/profile clean prod-postgres-runner --yes
   prod:
     cmds:
       - task: prod:up
@@ -107,13 +107,13 @@ tasks:
   external:localhost:
     desc: "Запуск тестов против Semaphore на localhost:3000"
     cmds:
-      - ./scripts/run-external-tests.sh --host localhost --port 3000
+      - docker compose run test-runner ./scripts/run-external-tests.sh --host localhost --port 3000
   external:docker:
     desc: "Запуск тестов против Semaphore в Docker на host.docker.internal:3000"
     cmds:
-      - ./scripts/run-external-tests.sh --host host.docker.internal --port 3000
+      - docker compose run test-runner ./scripts/run-external-tests.sh --host host.docker.internal --port 3000
 
   publish:s3:
     desc: "Опубликовать результаты тестов в S3"
     cmds:
-      - ./scripts/publish-to-s3.sh {{.CLI_ARGS}}
+      - docker compose run test-runner ./scripts/publish-to-s3.sh {{.CLI_ARGS}}
