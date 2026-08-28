@@ -119,3 +119,11 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `test-environment/smoke-report.md` — результаты проверки стенда.
 
 Исходный код Semaphore хранится локально в `/semaphore/` и исключён из этого репозитория.
+
+# Запуск тестов при помощи Semaphore UI
+
+Вызывать скрипт `run.sh` с параметрами test:external. Через параметры передаются аргументы запуска тестов. 
+Пример
+```bash
+./run.sh test:external [--host ХОСТ] [--port ПОРТ] [--username ПОЛЬЗОВАТЕЛЬ] [--password ПАРОЛЬ]
+```
