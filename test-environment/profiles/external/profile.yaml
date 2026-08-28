@@ -1,0 +1,22 @@
+id: external
+description: Test external semaphore instance with Semaphore API tests
+compose_file: compose.yml
+compose_project: external
+readiness_url: http://localhost:3000/api/ping
+stand: semaphore
+semaphore_version: v2.19.7
+semaphore_image: semaphoreui/semaphore:v2.19.7
+source_commit: e9dc41a1de8a747569334f7a2b76c320b945d4f0
+previous_semaphore_version: v2.19.6
+previous_semaphore_image: semaphoreui/semaphore:v2.19.6
+previous_source_commit: ff0cf4cbaa5760ea57fb02973b9f909e619b1856
+edition: community
+installation: docker-compose-upgrade
+architecture: native
+database_type: external
+database_image: external
+execution_mode: local
+execution_executor: local
+auth: password
+git_client: cmd_git
+capabilities: core-api,task-execution,git-local,schedules,secrets,database-migrations,release-upgrade

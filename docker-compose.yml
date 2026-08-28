@@ -1,0 +1,37 @@
+services:
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: semaphore-test-api:latest
+    container_name: semaphore-test-api
+
+    volumes:
+      - .:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+      
+    environment:
+      GRADLE_OPTS: -Xmx2g
+      API_BASE_URL: http://host.docker.internal:3000/api/
+      UI_BASE_URL: http://host.docker.internal:3000
+      API_PASSWORD: admin
+      UI_PASSWORD: admin
+
+    ports:
+      - "8080:8080"  
+
+    networks:
+      - semaphore-network
+
+    stdin_open: true
+    tty: true
+
+    restart: unless-stopped
+
+volumes:
+  gradle-cache:
+  maven-cache:
+
+networks:
+  semaphore-network:
+    driver: bridge

@@ -190,6 +190,12 @@ tasks.register<Test>("integrationTest") {
     filter { includeTestsMatching("io.bookwright.tests.integration.*") }
 }
 
+tasks.register<Test>("externalTest") {
+    group = "verification"
+    description = "Runs Semaphore API tests against a running external instance (use -DSTAND=external)."
+    filter { includeTestsMatching("io.bookwright.tests.semaphore.*") }
+}
+
 val frameworkCoverageClasses = sourceSets.main.get().output.asFileTree.matching {
     include(
         "io/bookwright/api/**",
