@@ -4,14 +4,10 @@ vars:
   SEMAPHORE_CONTAINER_NAME: "semaphore-1"
 
 tasks:
-  test:local:
-    desc: "Запуск тестов локально с Gradle"
-    cmds:
-      - ./gradlew apiTest
   test:external:
     desc: "Запуск тестов против запущенного Semaphore UI"
     cmds:
-      - ./run-external-tests.sh {{.CLI_ARGS}}
+      - ./scripts/run-external-tests.sh {{.CLI_ARGS}}
   sqlite:up:
     cmds:
       - test-environment/profile up core-sqlite-local
@@ -111,13 +107,13 @@ tasks:
   external:localhost:
     desc: "Запуск тестов против Semaphore на localhost:3000"
     cmds:
-      - ./run-external-tests.sh --host localhost --port 3000
+      - ./scripts/run-external-tests.sh --host localhost --port 3000
   external:docker:
     desc: "Запуск тестов против Semaphore в Docker на host.docker.internal:3000"
     cmds:
-      - ./run-external-tests.sh --host host.docker.internal --port 3000
+      - ./scripts/run-external-tests.sh --host host.docker.internal --port 3000
 
   publish:s3:
     desc: "Опубликовать результаты тестов в S3"
     cmds:
-      - ./publish-to-s3.sh {{.CLI_ARGS}}
+      - ./scripts/publish-to-s3.sh {{.CLI_ARGS}}
