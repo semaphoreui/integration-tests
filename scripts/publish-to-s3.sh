@@ -40,8 +40,8 @@ set -eu
 #     --secret-key minioadmin
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-script_dir=$(cd ..)
-repo_dir="$script_dir"
+repo_dir="$script_dir/.."
+echo "📂 Репозиторий: $repo_dir"
 
 # Значения по умолчанию
 s3_bucket="${AWS_S3_BUCKET:-}"
@@ -181,62 +181,87 @@ s3_path="reports/$timestamp"
 echo "📤 Загрузка файлов в S3..."
 echo "   Путь: s3://$s3_bucket/$s3_path/"
 
-# Функция для загрузки файла в S3 с AWS Signature V4
+# Функция для загрузки файла в S3
 upload_to_s3() {
     local file_path="$1"
     local s3_key="$2"
     local content_type="${3:-text/html}"
 
-    # Чтение файла
-    local file_content=$(cat "$file_path")
-    local file_size=${#file_content}
+    # Если используется MinIO endpoint, используем mc (MinIO Client)
+    if [ -n "$s3_endpoint" ]; then
+        # Убедимся, что mc установлен
+        if ! command -v mc &> /dev/null; then
+            echo "  ✗ mc (MinIO Client) не установлен. Используйте: brew install minio-mc" >&2
+            return 1
+        fi
 
-    # AWS Signature Version 4
-    local date_value=$(date -u '+%a, %d %b %Y %H:%M:%S GMT')
+        # Настроим alias для MinIO если его нет
+        if ! mc alias list 2>/dev/null | grep -q "^minio "; then
+            mc alias set minio "$s3_endpoint" "$aws_access_key" "$aws_secret_key" >/dev/null 2>&1
+        fi
+
+        # Загрузим через mc
+        if mc cp "$file_path" "minio/$s3_bucket/$s3_key" >/dev/null 2>&1; then
+            echo "  ✓ Загружен: $s3_key"
+            return 0
+        else
+            echo "  ✗ Ошибка при загрузке: $s3_key" >&2
+            return 1
+        fi
+    fi
+
+    # Для AWS S3 используем AWS Signature V4
     local amz_date=$(date -u '+%Y%m%dT%H%M%SZ')
     local datestamp=$(date -u '+%Y%m%d')
 
-    # Hashing
-    local payload_hash=$(echo -n "$file_content" | openssl dgst -sha256 -hex | awk '{print $2}')
+    # Хеш файла
+    local payload_hash=$(openssl dgst -sha256 -hex "$file_path" | awk '{print $2}')
 
     # Canonical request
-    local canonical_request="PUT
-/$s3_key
-Content-Type:$content_type
-Host:$s3_host
-X-Amz-Content-Sha256:$payload_hash
-X-Amz-Date:$amz_date
+    local tmp_canonical=$(mktemp)
+    cat > "$tmp_canonical" << CANONICAL
+PUT
+/${s3_key}
 
-Content-Type;Host;X-Amz-Content-Sha256;X-Amz-Date
-$payload_hash"
+host:${s3_host}
+x-amz-content-sha256:${payload_hash}
+x-amz-date:${amz_date}
 
-    local canonical_hash=$(echo -n "$canonical_request" | openssl dgst -sha256 -hex | awk '{print $2}')
+host;x-amz-content-sha256;x-amz-date
+${payload_hash}
+CANONICAL
+
+    local canonical_hash=$(openssl dgst -sha256 -hex "$tmp_canonical" | awk '{print $2}')
+    rm -f "$tmp_canonical"
 
     # String to sign
-    local string_to_sign="AWS4-HMAC-SHA256
-$amz_date
-$datestamp/${s3_region}/s3/aws4_request
-$canonical_hash"
+    local tmp_string=$(mktemp)
+    cat > "$tmp_string" << SIGN
+AWS4-HMAC-SHA256
+${amz_date}
+${datestamp}/${s3_region}/s3/aws4_request
+${canonical_hash}
+SIGN
 
     # Calculate signature
     local kSecret="AWS4${aws_secret_key}"
-    local kDate=$(echo -n "$datestamp" | openssl dgst -sha256 -mac HMAC -macopt key:"$kSecret" -hex | awk '{print $2}')
-    local kRegion=$(echo -n "${s3_region}" | openssl dgst -sha256 -mac HMAC -macopt hexkey:"$kDate" -hex | awk '{print $2}')
-    local kService=$(echo -n "s3" | openssl dgst -sha256 -mac HMAC -macopt hexkey:"$kRegion" -hex | awk '{print $2}')
-    local kSigning=$(echo -n "aws4_request" | openssl dgst -sha256 -mac HMAC -macopt hexkey:"$kService" -hex | awk '{print $2}')
-    local signature=$(echo -n "$string_to_sign" | openssl dgst -sha256 -mac HMAC -macopt hexkey:"$kSigning" -hex | awk '{print $2}')
+    local kDate=$(printf '%s' "$datestamp" | openssl dgst -sha256 -mac HMAC -macopt key:"$kSecret" -hex | awk '{print $2}')
+    local kRegion=$(printf '%s' "${s3_region}" | openssl dgst -sha256 -mac HMAC -macopt hexkey:"$kDate" -hex | awk '{print $2}')
+    local kService=$(printf '%s' "s3" | openssl dgst -sha256 -mac HMAC -macopt hexkey:"$kRegion" -hex | awk '{print $2}')
+    local kSigning=$(printf '%s' "aws4_request" | openssl dgst -sha256 -mac HMAC -macopt hexkey:"$kService" -hex | awk '{print $2}')
+    local signature=$(openssl dgst -sha256 -mac HMAC -macopt hexkey:"$kSigning" -hex "$tmp_string" | awk '{print $2}')
+    rm -f "$tmp_string"
 
     # Authorization header
-    local auth_header="AWS4-HMAC-SHA256 Credential=${aws_access_key}/${datestamp}/${s3_region}/s3/aws4_request, SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date, Signature=$signature"
+    local auth_header="AWS4-HMAC-SHA256 Credential=${aws_access_key}/${datestamp}/${s3_region}/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=${signature}"
 
     # Upload file
     local http_code=$(curl -s -w "%{http_code}" -o /dev/null \
         -X PUT \
-        -H "Content-Type: $content_type" \
-        -H "Authorization: $auth_header" \
-        -H "X-Amz-Content-Sha256: $payload_hash" \
-        -H "X-Amz-Date: $amz_date" \
-        -H "X-Amz-Acl: public-read" \
+        -H "host: ${s3_host}" \
+        -H "x-amz-content-sha256: ${payload_hash}" \
+        -H "x-amz-date: ${amz_date}" \
+        -H "Authorization: ${auth_header}" \
         --data-binary @"$file_path" \
         "${protocol}://${s3_host}/${s3_key}")
 
