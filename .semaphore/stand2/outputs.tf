@@ -1,14 +1,14 @@
-output "bucket_id" {
-  description = "Name of the S3 bucket."
-  value       = aws_s3_bucket.this.id
+output "site_url" {
+  description = "URL of the protected site."
+  value       = "https://${cloudflare_workers_domain.site.hostname}"
 }
 
-output "bucket_arn" {
-  description = "ARN of the S3 bucket."
-  value       = aws_s3_bucket.this.arn
+output "bucket_name" {
+  description = "Name of the R2 bucket."
+  value       = cloudflare_r2_bucket.this.name
 }
 
-output "bucket_regional_domain_name" {
-  description = "Regional domain name of the bucket."
-  value       = aws_s3_bucket.this.bucket_regional_domain_name
+output "access_application_aud" {
+  description = "Access application audience tag the Worker validates against."
+  value       = cloudflare_zero_trust_access_application.site.aud
 }

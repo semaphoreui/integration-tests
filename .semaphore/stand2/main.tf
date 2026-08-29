@@ -1,40 +1,82 @@
-resource "aws_s3_bucket" "this" {
-  bucket        = var.bucket_name
-  force_destroy = var.force_destroy
+# ---------------------------------------------------------------------------
+# Storage
+# ---------------------------------------------------------------------------
+
+resource "cloudflare_r2_bucket" "this" {
+  account_id = var.cloudflare_account_id
+  name       = var.bucket_name
+  location   = var.bucket_location != "" ? var.bucket_location : null
 }
 
-resource "aws_s3_bucket_ownership_controls" "this" {
-  bucket = aws_s3_bucket.this.id
+# ---------------------------------------------------------------------------
+# Zero Trust Access: email one-time-PIN login, allow-listed emails/domains
+# ---------------------------------------------------------------------------
 
-  rule {
-    object_ownership = "BucketOwnerEnforced"
+resource "cloudflare_zero_trust_access_identity_provider" "otp" {
+  account_id = var.cloudflare_account_id
+  name       = "Email one-time PIN"
+  type       = "onetimepin"
+}
+
+resource "cloudflare_zero_trust_access_application" "site" {
+  zone_id                   = var.cloudflare_zone_id
+  name                      = var.hostname
+  domain                    = var.hostname
+  type                      = "self_hosted"
+  session_duration          = var.session_duration
+  allowed_idps              = [cloudflare_zero_trust_access_identity_provider.otp.id]
+  auto_redirect_to_identity = true
+  app_launcher_visible      = false
+}
+
+resource "cloudflare_zero_trust_access_policy" "allow" {
+  zone_id        = var.cloudflare_zone_id
+  application_id = cloudflare_zero_trust_access_application.site.id
+  name           = "Allowed emails"
+  precedence     = 1
+  decision       = "allow"
+
+  include {
+    email        = length(var.allowed_emails) > 0 ? var.allowed_emails : null
+    email_domain = length(var.allowed_email_domains) > 0 ? var.allowed_email_domains : null
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "this" {
-  bucket = aws_s3_bucket.this.id
+# ---------------------------------------------------------------------------
+# Worker: verifies the Access JWT and serves objects from R2
+# ---------------------------------------------------------------------------
 
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
+resource "cloudflare_workers_script" "site" {
+  account_id         = var.cloudflare_account_id
+  name               = var.worker_name
+  content            = file("${path.module}/worker/index.js")
+  module             = true
+  compatibility_date = "2024-09-01"
 
-resource "aws_s3_bucket_versioning" "this" {
-  bucket = aws_s3_bucket.this.id
+  r2_bucket_binding {
+    name        = "BUCKET"
+    bucket_name = cloudflare_r2_bucket.this.name
+  }
 
-  versioning_configuration {
-    status = var.enable_versioning ? "Enabled" : "Suspended"
+  plain_text_binding {
+    name = "ACCESS_TEAM_DOMAIN"
+    text = var.access_team_domain
+  }
+
+  plain_text_binding {
+    name = "ACCESS_AUD"
+    text = cloudflare_zero_trust_access_application.site.aud
+  }
+
+  plain_text_binding {
+    name = "INDEX_DOCUMENT"
+    text = var.index_document
   }
 }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
-  bucket = aws_s3_bucket.this.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-    bucket_key_enabled = true
-  }
+resource "cloudflare_workers_domain" "site" {
+  account_id = var.cloudflare_account_id
+  zone_id    = var.cloudflare_zone_id
+  hostname   = var.hostname
+  service    = cloudflare_workers_script.site.name
 }
