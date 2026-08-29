@@ -18,7 +18,9 @@ browser -> Cloudflare Access (email OTP) -> Worker (verify JWT) -> R2
 ## Prerequisites
 
 - Zero Trust enabled on the account (free plan is fine); note the team domain
-  `https://<team>.cloudflareaccess.com`.
+  `https://<team>.cloudflareaccess.com`. Under Zero Trust → Settings →
+  Authentication, the **One-time PIN** login method must be enabled (it is by
+  default). It is not managed by Terraform.
 - Your account's workers.dev subdomain (Workers & Pages → Overview → *Subdomain*).
   The workers.dev route must be enabled for the Worker (it is by default; if
   the Worker's *Settings → Domains & Routes → workers.dev* toggle is off, turn

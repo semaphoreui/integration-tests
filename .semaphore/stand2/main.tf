@@ -17,21 +17,17 @@ resource "cloudflare_r2_bucket" "this" {
 # Account-scoped application on the built-in workers.dev hostname.
 # ---------------------------------------------------------------------------
 
-resource "cloudflare_zero_trust_access_identity_provider" "otp" {
-  account_id = var.cloudflare_account_id
-  name       = "Email one-time PIN"
-  type       = "onetimepin"
-}
-
+# The account's "One-time PIN" identity provider is not managed here: Cloudflare
+# allows exactly one per account and it usually already exists. With
+# allowed_idps unset the app accepts every IdP configured in Zero Trust
+# (Settings -> Authentication); make sure One-time PIN is enabled there.
 resource "cloudflare_zero_trust_access_application" "site" {
-  account_id                = var.cloudflare_account_id
-  name                      = local.hostname
-  domain                    = local.hostname
-  type                      = "self_hosted"
-  session_duration          = var.session_duration
-  allowed_idps              = [cloudflare_zero_trust_access_identity_provider.otp.id]
-  auto_redirect_to_identity = true
-  app_launcher_visible      = false
+  account_id           = var.cloudflare_account_id
+  name                 = local.hostname
+  domain               = local.hostname
+  type                 = "self_hosted"
+  session_duration     = var.session_duration
+  app_launcher_visible = false
 }
 
 resource "cloudflare_zero_trust_access_policy" "allow" {
