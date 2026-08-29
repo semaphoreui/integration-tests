@@ -1,0 +1,10 @@
+aws_region        = "us-east-1"
+bucket_name       = "semaphore-qa-artifacts-example"
+enable_versioning = false
+force_destroy     = false
+
+tags = {
+  Project     = "semaphore-qa"
+  Environment = "test"
+  ManagedBy   = "terraform"
+}
