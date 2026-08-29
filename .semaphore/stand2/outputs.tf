@@ -1,6 +1,6 @@
 output "site_url" {
   description = "URL of the protected site."
-  value       = "https://${cloudflare_workers_domain.site.hostname}"
+  value       = "https://${local.hostname}"
 }
 
 output "bucket_name" {

@@ -1,3 +1,7 @@
+locals {
+  hostname = "${var.worker_name}.${var.workers_subdomain}.workers.dev"
+}
+
 # ---------------------------------------------------------------------------
 # Storage
 # ---------------------------------------------------------------------------
@@ -9,7 +13,8 @@ resource "cloudflare_r2_bucket" "this" {
 }
 
 # ---------------------------------------------------------------------------
-# Zero Trust Access: email one-time-PIN login, allow-listed emails/domains
+# Zero Trust Access: email one-time-PIN login, allow-listed emails/domains.
+# Account-scoped application on the built-in workers.dev hostname.
 # ---------------------------------------------------------------------------
 
 resource "cloudflare_zero_trust_access_identity_provider" "otp" {
@@ -19,9 +24,9 @@ resource "cloudflare_zero_trust_access_identity_provider" "otp" {
 }
 
 resource "cloudflare_zero_trust_access_application" "site" {
-  zone_id                   = var.cloudflare_zone_id
-  name                      = var.hostname
-  domain                    = var.hostname
+  account_id                = var.cloudflare_account_id
+  name                      = local.hostname
+  domain                    = local.hostname
   type                      = "self_hosted"
   session_duration          = var.session_duration
   allowed_idps              = [cloudflare_zero_trust_access_identity_provider.otp.id]
@@ -30,7 +35,7 @@ resource "cloudflare_zero_trust_access_application" "site" {
 }
 
 resource "cloudflare_zero_trust_access_policy" "allow" {
-  zone_id        = var.cloudflare_zone_id
+  account_id     = var.cloudflare_account_id
   application_id = cloudflare_zero_trust_access_application.site.id
   name           = "Allowed emails"
   precedence     = 1
@@ -43,7 +48,8 @@ resource "cloudflare_zero_trust_access_policy" "allow" {
 }
 
 # ---------------------------------------------------------------------------
-# Worker: verifies the Access JWT and serves objects from R2
+# Worker: verifies the Access JWT and serves objects from R2.
+# Served on the built-in workers.dev hostname (no custom domain needed).
 # ---------------------------------------------------------------------------
 
 resource "cloudflare_workers_script" "site" {
@@ -72,11 +78,4 @@ resource "cloudflare_workers_script" "site" {
     name = "INDEX_DOCUMENT"
     text = var.index_document
   }
-}
-
-resource "cloudflare_workers_domain" "site" {
-  account_id = var.cloudflare_account_id
-  zone_id    = var.cloudflare_zone_id
-  hostname   = var.hostname
-  service    = cloudflare_workers_script.site.name
 }

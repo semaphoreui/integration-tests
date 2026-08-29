@@ -3,13 +3,8 @@ variable "cloudflare_account_id" {
   type        = string
 }
 
-variable "cloudflare_zone_id" {
-  description = "Zone ID of the domain the site is served from."
-  type        = string
-}
-
-variable "hostname" {
-  description = "Full hostname for the site, e.g. stand2.example.com (must belong to the zone)."
+variable "workers_subdomain" {
+  description = "Your account's workers.dev subdomain (Workers & Pages -> Overview -> Subdomain), e.g. \"myteam\" for *.myteam.workers.dev."
   type        = string
 }
 
