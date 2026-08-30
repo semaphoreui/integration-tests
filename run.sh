@@ -11,6 +11,8 @@ Usage: ./run.sh [COMMAND] [PARAMS...]
 Commands:
   test:external [PARAMS]            Запуск тестов против запущенного Semaphore UI
                                     Параметры: host=VALUE port=VALUE
+                                               api_base_url=URL ui_base_url=URL
+                                    (api_base_url/ui_base_url имеют приоритет над host/port)
 
   sqlite:up                         Запуск SQLite окружения
   sqlite:test                       Запуск тестов SQLite
@@ -48,6 +50,7 @@ Commands:
 Examples:
   ./run.sh sqlite
   ./run.sh test:external host=localhost port=3000
+  ./run.sh test:external api_base_url=https://demo.example.com/api/ ui_base_url=https://demo.example.com
   ./run.sh publish:s3 bucket=my-bucket
 
 EOF
@@ -196,15 +199,17 @@ external_docker() {
 test_external() {
     local host=$(get_param "host" "$@" 2>/dev/null || echo "host.docker.internal")
     local port=$(get_param "port" "$@" 2>/dev/null || echo "3000")
+    local api_base_url=$(get_param "api_base_url" "$@" 2>/dev/null || echo "http://${host}:${port}/api/")
+    local ui_base_url=$(get_param "ui_base_url" "$@" 2>/dev/null || echo "http://${host}:${port}")
 
     echo "Running external tests..."
-    echo "  Host: $host"
-    echo "  Port: $port"
+    echo "  API_BASE_URL: $api_base_url"
+    echo "  UI_BASE_URL:  $ui_base_url"
 
     # Передаём параметры через переменные окружения
     docker compose run \
-        -e API_BASE_URL="http://${host}:${port}/api/" \
-        -e UI_BASE_URL="http://${host}:${port}" \
+        -e API_BASE_URL="$api_base_url" \
+        -e UI_BASE_URL="$ui_base_url" \
         test-runner ./scripts/run-external-tests.sh
 }
 
