@@ -312,6 +312,10 @@ main() {
         publish:s3)
             publish_s3 "$@"
             ;;
+        external:test-and-publish)
+            test_external "$@"
+            publish_s3 "$@"
+            ;;
         help|--help|-h)
             print_help
             ;;
