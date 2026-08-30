@@ -210,6 +210,9 @@ test_external() {
     docker compose run \
         -e API_BASE_URL="$api_base_url" \
         -e UI_BASE_URL="$ui_base_url" \
+        -e API_USERNAME="$API_USERNAME" \
+        -e API_PASSWORD="$API_PASSWORD" \
+        -e UI_PASSWORD="$UI_PASSWORD" \
         test-runner ./scripts/run-external-tests.sh
 }
 
