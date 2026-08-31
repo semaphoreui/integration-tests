@@ -17,4 +17,7 @@ public record Template(
     @JsonProperty("survey_vars") List<SurveyVariable> surveyVariables,
     @JsonProperty("task_params") AnsibleTemplateParameters taskParameters,
     @JsonProperty("runner_tag") String runnerTag,
-    @JsonProperty("allow_parallel_tasks") boolean allowParallelTasks) {}
+    @JsonProperty("allow_parallel_tasks") boolean allowParallelTasks,
+    @JsonProperty("start_version") String startVersion,
+    @JsonProperty("build_template_id") Long buildTemplateId,
+    boolean autorun) {}

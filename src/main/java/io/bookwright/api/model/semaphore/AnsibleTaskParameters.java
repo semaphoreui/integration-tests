@@ -11,4 +11,5 @@ public record AnsibleTaskParameters(
     List<String> limit,
     List<String> tags,
     @JsonProperty("skip_tags") List<String> skipTags,
-    @JsonProperty("skip_galaxy_install") boolean skipGalaxyInstall) {}
+    @JsonProperty("skip_galaxy_install") boolean skipGalaxyInstall)
+    implements TaskParameters {}

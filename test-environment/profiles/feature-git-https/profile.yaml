@@ -1,0 +1,27 @@
+id: feature-git-https
+description: SQLite with a private HTTPS Git repository protected by Basic Auth
+compose_file: compose.yml
+compose_project: semaphore-test-feature-git-https
+readiness_url: http://localhost:3000/api/ping
+stand: semaphore
+test_class: io.bookwright.tests.semaphore.HttpsRepositoryGitTest
+semaphore_version: v2.19.8
+semaphore_image: semaphoreui/semaphore:v2.19.8
+source_commit: 3449a04f3bfa2522ec7fd60803f71b578c39f6b4
+edition: community
+installation: docker-compose
+architecture: native
+database_type: sqlite
+database_image: embedded
+execution_mode: local
+execution_executor: local
+auth: password
+git_client: cmd_git
+git_https_fixture: generated
+git_fixture_image: nginx:1.27.5-alpine
+capabilities: private-git-https,basic-auth,self-signed-git-tls,git-credential-security
+include:
+  - path:
+      - ../../compose.base.yml
+      - ../core-sqlite-local/compose.yml
+      - git-https.yml

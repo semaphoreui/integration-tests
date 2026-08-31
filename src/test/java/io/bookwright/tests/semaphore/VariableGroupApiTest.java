@@ -29,9 +29,16 @@ class VariableGroupApiTest {
       SemaphoreFixtures core,
       SemaphoreVariableGroupFixtures fixture) {
     var project = store.semaphoreProject();
-    var group = api.semaphore().variableGroups().createAndVerifyMasked(project.id(), fixture);
+    var createRequest = fixture.createRequest(project.id());
+    var group = api.semaphore().variableGroups().createAndVerifyMasked(project.id(), createRequest);
     var renamed =
-        api.semaphore().variableGroups().renameSecretAndVerifyMasked(project.id(), group, fixture);
+        api.semaphore()
+            .variableGroups()
+            .updateAndVerifyMasked(
+                project.id(),
+                group.id(),
+                fixture.renameRequest(project.id(), group),
+                createRequest);
     var key =
         api.semaphore().accessKeys().create(project.id(), core.accessKey().request(project.id()));
     var repository =
@@ -80,6 +87,9 @@ class VariableGroupApiTest {
       ApiSteps api, TestStore store, SemaphoreVariableGroupFixtures fixture) {
     api.semaphore()
         .variableGroups()
-        .emptyEnvironmentNameIsRejected(store.semaphoreProject().id(), fixture);
+        .emptyEnvironmentNameIsRejected(
+            store.semaphoreProject().id(),
+            fixture.invalidEmptyEnvironmentNameRequest(store.semaphoreProject().id()),
+            fixture.expectedValidationError());
   }
 }

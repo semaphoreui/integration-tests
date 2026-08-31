@@ -4,7 +4,7 @@
 
 Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
 
-Доступны пять опорных профилей и восемь feature-профилей:
+Доступны пять опорных профилей и девять feature-профилей:
 
 | Профиль | СУБД | Назначение |
 |---|---|---|
@@ -14,6 +14,7 @@ Manifest профиля находится в `profiles/<profile>/profile.yaml`.
 | `core-mariadb-local` | MariaDB 10.11 | проверка совместимости MariaDB через MySQL dialect |
 | `prod-postgres-runner` | PostgreSQL 14.3 | production-like server → DB → persistent remote runner |
 | `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target и защита key material |
+| `feature-git-https` | SQLite | приватный Git over HTTPS, Basic Auth, доверенный self-signed CA и защита credentials |
 | `feature-oidc-local` | SQLite | browser login через Dex, session/logout, provisioning и negative account/provider scenarios |
 | `feature-proxy-oidc` | PostgreSQL 14.3 | OIDC через NGINX, HTTPS и non-root public path `/semaphore` |
 | `feature-ldap-tls` | SQLite | LDAPS bind/search, provisioning/reuse user, logout и negative credential/account scenarios |
@@ -135,6 +136,16 @@ test-environment/profile test feature-ssh-local
 
 Пара ключей генерируется при `profile up` в игнорируемом Git каталоге `build/test-fixtures/ssh`. В контейнер монтируется только public key, а private key остаётся вне Docker build context и используется Java-тестом только для локального API. Версия fixture image записывается в Allure environment.
 
+## Private HTTPS Git feature-профиль
+
+Приватный HTTPS Git fixture поднимает pinned NGINX, публикует bare-репозиторий только внутри Compose network и требует Basic Auth. Self-signed CA генерируется в игнорируемом `build/test-fixtures/git-https` и передаётся дочерним Git-процессам через разрешённую переменную окружения:
+
+```bash
+test-environment/profile down feature-ssh-local
+test-environment/profile up feature-git-https
+test-environment/profile test feature-git-https
+```
+
 ## Schedule timezone feature-профиль
 
 ```bash
@@ -236,7 +247,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 | Workflow | Триггер | Профили |
 |---|---|---|
 | `CI` | pull request и push в `main` | API suite и Chromium UI smoke на `core-sqlite-local` после framework quality gate |
-| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation` |
+| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation` |
 | `Release upgrade` | воскресенье `03:30 UTC`, вручную | `upgrade-sqlite-local`, `upgrade-postgres-local` |
 
 Каждый matrix profile работает на отдельном runner, поэтому общий порт `3000` не создаёт конфликтов. После выполнения workflow сохраняет JUnit/HTML/Allure artifacts, при ошибке добавляет `profile ps` и конечный снимок Compose logs, а затем удаляет только контейнеры и volumes выбранного профиля.

@@ -32,6 +32,27 @@ test-environment/profile test core-sqlite-local
 
 Команда сама проверяет readiness и добавляет точную конфигурацию стенда в Allure environment. Остановка с сохранением SQLite volume: `test-environment/profile down core-sqlite-local`. Полное удаление состояния требует явной команды `test-environment/profile clean core-sqlite-local --yes`.
 
+Core-набор также защищает lifecycle удаления проекта: после остановки task проект и зависимые
+ресурсы удаляются корректно. Known-defect canary для `v2.19.8` показывает, что удаление во время
+`running` ошибочно возвращает `204`, оставляет executor работающим и заканчивается FK errors.
+Воспроизведение и source boundary описаны в
+`test-environment/project-deletion-running-task-defect.md`.
+
+Static inventory проверяется в обоих штатных форматах — INI `static` и YAML `static-yaml`.
+Для каждого формата сценарий сохраняет две группы с разными host aliases и выполняет template с
+default `limit`. Task output подтверждает выполнение только выбранной группы.
+
+Password-login security test сравнивает ответы для существующего и неизвестного аккаунта, проверяет
+отсутствие session cookie и корректный отказ пустого пароля. На `v2.19.8` пять последовательных
+ошибок остаются без throttle и audit warning; этот security gap описан в
+`test-environment/password-login-brute-force-protection-gap.md`.
+
+Тот же core-профиль выполняет plan-only сценарии на встроенных в release image Terraform 1.11.3 и
+OpenTofu 1.11.0. Минимальный локальный module не скачивает providers; workspace inventories типов
+`terraform-workspace` и `tofu-workspace` подтверждаются реальным output каждого tool. Привязанный
+Variable Group передаёт секрет типа `env` с префиксом `TF_VAR_`: module сравнивает его SHA-256 и
+выводит только безопасный marker, а тест исключает plaintext из API, structured/raw output и Allure.
+
 Короткий browser smoke на том же стенде проверяет password login, запуск подготовленного executable template через UI и обязательность project name до отправки запроса:
 
 ```bash
@@ -77,6 +98,16 @@ test-environment/profile test feature-ssh-local
 ```
 
 Два изолированных SSH-сервера доступны только внутри Compose network и принимают разные сгенерированные ключи. Положительный сценарий подтверждает удалённое выполнение playbook, отрицательный — полезную clone-диагностику с неверным ключом. Rotation-сценарий сначала получает отказ второго сервера со старым ключом, обновляет secret у того же access key через API и затем подтверждает успешные Git clone и Ansible SSH. Все сценарии проверяют отсутствие private key и passphrase в API и task output.
+
+Приватный Git по HTTPS проверяется отдельно, через локальный NGINX с self-signed TLS и обязательной Basic Auth:
+
+```bash
+test-environment/profile down feature-ssh-local
+test-environment/profile up feature-git-https
+test-environment/profile test feature-git-https
+```
+
+Профиль передаёт доверенный CA в Git-процессы через штатный `SEMAPHORE_FORWARDED_ENV_VARS`. Positive-сценарий выполняет playbook после authenticated clone, negative подтверждает отказ без access key. Password не попадает в API/Allure diagnostics, а login и password отсутствуют в structured/raw task output.
 
 OIDC feature-профиль выполняет полный браузерный вход через локальный Dex и проверяет callback, session, return path, provisioning external user, повторный вход, logout, конфликт с локальным email и отказ недоступного provider:
 
@@ -157,7 +188,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 GitHub Actions разделены по стоимости и назначению:
 
 - `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite и короткий Chromium UI smoke на `core-sqlite-local`;
-- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH, прямой и HTTPS/subpath OIDC, LDAPS, TOTP и ротацию database encryption keyring;
+- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH, приватный HTTPS Git, прямой и HTTPS/subpath OIDC, LDAPS, TOTP и ротацию database encryption keyring;
 - `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.7 → v2.19.8` на SQLite и PostgreSQL.
 
 Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
@@ -180,9 +211,27 @@ project → access key → local Git repository → inventory → task template
 
 Отдельный RBAC-набор фиксирует встроенные контракты `manager` и `task_runner`. Manager может создавать проектные ресурсы и запускать задачи, но не может удалить проект или управлять участниками. Task runner может запускать задачи, но получает `403` при изменении ресурсов, проекта и состава участников.
 
+API-token-набор создаёт ограниченный по времени token, проверяет prefix-only listing, аутентифицирует отдельный Retrofit session через Bearer header и создаёт проект. После отзыва тот же token получает `401`; создание уже истёкшего token отклоняется с `400`. Полное значение не попадает в URL, step parameters или HTTP/Allure attachments: creation response намеренно скрывается, Authorization редактируется, а delete использует публичный восьмисимвольный prefix.
+
+User lifecycle-набор проверяет поддерживаемую Community API последовательность create → update → delete → absence → recreate на одноразовом typed fixture. У модели пользователя в текущем Semaphore нет поля `active/disabled` и endpoints deactivate/reactivate, поэтому такой контракт не имитируется подменой password/delete.
+
+File inventory-набор создаёт repository-backed `type=file`, выполняет playbook через inventory-файл из доверенного Git fixture и проверяет сохранённый `repository_id`. Отдельный безопасный canary фиксирует дефект `v2.19.8`: create принимает traversal-путь `../…`, хотя update корректно возвращает `400`; такой inventory не запускается.
+
 Отдельный security smoke создаёт `login_password` access key с уникальным маркером, использует его как inventory credential при выполнении задачи и проверяет отсутствие plaintext в create/get/list API, структурированном и raw task output, Allure и JUnit artifacts.
 
 Variable Group-набор создаёт смешанную группу с JSON extra vars, ENV и секретами типов `var`/`env`, переименовывает сохранённый secret без замены значения и реально выполняет `variables.yml`. Playbook проверяет секреты по SHA-256 под `no_log` и выводит только безопасный marker; тест отдельно контролирует create/get/list API и structured/raw output. Тот же контракт прошёл на SQLite и PostgreSQL `v2.19.8`; пустое имя ENV-переменной получает диагностируемый `400`.
+
+Terraform/OpenTofu-набор отдельно проверяет нативный контракт `TF_VAR_*`: уникальный secret хранится
+в Variable Group как `env`, подключается к обоим templates и действительно читается как Terraform
+input variable. Provider-free module публикует marker только после совпадения хеша; plaintext не
+появляется в Variable Group API, task output или HTTP/Allure diagnostics.
+
+Build/Deploy-набор создаёт связанную пару Ansible templates и вручную выбирает успешную build-задачу
+при запуске deploy. Semaphore назначает build `start_version`, передаёт её как
+`SEMAPHORE_TASK_TARGET_VERSION`, сохраняет `build_task_id` у deploy и передаёт ту же версию как
+`SEMAPHORE_TASK_INCOMING_VERSION`. Оба playbook сверяют API metadata с executor environment и выводят
+безопасные version markers. В detail API deploy хранится связь, а отображаемая версия берётся из
+вложенного `build_task` в task history — собственного поля `version` у deploy-задачи нет.
 
 Survey/task override-набор сохраняет в template enum, integer, string, env-target и secret survey variables, затем запускает `survey-overrides.yml` с переопределёнными значениями, template/task arguments и Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. Task действительно выполняется на SQLite и PostgreSQL с local execution, secret проверяется по SHA-256 под `no_log` и отсутствует в structured/raw output. Persistent runner на `v2.19.8` теряет survey secret перед dispatch; это покрыто отдельным canary до перехода на upstream #4086. Неподдерживаемый survey target получает `400`. Также зафиксирован gap `v2.19.8`: enum default вне списка принимается backend-ом; исправление уже есть в upstream `v2.20.0-alpha1`.
 

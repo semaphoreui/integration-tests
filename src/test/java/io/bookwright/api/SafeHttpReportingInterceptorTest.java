@@ -119,6 +119,27 @@ class SafeHttpReportingInterceptorTest {
   }
 
   @Test
+  void omitsSemaphoreApiTokenCreationBodyWithGenericSecretId() throws IOException {
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(201)
+            .addHeader("Content-Type", "application/json")
+            .setBody(
+                "{\"id\":\"generated-bearer-secret\",\"name\":\"ci-token\",\"expired\":false}"));
+    Request request =
+        new Request.Builder()
+            .url(server.url("/api/user/tokens"))
+            .post(RequestBody.create("{}", MediaType.get("application/json")))
+            .build();
+
+    try (Response response = new OkHttpClient().newCall(request).execute()) {
+      assertThat(SafeHttpReportingInterceptor.responseReport(response, 8))
+          .contains(SecretSanitizer.OMITTED_BODY)
+          .doesNotContain("generated-bearer-secret");
+    }
+  }
+
+  @Test
   void redactsTotpEnrollmentAndVerificationMaterial() {
     String report =
         SecretSanitizer.body(

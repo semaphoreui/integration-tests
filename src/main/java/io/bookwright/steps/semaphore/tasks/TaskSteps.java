@@ -187,6 +187,11 @@ public class TaskSteps {
     return Calls.body(api.getTasks(projectId), 200, "tasks");
   }
 
+  @Step("Get tasks for Semaphore template {templateId}")
+  public List<Task> getTasksForTemplate(long projectId, long templateId) {
+    return Calls.body(api.getTemplateTasks(projectId, templateId), 200, "template tasks");
+  }
+
   @Step("Find persisted Semaphore task {taskId} in project {projectId}")
   public Task requirePersistedTask(long projectId, long taskId) {
     List<Task> tasks = getTasks(projectId);

@@ -69,6 +69,7 @@ select_profile() {
   selected_ui_ignore_https_errors=$(manifest_value ui_ignore_https_errors)
   [ -n "$selected_ui_ignore_https_errors" ] || selected_ui_ignore_https_errors=false
   selected_tls_fixture=$(manifest_value tls_fixture)
+  selected_git_https_fixture=$(manifest_value git_https_fixture)
   selected_encryption_fixture=$(manifest_value encryption_fixture)
 
   case "$selected_test_task" in
@@ -224,6 +225,29 @@ prepare_tls_fixture() {
   fi
 }
 
+prepare_git_https_fixture() {
+  [ "$selected_git_https_fixture" = "generated" ] || return 0
+  command -v openssl >/dev/null 2>&1 || fail "openssl is required for profile '$profile_id'"
+
+  git_https_fixture_dir="$repository_dir/build/test-fixtures/git-https"
+  git_https_private_key="$git_https_fixture_dir/server-key.pem"
+  git_https_certificate="$git_https_fixture_dir/server-cert.pem"
+  mkdir -p "$git_https_fixture_dir"
+
+  if [ ! -s "$git_https_private_key" ] || [ ! -s "$git_https_certificate" ]; then
+    if [ -e "$git_https_private_key" ] || [ -e "$git_https_certificate" ]; then
+      fail "incomplete HTTPS Git fixture in $git_https_fixture_dir; remove the directory and retry"
+    fi
+    openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
+      -keyout "$git_https_private_key" \
+      -out "$git_https_certificate" \
+      -config "$profiles_dir/feature-git-https/openssl.cnf"
+  fi
+
+  chmod 600 "$git_https_private_key"
+  chmod 644 "$git_https_certificate"
+}
+
 prepare_encryption_fixture() {
   [ "$selected_encryption_fixture" = "generated" ] || return 0
   command -v openssl >/dev/null 2>&1 || fail "openssl is required for profile '$profile_id'"
@@ -296,6 +320,13 @@ write_allure_environment() {
     [ -z "$inspected_ssh_fixture_image" ] || ssh_fixture_image_reference=$inspected_ssh_fixture_image
   fi
 
+  git_fixture_image=$(manifest_value git_fixture_image)
+  git_fixture_image_reference=$git_fixture_image
+  if [ -n "$git_fixture_image" ]; then
+    inspected_git_fixture_image=$(docker image inspect "$git_fixture_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+    [ -z "$inspected_git_fixture_image" ] || git_fixture_image_reference=$inspected_git_fixture_image
+  fi
+
   {
     printf 'profile=%s\n' "$profile_id"
     printf 'semaphore.version=%s\n' "$(manifest_value semaphore_version)"
@@ -315,6 +346,10 @@ write_allure_environment() {
     fi
     if [ -n "$ssh_fixture_image_reference" ]; then
       printf 'ssh.fixture.image=%s\n' "$ssh_fixture_image_reference"
+    fi
+    if [ -n "$git_fixture_image_reference" ]; then
+      printf 'git.https.fixture.image=%s\n' "$git_fixture_image_reference"
+      printf 'git.https.auth=basic\n'
     fi
     printf 'auth=%s\n' "$(manifest_value auth)"
     printf 'test.task=%s\n' "$selected_test_task"
@@ -419,6 +454,7 @@ case "$action" in
     select_profile "${2:-}"
     prepare_ssh_fixture
     prepare_tls_fixture
+    prepare_git_https_fixture
     prepare_encryption_fixture
     if [ "$selected_encryption_fixture" = "generated" ] && [ ! -s "$encryption_keys_file" ]; then
       write_encryption_keyset old-primary true
@@ -434,6 +470,7 @@ case "$action" in
     shift 2
     prepare_ssh_fixture
     prepare_tls_fixture
+    prepare_git_https_fixture
     prepare_encryption_fixture
     wait_for_setup
     await_ready

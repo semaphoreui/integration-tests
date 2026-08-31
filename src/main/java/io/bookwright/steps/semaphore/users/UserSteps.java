@@ -85,6 +85,29 @@ public class UserSteps {
     }
   }
 
+  @Step("Create disposable Semaphore user")
+  public User createDisposable(UserRequest request) {
+    User user = create(request);
+    teardown.push("Delete Semaphore user " + user.id(), () -> deleteIfPresent(user.id()));
+    return user;
+  }
+
+  @Step("Update Semaphore user {userId}")
+  public User update(long userId, UserRequest request) {
+    Calls.expectStatus(api.updateUser(userId, request), 204);
+    return getUser(userId);
+  }
+
+  @Step("Delete Semaphore user {userId}")
+  public void delete(long userId) {
+    Calls.expectStatus(api.deleteUser(userId), 204);
+  }
+
+  @Step("Verify Semaphore user {userId} does not exist")
+  public void verifyMissing(long userId) {
+    Calls.expectStatus(api.getUser(userId), 404);
+  }
+
   @Step("Get or create Semaphore user {request.username}")
   public User getOrCreate(UserRequest request) {
     return getUsers().stream()
@@ -105,6 +128,15 @@ public class UserSteps {
                 .formatted(request.username()),
             creationError);
       }
+    }
+  }
+
+  private void deleteIfPresent(long userId) {
+    var response = Calls.response(api.deleteUser(userId));
+    if (response.code() != 204 && response.code() != 404) {
+      throw new IllegalStateException(
+          "User cleanup for %d expected HTTP 204 or 404 but received %d"
+              .formatted(userId, response.code()));
     }
   }
 

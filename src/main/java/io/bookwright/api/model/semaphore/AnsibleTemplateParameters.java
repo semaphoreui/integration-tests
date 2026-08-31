@@ -13,4 +13,5 @@ public record AnsibleTemplateParameters(
     @JsonProperty("skip_galaxy_install") boolean skipGalaxyInstall,
     List<String> limit,
     List<String> tags,
-    @JsonProperty("skip_tags") List<String> skipTags) {}
+    @JsonProperty("skip_tags") List<String> skipTags)
+    implements TemplateParameters {}

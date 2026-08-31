@@ -7,11 +7,15 @@ import io.bookwright.config.Configs;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreHttpsGitFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreLoginSecurityFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreOidcFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSurveyFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTerraformFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreUserLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreVariableGroupFixtures;
 import io.bookwright.util.TestData;
 import java.io.IOException;
@@ -55,6 +59,7 @@ class FixtureArchitectureTest {
           "999_999_999",
           "bookwright-rbac-guest",
           "Bookwright-test-password-42!",
+          "bookwright-no-user-",
           "file:///fixtures/ansible",
           "semaphore-bookwright-smoke-ok",
           "forbidden-guest-key",
@@ -71,6 +76,12 @@ class FixtureArchitectureTest {
           "Bookwright-LDAP-Conflict-42!",
           "ssh://fixture@ssh-fixture:22/repositories/ansible",
           "semaphore-bookwright-ssh-target-ok",
+          "inventories/localhost.ini",
+          "semaphore-bookwright-file-inventory-ok",
+          "semaphore-bookwright-project-delete-ready",
+          "semaphore-bookwright-project-delete-completed",
+          "https://git-https-fixture/ansible.git",
+          "Bookwright-https-token-42!",
           "Bookwright Dex",
           "oidc.user@bookwright.test",
           "Bookwright-OIDC-42!",
@@ -97,7 +108,12 @@ class FixtureArchitectureTest {
     LocalUserFixtures local = LocalUserFixtures.from(Configs.main());
     SemaphoreFixtures semaphore =
         SemaphoreFixtures.from(Configs.main(), new TestData(1L, 2L, "fixture-redaction"));
+    SemaphoreHttpsGitFixtures httpsGit =
+        SemaphoreHttpsGitFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreLdapFixtures ldap = SemaphoreLdapFixtures.standard();
+    SemaphoreLoginSecurityFixtures loginSecurity =
+        SemaphoreLoginSecurityFixtures.from(
+            Configs.main(), new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreOidcFixtures oidc = SemaphoreOidcFixtures.standard();
     SemaphoreSshFixtures.SshAccessKey sshKey =
         new SemaphoreSshFixtures.SshAccessKey(
@@ -107,6 +123,10 @@ class FixtureArchitectureTest {
         SemaphoreVariableGroupFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreSurveyFixtures survey =
         SemaphoreSurveyFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
+    SemaphoreTerraformFixtures terraform =
+        SemaphoreTerraformFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
+    SemaphoreUserLifecycleFixtures userLifecycle =
+        SemaphoreUserLifecycleFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
 
     SecretAssertions.absent(
         "SauceDemo fixture diagnostics", sauceDemo.toString(), sauceDemo.standardUser().password());
@@ -121,6 +141,14 @@ class FixtureArchitectureTest {
     SecretAssertions.absent(
         "Semaphore fixture diagnostics", semaphore.toString(), semaphore.invalidLogin().password());
     SecretAssertions.absent(
+        "Semaphore HTTPS Git fixture diagnostics",
+        httpsGit.toString(),
+        httpsGit.credentials().password());
+    SecretAssertions.absent(
+        "Semaphore HTTPS Git request diagnostics",
+        httpsGit.credentials().request(1).toString(),
+        httpsGit.credentials().password());
+    SecretAssertions.absent(
         "Semaphore LDAP fixture diagnostics", ldap.toString(), ldap.successfulLogin().password());
     SecretAssertions.absent(
         "Semaphore LDAP fixture diagnostics", ldap.toString(), ldap.invalidPassword().password());
@@ -128,6 +156,10 @@ class FixtureArchitectureTest {
         "Semaphore LDAP fixture diagnostics",
         ldap.toString(),
         ldap.localEmailConflict().password());
+    SecretAssertions.absent(
+        "Semaphore login security fixture diagnostics",
+        loginSecurity.toString(),
+        loginSecurity.correct().password());
     SecretAssertions.absent(
         "Semaphore OIDC fixture diagnostics",
         oidc.toString(),
@@ -159,16 +191,30 @@ class FixtureArchitectureTest {
         "Semaphore survey task request diagnostics",
         survey.taskRequest(1).toString(),
         survey.taskSecret().value());
+    SecretAssertions.absent(
+        "Semaphore Terraform fixture diagnostics",
+        terraform.toString(),
+        terraform.variableGroup().secretValue());
+    SecretAssertions.absent(
+        "Semaphore Terraform Variable Group request diagnostics",
+        terraform.variableGroup().request(1).toString(),
+        terraform.variableGroup().secretValue());
+    SecretAssertions.absent(
+        "Semaphore user lifecycle diagnostics",
+        userLifecycle.toString(),
+        userLifecycle.initial().password());
 
     assertThat(sauceDemo.toString()).contains("[REDACTED]");
     assertThat(local.toString()).contains("[REDACTED]");
     assertThat(semaphore.toString()).contains("[REDACTED]");
+    assertThat(httpsGit.toString()).contains("[REDACTED]");
     assertThat(ldap.toString()).contains("[REDACTED]");
     assertThat(oidc.toString()).contains("[REDACTED]");
     assertThat(upgrade.toString()).contains("[REDACTED]");
     assertThat(sshKey.toString()).contains("[REDACTED]");
     assertThat(variableGroup.toString()).contains("[REDACTED]");
     assertThat(survey.toString()).contains("[REDACTED]");
+    assertThat(terraform.toString()).contains("[REDACTED]");
   }
 
   private void inspect(Path root, List<String> violations) throws IOException {

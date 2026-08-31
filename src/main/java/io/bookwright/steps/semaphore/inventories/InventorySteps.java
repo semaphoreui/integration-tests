@@ -3,6 +3,7 @@ package io.bookwright.steps.semaphore.inventories;
 import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.Inventory;
 import io.bookwright.api.model.semaphore.InventoryRequest;
+import io.bookwright.api.model.semaphore.InventoryUpdateRequest;
 import io.bookwright.api.semaphore.inventories.SemaphoreInventoriesApi;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
@@ -20,7 +21,7 @@ public class InventorySteps {
     this.teardown = teardown;
   }
 
-  @Step("Create static inventory in Semaphore project {projectId}")
+  @Step("Create inventory in Semaphore project {projectId}")
   public Inventory create(long projectId, InventoryRequest request) {
     Inventory inventory =
         Calls.body(api.createInventory(projectId, request), 201, "created inventory");
@@ -28,6 +29,12 @@ public class InventorySteps {
         "Delete Semaphore inventory " + inventory.id(),
         () -> Calls.expectStatus(api.deleteInventory(projectId, inventory.id()), 204));
     return inventory;
+  }
+
+  @Step("Verify Semaphore rejects unsafe path update for inventory {inventoryId}")
+  public void verifyUnsafePathUpdateRejected(
+      long projectId, long inventoryId, InventoryUpdateRequest request) {
+    Calls.expectStatus(api.updateInventory(projectId, inventoryId, request), 400);
   }
 
   @Step("Find required inventory {name} in Semaphore project {projectId}")

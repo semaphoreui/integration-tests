@@ -38,6 +38,11 @@ public class TeardownStorage {
     actions.clear();
   }
 
+  /** Discards redundant actions after a test has explicitly removed all resources it created. */
+  public void discardAfterExplicitCleanup() {
+    actions.clear();
+  }
+
   TeardownAction pollLast() {
     return actions.pollLast();
   }

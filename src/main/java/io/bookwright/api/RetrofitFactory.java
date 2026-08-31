@@ -18,7 +18,18 @@ public final class RetrofitFactory {
   private RetrofitFactory() {}
 
   public static Retrofit create(String baseUrl) {
-    OkHttpClient client =
+    return create(baseUrl, null);
+  }
+
+  public static Retrofit createWithBearerToken(String baseUrl, String bearerToken) {
+    if (bearerToken == null || bearerToken.isBlank()) {
+      throw new IllegalArgumentException("Bearer token must not be blank");
+    }
+    return create(baseUrl, bearerToken);
+  }
+
+  private static Retrofit create(String baseUrl, String bearerToken) {
+    OkHttpClient.Builder client =
         new OkHttpClient.Builder()
             .connectTimeout(Duration.ofSeconds(15))
             .readTimeout(Duration.ofSeconds(30))
@@ -28,13 +39,22 @@ public final class RetrofitFactory {
             .addInterceptor(
                 chain ->
                     chain.proceed(
-                        chain.request().newBuilder().header("Accept", "application/json").build()))
-            .addInterceptor(new SafeHttpReportingInterceptor())
-            .build();
+                        chain.request().newBuilder().header("Accept", "application/json").build()));
+    if (bearerToken != null) {
+      client.addInterceptor(
+          chain ->
+              chain.proceed(
+                  chain
+                      .request()
+                      .newBuilder()
+                      .header("Authorization", "Bearer " + bearerToken)
+                      .build()));
+    }
+    client.addInterceptor(new SafeHttpReportingInterceptor());
 
     return new Retrofit.Builder()
         .baseUrl(baseUrl.endsWith("/") ? baseUrl : baseUrl + "/")
-        .client(client)
+        .client(client.build())
         .addConverterFactory(JacksonConverterFactory.create(objectMapper()))
         .build();
   }

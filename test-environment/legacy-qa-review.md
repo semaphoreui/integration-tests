@@ -38,27 +38,27 @@
 
 | ID | Область | Статус | Решение |
 |---|---|---|---|
-| TC-001 | Admin login | Частично | API login есть; оставить один будущий UI login smoke |
-| TC-002 | Invalid login / brute force | Частично | Wrong password покрыт; lockout добавить после уточнения контракта |
+| TC-001 | Admin login | Покрыто | API login и независимый browser password-login smoke проходят |
+| TC-002 | Invalid login / brute force | Покрыто с security gap | Existing/unknown/empty credentials не создают session и не раскрывают account; пять повторов остаются без throttle и warning |
 | TC-003 | TOTP | Покрыто | API и browser enrollment/challenge/recovery проходят с управляемым RFC 6238 secret |
-| TC-004 | User lifecycle | Частично | Create/reuse fixture есть; добавить deactivate/reactivate |
-| TC-005 | API token | Backlog | P1 auth/security |
+| TC-004 | User lifecycle | Покрыто в границах API | Create/update/delete/absence/recreate автоматизированы; deactivate/reactivate отсутствует в текущих router и модели пользователя |
+| TC-005 | API token | Покрыто | Create/list, expiry validation, Bearer access, revoke и защита token material автоматизированы |
 | TC-006 | Project create | Покрыто | Не дублировать |
 | TC-007 | Max parallel tasks | Покрыто | Лимиты 1→2, waiting admission, slot release и одновременный running автоматизированы |
-| TC-008 | Backup/restore | Backlog | P2 migration/recovery |
-| TC-009 | Delete project dependencies | Частично | Cleanup есть; добавить негативный контракт зависимостей |
+| TC-008 | Backup/restore | Покрыто с дефектом | Round trip, relinking, execution и negative paths автоматизированы; duplicate-name validation содержит отдельный canary |
+| TC-009 | Delete project dependencies | Покрыто с дефектом | После `stopped` каскадное удаление проходит; при `running` API ошибочно возвращает `204`, executor продолжает работу и вызывает FK errors |
 | TC-010 | SSH Git repository | Покрыто | Локальный SSH Git fixture, negative auth и rotation автоматизированы |
-| TC-011 | HTTPS token repository | Частично | Безопасный failure покрыт; нужен успешный локальный HTTPS remote |
+| TC-011 | HTTPS token repository | Покрыто | Локальный private HTTPS remote проверяет trusted TLS, Basic Auth, execution, negative auth и masking |
 | TC-012 | SSH inventory key | Покрыто | Тот же SSH fixture подтверждает удалённое Ansible execution |
 | TC-013 | Login/password key | Покрыто | Использование и отсутствие plaintext проверяются |
 | TC-014 | Vault storage | Внешний | Feature profile с Vault dev server |
-| TC-015 | Static inventory | Частично | Localhost покрыт; multi-group semantics оставить как низкий риск |
-| TC-016 | File inventory | Backlog | P1 inventory/repository integration |
-| TC-017 | Terraform inventory | Внешний | Отдельный Terraform feature profile |
+| TC-015 | Static inventory | Покрыто | INI `static` и YAML `static-yaml` сохраняются; template `limit` выбирает одну группу, а host второй группы не выполняется |
+| TC-016 | File inventory | Покрыто с дефектом | Repository-backed file реально выполняется; create пропускает traversal, а update отклоняет его пустым `400` |
+| TC-017 | Terraform inventory | Покрыто | Plan-only Terraform/OpenTofu используют выбранные workspace inventories на локальном module без provider downloads |
 | TC-018 | Variable Groups mixed | Покрыто | JSON/ENV/secret var+env, rename, masking и task execution автоматизированы |
-| TC-019 | TF_VAR secrets | Внешний | После Terraform profile |
+| TC-019 | TF_VAR secrets | Покрыто | Secret типа `env` реально становится Terraform/OpenTofu input variable; SHA-256 marker подтверждает injection без plaintext в API/output/Allure |
 | TC-020 | Ansible template execution | Покрыто | Не дублировать |
-| TC-021 | Build/deploy chain | Backlog | P2 workflows |
+| TC-021 | Build/deploy chain | Покрыто с уточнением | Ручной выбор successful build, `build_task_id`, nested history version и target/incoming executor env автоматизированы; собственное `version` существует только у build task |
 | TC-022 | Survey variables | Покрыто API с дефектом | Enum/int/string/env/secret metadata, persistence, local execution и backend target validation; `v2.19.8` теряет secret при remote dispatch; UI widgets/required остаются browser-проверкой |
 | TC-023 | Task overrides | Покрыто API | Launch values, template/task arguments и Ansible limit/tags/skip-tags/diff/skip-galaxy реально выполняются |
 | TC-024 | Stop task | Покрыто | Обычный stop и force-stop детерминированы marker-ом |

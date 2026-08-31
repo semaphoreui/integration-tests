@@ -7,5 +7,6 @@ public record Inventory(
     String name,
     @JsonProperty("project_id") long projectId,
     String inventory,
-    @JsonProperty("ssh_key_id") long sshKeyId,
-    String type) {}
+    @JsonProperty("ssh_key_id") Long sshKeyId,
+    String type,
+    @JsonProperty("repository_id") Long repositoryId) {}

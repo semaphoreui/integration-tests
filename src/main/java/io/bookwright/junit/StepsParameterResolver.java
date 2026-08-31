@@ -10,18 +10,27 @@ import io.bookwright.fixtures.database.HotelDatabaseFixtures;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreBackupFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreBuildDeployFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreConcurrencyFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreEncryptionRotationFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreFileInventoryFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreHttpsGitFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreIntegrationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreLoginSecurityFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreOidcFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreProjectDeletionFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreRunnerRoutingFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreScheduleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreStaticInventoryFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSurveyFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTerraformFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTokenFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTotpFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreUserLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreVariableGroupFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.steps.DbSteps;
@@ -54,17 +63,26 @@ public class StepsParameterResolver implements ParameterResolver {
         || type == HotelDatabaseFixtures.class
         || type == SemaphoreEncryptionRotationFixtures.class
         || type == SemaphoreBackupFixtures.class
+        || type == SemaphoreBuildDeployFixtures.class
         || type == SemaphoreConcurrencyFixtures.class
         || type == SemaphoreFixtures.class
+        || type == SemaphoreFileInventoryFixtures.class
+        || type == SemaphoreHttpsGitFixtures.class
         || type == SemaphoreIntegrationFixtures.class
         || type == SemaphoreLdapFixtures.class
+        || type == SemaphoreLoginSecurityFixtures.class
         || type == SemaphoreOidcFixtures.class
+        || type == SemaphoreProjectDeletionFixtures.class
         || type == SemaphoreRunnerRoutingFixtures.class
         || type == SemaphoreScheduleFixtures.class
         || type == SemaphoreSshFixtures.class
+        || type == SemaphoreStaticInventoryFixtures.class
         || type == SemaphoreSurveyFixtures.class
+        || type == SemaphoreTerraformFixtures.class
         || type == SemaphoreTotpFixtures.class
+        || type == SemaphoreTokenFixtures.class
         || type == SemaphoreUpgradeFixtures.class
+        || type == SemaphoreUserLifecycleFixtures.class
         || type == SemaphoreVariableGroupFixtures.class
         || SUPPORTED.contains(type);
   }
@@ -94,6 +112,9 @@ public class StepsParameterResolver implements ParameterResolver {
     if (type == SemaphoreBackupFixtures.class) {
       return SemaphoreBackupFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
+    if (type == SemaphoreBuildDeployFixtures.class) {
+      return SemaphoreBuildDeployFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
     if (type == SemaphoreConcurrencyFixtures.class) {
       return SemaphoreConcurrencyFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
@@ -101,14 +122,27 @@ public class StepsParameterResolver implements ParameterResolver {
       return SemaphoreFixtures.from(
           io.bookwright.config.Configs.main(), TestDataExtension.getOrCreate(extensionContext));
     }
+    if (type == SemaphoreFileInventoryFixtures.class) {
+      return SemaphoreFileInventoryFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
+    if (type == SemaphoreHttpsGitFixtures.class) {
+      return SemaphoreHttpsGitFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
     if (type == SemaphoreIntegrationFixtures.class) {
       return SemaphoreIntegrationFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreLdapFixtures.class) {
       return SemaphoreLdapFixtures.standard();
     }
+    if (type == SemaphoreLoginSecurityFixtures.class) {
+      return SemaphoreLoginSecurityFixtures.from(
+          io.bookwright.config.Configs.main(), TestDataExtension.getOrCreate(extensionContext));
+    }
     if (type == SemaphoreOidcFixtures.class) {
       return SemaphoreOidcFixtures.standard();
+    }
+    if (type == SemaphoreProjectDeletionFixtures.class) {
+      return SemaphoreProjectDeletionFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreRunnerRoutingFixtures.class) {
       return SemaphoreRunnerRoutingFixtures.from(TestDataExtension.getOrCreate(extensionContext));
@@ -119,14 +153,26 @@ public class StepsParameterResolver implements ParameterResolver {
     if (type == SemaphoreSshFixtures.class) {
       return SemaphoreSshFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
+    if (type == SemaphoreStaticInventoryFixtures.class) {
+      return SemaphoreStaticInventoryFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
     if (type == SemaphoreSurveyFixtures.class) {
       return SemaphoreSurveyFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
+    if (type == SemaphoreTerraformFixtures.class) {
+      return SemaphoreTerraformFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreTotpFixtures.class) {
       return SemaphoreTotpFixtures.standard();
     }
+    if (type == SemaphoreTokenFixtures.class) {
+      return SemaphoreTokenFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
     if (type == SemaphoreUpgradeFixtures.class) {
       return SemaphoreUpgradeFixtures.standard();
+    }
+    if (type == SemaphoreUserLifecycleFixtures.class) {
+      return SemaphoreUserLifecycleFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreVariableGroupFixtures.class) {
       return SemaphoreVariableGroupFixtures.from(TestDataExtension.getOrCreate(extensionContext));

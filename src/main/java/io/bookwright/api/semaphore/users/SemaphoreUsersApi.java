@@ -10,6 +10,7 @@ import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Path;
 
 public interface SemaphoreUsersApi {
@@ -25,6 +26,9 @@ public interface SemaphoreUsersApi {
 
   @GET("users/{userId}")
   Call<User> getUser(@Path("userId") long userId);
+
+  @PUT("users/{userId}")
+  Call<Void> updateUser(@Path("userId") long userId, @Body UserRequest request);
 
   @POST("users/{userId}/2fas/totp")
   Call<UserTotp> enableTotp(@Path("userId") long userId);

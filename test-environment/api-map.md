@@ -22,6 +22,8 @@
 |---|---|---|---|
 | Health | `GET /api/ping` | 200 | Доступность и точное тело `pong` |
 | Login | `GET`, `POST /api/auth/login` | 200, 204 | Метаданные входа, корректные и неверные credentials, cookie-сессия |
+| API tokens | `GET/POST /api/user/tokens`, `DELETE /api/user/tokens/{prefix}` | 200/201/204 | Bearer auth, prefix-only listing, expiry, revoke и отсутствие plaintext в диагностике |
+| Users | `POST /api/users`, `GET/PUT/DELETE /api/users/{id}` | 200/201/204 | Create/update/delete/recreate; deactivate/reactivate отсутствует в текущей модели |
 | Projects | `GET`, `POST /api/projects` | 200, 201 | Создание изолированного проекта, обязательность имени, уникальность данных |
 | Project role | `GET /api/project/{project_id}/role` | 200 | Роль и permissions текущего пользователя |
 | Keys | CRUD `/api/project/{project_id}/keys` | 200/201/204 | Типы `none`, `ssh`, `login_password`, скрытие секретов, refs и удаление |
@@ -121,14 +123,15 @@ Project
 
 ### P1 — основные риски
 
-1. Git branch/ref и ошибки clone.
-2. Расширенные SSH и login/password access keys: rotation, known_hosts и custom SSH config.
-3. Schedule: cron, run-at, timezone/DST и параметры задачи.
-4. RBAC для manager, task_runner и guest.
-5. Запрет доступа к ресурсам другого проекта.
-6. Stop/force stop, project `max_parallel_tasks` и параллельный запуск задач.
-7. Variable Groups: смешанные JSON/ENV/secret values, rename persistence и безопасное task execution.
-8. Survey variables и launch-time overrides: metadata, persistence, secret masking, arguments и Ansible params.
+1. API tokens: Bearer auth, expiry, revoke и защита token material.
+2. Git branch/ref и ошибки clone.
+3. Расширенные SSH и login/password access keys: rotation, known_hosts и custom SSH config.
+4. Schedule: cron, run-at, timezone/DST и параметры задачи.
+5. RBAC для manager, task_runner и guest.
+6. Запрет доступа к ресурсам другого проекта.
+7. Stop/force stop, project `max_parallel_tasks` и параллельный запуск задач.
+8. Variable Groups: смешанные JSON/ENV/secret values, rename persistence и безопасное task execution.
+9. Survey variables и launch-time overrides: metadata, persistence, secret masking, arguments и Ansible params.
 
 ### P2 — расширение
 
@@ -142,13 +145,48 @@ Project
 
 Исполняемый API smoke реализован на Bookwright v1.4.0: он создаёт изолированные ресурсы без фиксированных ID, использует deterministic typed fixtures, выполняет LIFO cleanup и защищает диагностику от секретов.
 
+API-token P1 покрыт отдельным domain client/steps: создание с future expiry, prefix-only list, Bearer-authenticated чтение пользователя и создание проекта проходят; revoke немедленно даёт `401`, а past expiry отклоняется с `400`. Creation response с plaintext token скрывается из HTTP/Allure diagnostics, Authorization редактируется. Поддерживаемый local-user lifecycle create/update/delete/recreate также автоматизирован; deactivate/reactivate отсутствует в текущих router и `db.User`, поэтому не заявляется как доступная функция.
+
+Password login security покрывает account-enumeration boundary: existing user с неверным паролем и
+unknown user получают одинаковый `401` с пустым body, ни один invalid path не создаёт session cookie,
+а пустой пароль отклоняется. Пять повторов на `v2.19.8` остаются без `429`, `Retry-After` и warning;
+canary и source boundary находятся в `password-login-brute-force-protection-gap.md`.
+
 Из Git-рисков P1 автоматизированы успешный запуск из явно выбранной ветки, отсутствующий ref и недоступный authenticated HTTPS remote. Ошибки приводят задачу в ожидаемый статус `error`, сохраняют полезную Git-диагностику и не раскрывают login/password в structured или raw output.
 
 Успешный SSH repository/access key автоматизирован в отдельном `feature-ssh-local`: зашифрованный ключ используется для Git clone и Ansible SSH inventory, удалённый output подтверждён маркером. Negative-сценарий с неверным ключом проверяет диагностируемый отказ. Rotation-сценарий использует два SSH fixture с разными authorized keys: старый secret получает отказ на втором сервере, `PUT /keys/{id}` заменяет secret без изменения key ID, после чего Git clone и Ansible SSH проходят. Private keys/passphrases отсутствуют в API responses, HTTP/Allure diagnostics, structured и raw task output.
 
+Успешный приватный HTTPS clone автоматизирован в `feature-git-https`: pinned NGINX обслуживает bare Git repository по self-signed TLS и требует Basic Auth. Semaphore доверяет только сгенерированному CA через `SEMAPHORE_FORWARDED_ENV_VARS`, выполняет playbook после authenticated clone, а запрос без access key получает диагностируемый отказ. Password проверяется на отсутствие в create/get/list API и HTTP/Allure diagnostics; login и password отсутствуют в structured и raw task output.
+
+Static inventory P1 расширен multi-group сценарием для INI `static` и YAML `static-yaml`: API
+сохраняет два формата с разными host aliases, templates содержат default `limit`, а task output
+доказывает выполнение выбранных hosts и отсутствие hosts вторых групп.
+
+Repository-backed file inventory P1 также автоматизирован: `type=file` сохраняет `repository_id`, читает `inventories/localhost.ini` из доверенного Git fixture и реально выполняет playbook на ожидаемой группе. Найден validation defect `v2.19.8`: create принимает путь с `../`, хотя update того же объекта возвращает пустой `400`. Canary и source boundary описаны в `file-inventory-path-validation-defect.md`; небезопасный inventory не исполняется.
+
+Workspace inventories проверены реальным plan execution на toolchain из release image:
+`terraform-workspace` выбирает отдельный workspace в Terraform 1.11.3, а `tofu-workspace` — в
+OpenTofu 1.11.0. Тот же provider-free module получает Variable Group secret типа `env` через
+`TF_VAR_bookwright_secret`, сравнивает его с переданным SHA-256 и выводит только безопасный marker.
+Тест проверяет create/get/list API, structured/raw output и Allure на отсутствие plaintext. Сценарий
+запускается один раз на `core-sqlite-local` вместо дублирования по DB matrix.
+
+Build → Deploy chain проверен через те же project/template/task endpoints. Build template сохраняет
+`start_version`, первая успешная task получает эту версию, а endpoint истории build-template отдаёт
+её как доступный вариант для ручного deploy. Deploy request содержит выбранный `build_task_id`;
+detail API сохраняет эту связь, task history содержит вложенный `build_task` с версией, а executor
+получает идентичное значение через `SEMAPHORE_TASK_INCOMING_VERSION`. Это уточняет старое ожидание
+TC-021: поле `version` принадлежит build-задаче, а не самой deploy-задаче.
+
 Для встроенных ролей `manager` и `task_runner` автоматизированы точные permission bitmask и поведенческие границы. Обе роли могут запускать задачи; manager может управлять ресурсами, но не проектом и участниками; task runner не может изменять ресурсы, проект или участников.
 
 Обычный stop и force-stop автоматизированы на long-running Ansible fixture. Запрос отправляется после marker фактического начала playbook; затем проверяются terminal `stopped` и отсутствие marker шага после паузы.
+
+Project deletion теперь проверяется на той же lifecycle-границе. После terminal `stopped` API
+удаляет проект и связанные ресурсы, а detail/list подтверждают отсутствие. При удалении во время
+`running` версия `v2.19.8` возвращает `204`, хотя executor продолжает playbook и после удаления строк
+логирует foreign-key errors. Canary и анализ controller/service/store boundary находятся в
+`project-deletion-running-task-defect.md`.
 
 Persistent remote runner автоматизирован отдельной API-группой и production-like профилем PostgreSQL. Проверяются регистрация, `active`, `is_default`, `online`, heartbeat и выполнение task suite вне server process. Exact tag сохраняется и выбирает ожидаемый `used_runner_id`; при capacity `1` второй matching task возвращается в `waiting` и запускается после освобождения слота. При отсутствии matching active runner `v2.19.8` вместо recoverable waiting завершает задачу с `error: no runners available`; доказательства и code boundary находятся в `runner-unavailable-routing-defect.md`. Secret survey variables также теряются на границе remote dispatch; canary и upstream #4086 описаны в `remote-runner-survey-secrets-defect.md`.
 

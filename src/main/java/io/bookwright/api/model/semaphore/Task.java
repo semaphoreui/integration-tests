@@ -13,5 +13,8 @@ public record Task(
     String environment,
     String arguments,
     AnsibleTaskParameters params,
+    @JsonProperty("build_task_id") Long buildTaskId,
+    String version,
+    @JsonProperty("build_task") Task buildTask,
     @JsonProperty("integration_id") Long integrationId,
     @JsonProperty("used_runner_id") Long usedRunnerId) {}

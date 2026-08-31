@@ -7,18 +7,13 @@ import io.bookwright.api.model.semaphore.SemaphoreTestUser;
 import io.bookwright.api.model.semaphore.TotpPasscodeRequest;
 import io.bookwright.api.model.semaphore.TotpRecoveryRequest;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
-import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.api.semaphore.auth.SemaphoreAuthApi;
-import io.bookwright.api.semaphore.backups.SemaphoreBackupsApi;
-import io.bookwright.api.semaphore.projects.SemaphoreProjectsApi;
-import io.bookwright.api.semaphore.schedules.SemaphoreSchedulesApi;
-import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
-import io.bookwright.api.semaphore.users.SemaphoreUsersApi;
 import io.bookwright.config.MainConfig;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
 import java.io.IOException;
 import retrofit2.Call;
+import retrofit2.Response;
 
 public class AuthSteps {
 
@@ -34,9 +29,44 @@ public class AuthSteps {
   @Step("Check that invalid Semaphore credentials are rejected")
   public void invalidLoginIsRejected(LoginRequest request) {
     var response = Calls.response(api.login(request));
-    if (response.code() < 400 || response.code() >= 500) {
+    try (var ignored = response.errorBody()) {
+      if (response.code() < 400 || response.code() >= 500) {
+        throw new IllegalStateException(
+            "Expected invalid login to return 4xx but received " + response.code());
+      }
+    }
+  }
+
+  @Step("Verify invalid credentials do not disclose whether a Semaphore account exists")
+  public void verifyInvalidCredentialsIndistinguishable(
+      LoginRequest existingUser, LoginRequest unknownUser) {
+    String existingUserBody = requireUnauthorizedWithoutSession(existingUser);
+    String unknownUserBody = requireUnauthorizedWithoutSession(unknownUser);
+    if (!existingUserBody.equals(unknownUserBody)) {
       throw new IllegalStateException(
-          "Expected invalid login to return 4xx but received " + response.code());
+          "Invalid login responses disclose whether the Semaphore account exists");
+    }
+  }
+
+  @Step("Verify an empty Semaphore password is rejected without a session")
+  public void verifyEmptyPasswordRejected(LoginRequest request) {
+    Response<Void> response = Calls.response(api.login(request));
+    try (var ignored = response.errorBody()) {
+      if ((response.code() != 400 && response.code() != 401) || issuesSessionCookie(response)) {
+        throw new IllegalStateException(
+            "Empty password expected HTTP 400/401 without a session cookie but received HTTP %d"
+                .formatted(response.code()));
+      }
+    }
+  }
+
+  @Step("Verify {attempts} repeated failed Semaphore logins remain unthrottled")
+  public void verifyFailuresRemainUnthrottled(LoginRequest request, int attempts) {
+    if (attempts < 1) {
+      throw new IllegalArgumentException("Repeated login attempt count must be positive");
+    }
+    for (int attempt = 1; attempt <= attempts; attempt++) {
+      requireUnauthorizedWithoutSession(request);
     }
   }
 
@@ -56,14 +86,7 @@ public class AuthSteps {
     var retrofit = RetrofitFactory.create(config.apiBaseUrl());
     var isolatedAuth = retrofit.create(SemaphoreAuthApi.class);
     Calls.expectStatus(isolatedAuth.login(request), 204);
-    return new SemaphoreSessionApis(
-        isolatedAuth,
-        retrofit.create(SemaphoreBackupsApi.class),
-        retrofit.create(SemaphoreProjectsApi.class),
-        retrofit.create(SemaphoreAccessKeysApi.class),
-        retrofit.create(SemaphoreSchedulesApi.class),
-        retrofit.create(SemaphoreTasksApi.class),
-        retrofit.create(SemaphoreUsersApi.class));
+    return SemaphoreSessionApis.create(retrofit);
   }
 
   @Step("Verify isolated Semaphore session requires TOTP")
@@ -117,5 +140,26 @@ public class AuthSteps {
           "%s expected HTTP %d with %s but received HTTP %d: %s"
               .formatted(operation, expectedStatus, expectedError, response.code(), body));
     }
+  }
+
+  private String requireUnauthorizedWithoutSession(LoginRequest request) {
+    Response<Void> response = Calls.response(api.login(request));
+    if (response.code() != 401
+        || response.headers().get("Retry-After") != null
+        || issuesSessionCookie(response)) {
+      throw new IllegalStateException(
+          "Invalid login expected an unthrottled HTTP 401 without a session cookie but received HTTP %d"
+              .formatted(response.code()));
+    }
+    try (var body = response.errorBody()) {
+      return body == null ? "" : body.string();
+    } catch (IOException error) {
+      throw new IllegalStateException("Could not read invalid login response", error);
+    }
+  }
+
+  private boolean issuesSessionCookie(Response<?> response) {
+    return response.headers().values("Set-Cookie").stream()
+        .anyMatch(cookie -> cookie.startsWith("semaphore="));
   }
 }

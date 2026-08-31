@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.VariableGroup;
+import io.bookwright.api.model.semaphore.VariableGroupRequest;
 import io.bookwright.api.semaphore.variablegroups.SemaphoreVariableGroupsApi;
 import io.bookwright.assertions.SecretAssertions;
-import io.bookwright.fixtures.semaphore.SemaphoreVariableGroupFixtures;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
@@ -27,56 +27,47 @@ public class VariableGroupSteps {
     this.teardown = teardown;
   }
 
-  @Step("Create mixed Semaphore Variable Group in project {projectId}")
-  public VariableGroup createAndVerifyMasked(
-      long projectId, SemaphoreVariableGroupFixtures fixture) {
-    JsonNode created =
-        Calls.body(
-            api.create(projectId, fixture.createRequest(projectId)), 201, "created Variable Group");
-    verifySecretsAbsent("Variable Group create response", created, fixture);
+  @Step("Create Semaphore Variable Group in project {projectId}")
+  public VariableGroup createAndVerifyMasked(long projectId, VariableGroupRequest request) {
+    JsonNode created = Calls.body(api.create(projectId, request), 201, "created Variable Group");
+    verifySecretsAbsent("Variable Group create response", created, request);
     VariableGroup group = JSON.convertValue(created, VariableGroup.class);
     teardown.push(
         "Delete Semaphore Variable Group " + group.id(),
         () -> Calls.expectStatus(api.delete(projectId, group.id()), 204));
-    return getAndVerifyMasked(projectId, group.id(), fixture);
+    return getAndVerifyMasked(projectId, group.id(), request);
   }
 
-  @Step("Get Semaphore Variable Group {groupId} and verify secrets remain masked")
-  public VariableGroup getAndVerifyMasked(
-      long projectId, long groupId, SemaphoreVariableGroupFixtures fixture) {
+  private VariableGroup getAndVerifyMasked(
+      long projectId, long groupId, VariableGroupRequest sourceRequest) {
     JsonNode saved = Calls.body(api.get(projectId, groupId), 200, "saved Variable Group");
     JsonNode listed = Calls.body(api.getAll(projectId), 200, "Variable Group collection");
-    verifySecretsAbsent("Variable Group GET response", saved, fixture);
-    verifySecretsAbsent("Variable Group collection response", listed, fixture);
+    verifySecretsAbsent("Variable Group GET response", saved, sourceRequest);
+    verifySecretsAbsent("Variable Group collection response", listed, sourceRequest);
     return JSON.convertValue(saved, VariableGroup.class);
   }
 
-  @Step("Rename a persisted Variable Group secret and preserve its value")
-  public VariableGroup renameSecretAndVerifyMasked(
-      long projectId, VariableGroup group, SemaphoreVariableGroupFixtures fixture) {
-    Calls.expectStatus(
-        api.update(projectId, group.id(), fixture.renameRequest(projectId, group)), 204);
-    VariableGroup updated = getAndVerifyMasked(projectId, group.id(), fixture);
-    if (updated.secrets().stream()
-        .noneMatch(secret -> fixture.renamedVariable().equals(secret.name()))) {
-      throw new IllegalStateException("Variable Group secret rename was not persisted");
-    }
-    return updated;
+  @Step("Update Semaphore Variable Group {groupId}")
+  public VariableGroup updateAndVerifyMasked(
+      long projectId,
+      long groupId,
+      VariableGroupRequest updateRequest,
+      VariableGroupRequest sourceRequest) {
+    Calls.expectStatus(api.update(projectId, groupId, updateRequest), 204);
+    return getAndVerifyMasked(projectId, groupId, sourceRequest);
   }
 
   @Step("Reject a Variable Group environment variable with an empty name")
   public void emptyEnvironmentNameIsRejected(
-      long projectId, SemaphoreVariableGroupFixtures fixture) {
-    var response =
-        Calls.response(
-            api.create(projectId, fixture.invalidEmptyEnvironmentNameRequest(projectId)));
+      long projectId, VariableGroupRequest request, String expectedValidationError) {
+    var response = Calls.response(api.create(projectId, request));
     String errorBody;
     try {
       errorBody = response.errorBody() == null ? "" : response.errorBody().string();
     } catch (IOException error) {
       throw new IllegalStateException("Could not read Variable Group validation response", error);
     }
-    if (response.code() != 400 || !errorBody.contains(fixture.expectedValidationError())) {
+    if (response.code() != 400 || !errorBody.contains(expectedValidationError)) {
       throw new IllegalStateException(
           "Empty Variable Group variable name expected HTTP 400 with validation details but received HTTP "
               + response.code());
@@ -84,8 +75,10 @@ public class VariableGroupSteps {
   }
 
   private void verifySecretsAbsent(
-      String surface, JsonNode document, SemaphoreVariableGroupFixtures fixture) {
-    SecretAssertions.absent(surface, document.toString(), fixture.variableSecret().value());
-    SecretAssertions.absent(surface, document.toString(), fixture.environmentSecret().value());
+      String surface, JsonNode document, VariableGroupRequest sourceRequest) {
+    sourceRequest.secrets().stream()
+        .map(secret -> secret.secret())
+        .filter(secret -> secret != null && !secret.isBlank())
+        .forEach(secret -> SecretAssertions.absent(surface, document.toString(), secret));
   }
 }

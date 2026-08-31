@@ -6,6 +6,16 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- API-token lifecycle coverage for creation, prefix-only listing, bearer authentication, project access, revocation, expiry validation, and secret-safe HTTP diagnostics.
+- Supported local-user lifecycle coverage for create, update, delete, absence verification, and recreation; unsupported deactivate/reactivate semantics are documented explicitly.
+- Private HTTPS Git profile with trusted self-signed TLS, Basic Auth, successful playbook execution, missing-credential failure, and credential-leak checks.
+- Repository-backed Ansible file inventory execution and a canary for create/update path-validation inconsistency.
+- INI and YAML static multi-group inventory execution proving that a template limit selects only the requested host group.
+- Plan-only Terraform and OpenTofu execution with real workspace inventory selection and no external provider downloads.
+- Terraform/OpenTofu `TF_VAR_*` secret injection from a Variable Group with hash-based execution proof and API/output/report leak checks.
+- Build-to-Deploy template chaining with successful-build selection, persisted linkage, nested history version, and executor target/incoming version checks.
+- Password-login security coverage for account-enumeration resistance, empty credentials, session-cookie absence, repeated failures, and recovery through a valid login.
+- Project deletion coverage after a stopped task and a reproducer for deletion during execution causing continued automation and foreign-key errors.
 - SSH access-key rotation coverage using isolated servers with distinct authorized keys.
 - Browser-based OIDC discovery, callback, session, return-path, and external-user provisioning coverage through a pinned local Dex provider.
 - OIDC repeat-login, logout, local-account collision, and unavailable-provider coverage.
