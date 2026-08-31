@@ -44,14 +44,14 @@ public record SemaphoreFixtures(
             "Bw-secret-" + suffix + "-42!"),
         new Repositories(
             new Repository(
-                "bookwright-demo-repository-" + suffix, "https://github.com/semaphoreui/ansible-fixtures.git", "main"),
+                "bookwright-demo-repository-" + suffix, "https://github.com/semaphoreui/integration-test-fixtures.git", "main"),
             new Repository(
                 "bookwright-ref-repository-" + suffix,
-                "https://github.com/semaphoreui/ansible-fixtures.git",
+                "https://github.com/semaphoreui/integration-test-fixtures.git",
                 "bookwright-fixture-ref"),
             new Repository(
                 "bookwright-missing-ref-repository-" + suffix,
-                "https://github.com/semaphoreui/ansible-fixtures.git",
+                "https://github.com/semaphoreui/integration-test-fixtures.git",
                 "bookwright-missing-ref"),
             new Repository(
                 "bookwright-unavailable-repository-" + suffix,
@@ -62,9 +62,9 @@ public record SemaphoreFixtures(
             "[local]\nlocalhost ansible_connection=local",
             "static"),
         new Templates(
-            new Template("bookwright-build-template-" + suffix, "smoke.yml", "ansible", ""),
+            new Template("bookwright-build-template-" + suffix, "ansible/smoke.yml", "ansible", ""),
             new Template(
-                "bookwright-stoppable-template-" + suffix, "long-running.yml", "ansible", ""),
+                "bookwright-stoppable-template-" + suffix, "ansible/long-running.yml", "ansible", ""),
             new Template(
                 "bookwright-shell-output-template-" + suffix,
                 "bash/capture-output/normal.sh",
