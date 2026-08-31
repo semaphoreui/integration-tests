@@ -44,14 +44,14 @@ public record SemaphoreFixtures(
             "Bw-secret-" + suffix + "-42!"),
         new Repositories(
             new Repository(
-                "bookwright-demo-repository-" + suffix, "https://github.com/semaphoreui/integration-test-fixtures.git", "main"),
+                "bookwright-demo-repository-" + suffix, "https://github.com/semaphoreui/integration-tests.git", "external"),
             new Repository(
                 "bookwright-ref-repository-" + suffix,
-                "https://github.com/semaphoreui/integration-test-fixtures.git",
+                "https://github.com/semaphoreui/integration-tests.git",
                 "bookwright-fixture-ref"),
             new Repository(
                 "bookwright-missing-ref-repository-" + suffix,
-                "https://github.com/semaphoreui/integration-test-fixtures.git",
+                "https://github.com/semaphoreui/integration-tests.git",
                 "bookwright-missing-ref"),
             new Repository(
                 "bookwright-unavailable-repository-" + suffix,
@@ -62,17 +62,17 @@ public record SemaphoreFixtures(
             "[local]\nlocalhost ansible_connection=local",
             "static"),
         new Templates(
-            new Template("bookwright-build-template-" + suffix, "ansible/smoke.yml", "ansible", ""),
+            new Template("bookwright-build-template-" + suffix, "test-environment/fixtures/ansible/smoke.yml", "ansible", ""),
             new Template(
-                "bookwright-stoppable-template-" + suffix, "ansible/long-running.yml", "ansible", ""),
+                "bookwright-stoppable-template-" + suffix, "test-environment/fixtures/ansible/long-running.yml", "ansible", ""),
             new Template(
                 "bookwright-shell-output-template-" + suffix,
-                "bash/capture-output/normal.sh",
+                "test-environment/fixtures/bash/capture-output/normal.sh",
                 "bash",
                 ""),
             new Template(
                 "bookwright-background-shell-output-template-" + suffix,
-                "bash/capture-output/background.sh",
+                "test-environment/fixtures/bash/capture-output/background.sh",
                 "bash",
                 "")),
         new Schedule("bookwright-nightly-schedule-" + suffix, "0 0 * * *", false, ""),
