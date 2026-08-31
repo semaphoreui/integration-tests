@@ -44,14 +44,14 @@ public record SemaphoreFixtures(
             "Bw-secret-" + suffix + "-42!"),
         new Repositories(
             new Repository(
-                "bookwright-demo-repository-" + suffix, "https://github.com/LowSwoo/semaphore-ansible-fixtures.git", "main"),
+                "bookwright-demo-repository-" + suffix, "https://github.com/semaphoreui/ansible-fixtures.git", "main"),
             new Repository(
                 "bookwright-ref-repository-" + suffix,
-                "https://github.com/LowSwoo/semaphore-ansible-fixtures.git",
+                "https://github.com/semaphoreui/ansible-fixtures.git",
                 "bookwright-fixture-ref"),
             new Repository(
                 "bookwright-missing-ref-repository-" + suffix,
-                "https://github.com/LowSwoo/semaphore-ansible-fixtures.git",
+                "https://github.com/semaphoreui/ansible-fixtures.git",
                 "bookwright-missing-ref"),
             new Repository(
                 "bookwright-unavailable-repository-" + suffix,
