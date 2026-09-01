@@ -166,6 +166,18 @@ tasks.register<Test>("apiTest") {
     filter { includeTestsMatching("io.bookwright.tests.semaphore.*") }
 }
 
+tasks.register<Test>("externalSmokeTest") {
+    group = "verification"
+    description = "Runs a small set of Semaphore API tests against a running external instance (use -DSTAND=external)."
+    filter {
+        includeTestsMatching("io.bookwright.tests.semaphore.SemaphoreProjectSmokeTest")
+        includeTestsMatching("io.bookwright.tests.semaphore.AccessKeySecretsTest")
+        includeTestsMatching("io.bookwright.tests.semaphore.ProjectRbacTest")
+        includeTestsMatching("io.bookwright.tests.semaphore.VariableGroupApiTest")
+        includeTestsMatching("io.bookwright.tests.ui.semaphore.SemaphoreCoreUiSmokeTest")
+    }
+}
+
 tasks.register<Test>("upgradeTest") {
     group = "verification"
     description = "Runs the seed or verify phase of the Semaphore release-upgrade scenario."
