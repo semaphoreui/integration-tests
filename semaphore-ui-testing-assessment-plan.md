@@ -1,343 +1,343 @@
-# План запуска тестирования Semaphore UI
+# Semaphore UI Testing Launch Plan
 
-**Проект:** [semaphoreui/semaphore](https://github.com/semaphoreui/semaphore)  
-**Формат работы:** анализ текущего состояния, создание основы автоматизированного тестирования и передача проекта инженеру, который будет развивать и поддерживать тесты дальше.
-
----
-
-## Цель
-
-Не ограничиваться аудитом и рекомендациями, а запустить тестирование как работающую инженерную систему:
-
-- разобраться в реальных проблемах продукта;
-- определить риск-ориентированные приоритеты;
-- получить воспроизводимое тестовое окружение;
-- выбрать практичный стек;
-- реализовать первые полезные тесты;
-- подключить их к CI;
-- подготовить документацию и передать систему следующему инженеру.
-
-Результатом должна стать не только стратегия, но и репозиторий с понятной структурой, рабочими тестами и простым способом запуска локально и в CI.
+**Project:** https://github.com/semaphoreui/semaphore
+**Work format:** analysis of the current state, establishment of the foundation for automated testing, and handover of the project to an engineer who will further develop and maintain the test suite.
 
 ---
 
-## Принципы
+## Goal
 
-1. **Начинаем с болей продукта, а не с инструмента.** Сначала определяем, где и почему происходят дефекты, затем выбираем тесты и технологии.
-2. **Критичные сценарии важнее процента покрытия.** В первую очередь защищаем авторизацию, права доступа, секреты, запуск задач, работу с репозиториями и обновления.
-3. **API — основной стартовый уровень.** API-тесты обычно быстрее и стабильнее UI e2e, при этом позволяют проверять бизнес-логику и права доступа напрямую.
-4. **UI e2e используется выборочно.** Через браузер покрываем только критичные пользовательские пути и то, что нельзя достаточно проверить на более низком уровне.
-5. **Всё должно быть поддерживаемо одним инженером.** Запуск, диагностика падений и добавление нового теста не должны требовать отдельной инфраструктурной команды.
-6. **Передача закладывается с первого дня.** Решения, команды запуска, ограничения и известные проблемы документируются по ходу работы.
+The goal is not limited to an audit and recommendations, but to launch testing as a working engineering system:
 
----
+* understand the actual product problems;
+* define risk-based priorities;
+* establish a reproducible test environment;
+* choose a practical technology stack;
+* implement the first useful tests;
+* integrate them into CI;
+* prepare documentation and hand over the system to the next engineer.
 
-## Этап 1. Исследование и определение приоритетов
-
-Это стартовый этап. Его задача — получить факты, на которых будет строиться тестовая стратегия и первая реализация.
-
-### 1.1. Анализ открытых и закрытых issues
-
-Просматриваю открытые и закрытые issues, прежде всего задачи с метками `bug`, `regression`, `security` и проблемы, связанные с релизами.
-
-Что нужно выяснить:
-
-- какие части продукта ломаются чаще всего;
-- какие дефекты повторяются;
-- какие проблемы имеют наибольший ущерб для пользователей;
-- какие сценарии сложно воспроизводить вручную;
-- где отсутствующая автоматизация замедляет релизы или исправление багов;
-- какие дефекты уже исправлялись, но могут вернуться.
-
-Issues группируются по функциональным зонам:
-
-- аутентификация и управление пользователями;
-- RBAC и доступ между проектами;
-- создание и запуск задач;
-- раннеры, очередь и параллельное выполнение;
-- секреты, ключи и Variable Groups;
-- Git-репозитории и интеграции;
-- inventory и окружения;
-- расписания;
-- миграции и разные СУБД;
-- UI;
-- установка и обновление.
-
-Первичный проход выполнен по всем 2 192 issues: 865 открытым и 1 327 закрытым. Для каждой записи зафиксированы жалоба пользователя, симптом, состояние исправления, доступные доказательства и основной компонент системы. Полный реестр хранится в `outputs/issues-assessment/semaphore-issues-register.xlsx`.
-
-#### Результаты анализа issues
-
-Наибольшая концентрация обращений и явно размеченных дефектов обнаружена в следующих компонентах:
-
-| Компонент | Всего issues | Issues с label `bug` | Открыто | Issues с label `critical` |
-|---|---:|---:|---:|---:|
-| Git-репозитории | 450 | 68 | 152 | 17 |
-| Аутентификация и сессии | 295 | 50 | 126 | 17 |
-| Ключи, секреты и Variable Groups | 208 | 22 | 89 | 10 |
-| Расписания и время | 164 | 23 | 88 | 12 |
-| Вывод задач и события | 137 | 24 | 52 | 5 |
-| Шаблоны задач | 127 | 18 | 66 | 5 |
-
-Основные выводы:
-
-- **Git-репозитории — крупнейшая зона проблем.** Наиболее характерные риски: clone/pull, SSH- и HTTPS-доступ, ветки и refs, пути playbook и Git-кеш.
-- **Аутентификация — одна из самых рискованных областей.** Здесь сосредоточены login, API tokens, LDAP, OIDC, TOTP, сессии и связанные проверки доступа.
-- **Секреты образуют критическую связку с репозиториями и исполнением задач.** Ошибки в access keys, Vault, Variable Groups, шифровании или передаче секретов блокируют сквозной пользовательский сценарий.
-- **Расписания имеют большой незакрытый хвост:** открыто 88 из 164 issues (53,7%). Особое внимание требуется cron, timezone/DST, одноразовым запускам и передаче параметров.
-- **Шаблоны также остаются проблемной областью:** открыто 66 из 127 issues (52%). Основные риски находятся на пересечении параметров запуска, survey variables, inventory, repositories и secrets.
-
-Количество issues не равно количеству подтверждённых дефектов: в выборке присутствуют feature requests, вопросы и обращения без label `bug`. Поэтому приоритет определяется сочетанием частоты, критичности и влияния на основной пользовательский поток.
-
-#### Первый приоритет автоматизации
-
-1. Вход пользователя и получение API token.
-2. Создание проекта и настройка Git-репозитория.
-3. Создание access key и проверка безопасной работы с секретами.
-4. Создание inventory и task template, запуск задачи.
-5. Проверка lifecycle, итогового статуса и output задачи.
-6. Создание schedule с cron, timezone и параметрами запуска.
-7. Негативные проверки RBAC и изоляции проектов.
-
-Этот сквозной поток покрывает основные пользовательские действия и одновременно затрагивает пять наиболее проблемных компонентов.
-
-**Результат:** карта болей и предварительный список критичных сценариев с объяснением приоритетов.
-
-### 1.2. Локальное тестовое окружение
-
-Поднимаю Semaphore локально и фиксирую воспроизводимый путь от клонирования репозитория до работающего сервиса.
-
-**Текущий статус:** минимальный стенд `v2.19.7` с SQLite поднят через Docker Compose. Проверены UI, аутентификация и базовые read-only API-запросы. Команды запуска и результаты smoke-проверки находятся в `test-environment/`.
-
-Для автоматизации выбран Java-каркас Bookwright v1.4.0. В тестовый репозиторий адаптированы Gradle/JUnit 5, Retrofit/OkHttp, Guice, Allure, Playwright, детерминированные typed fixtures, target/domain API и steps, architecture self-tests, typed precondition state и LIFO cleanup. Сквозной Java API smoke успешно проверяет health, login, проект и роль owner, локальный Git fixture, inventory, template, выполнение Ansible-задачи, output, неактивное cron-расписание, гостевой доступ к назначенному проекту, запрет гостю изменять access keys и изоляцию неназначенного проекта. Отдельный security smoke создаёт `login_password` key, реально использует пароль при выполнении задачи и подтверждает отсутствие plaintext в API responses, structured/raw task output и тестовых артефактах. Git-набор проверяет выполнение задачи из явно выбранной ветки, ожидаемый отказ для отсутствующего ref и недоступного authenticated HTTPS remote, включая отсутствие credentials в диагностике. RBAC-набор подтверждает permission bitmask и границы `manager`/`task_runner`: разрешённый запуск задач, разрешённое manager-управление ресурсами и запреты на project/resource/member mutations согласно роли. Task lifecycle-набор после подтверждённого начала long-running playbook проверяет обычный stop и force-stop, terminal `stopped` и отсутствие выполнения последующего шага. Проектные тестовые данные удаляются автоматически; RBAC fixture-пользователь переиспользуется между запусками из-за ограничения удаления пользователя с историей login-сессий в Semaphore v2.19.7.
-
-Проверяю:
-
-- какие зависимости нужны;
-- какой способ запуска удобнее для разработки тестов;
-- как создавать пользователей, проекты и тестовые данные;
-- как очищать или пересоздавать состояние;
-- как получать логи приложения и задач;
-- какие внешние зависимости понадобятся для тестов;
-- можно ли одинаково запускать окружение локально и в CI.
-
-Первичная матрица конфигураций и способ её расширения зафиксированы в `test-environment/configuration-testing-overview.md`. Вместо полного перебора используются быстрые configuration checks, несколько опорных end-to-end профилей и самостоятельные feature profiles. Реализованы `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local` и production-like `prod-postgres-runner`: manifests закрепляют конфигурацию, единая lifecycle-команда управляет запуском/setup и записывает runtime metadata и точные image digests в Allure. Один core API-набор проходит на SQLite, PostgreSQL, MySQL 8.4 и MariaDB 10.11, локально и через отдельный persistent runner; runner API подтверждает регистрацию, default/online status и heartbeat. Отдельные `upgrade-sqlite-local` и `upgrade-postgres-local` воспроизводят N-1 → current на сохранённой БД. Они обнаружили блокирующую несовместимость `v2.19.6 → v2.19.7`: текущий релиз не читает access keys из схемы предыдущего релиза из-за удалённых полей миграции `v2.20.1`. Автоматизация и отчёт готовы, но upgrade jobs должны оставаться красными до исправления продукта.
-
-**Результат:** рабочее тестовое окружение и документированная команда запуска.
-
-### 1.3. Анализ API и документации
-
-Изучаю роуты приложения, `api-docs.yml`, фактическое поведение API и расхождения между реализацией и документацией.
-
-Проверяю:
-
-- полноту и актуальность API-спецификации;
-- способы аутентификации;
-- основные CRUD-операции и жизненные циклы ресурсов;
-- проверки ролей и принадлежности ресурсов проекту;
-- контракты ошибок и валидацию входных данных;
-- асинхронные операции: запуск задачи, статусы, логи, остановка;
-- пригодность API для подготовки и очистки тестовых данных;
-- возможность контрактного тестирования по спецификации.
-
-Список первых API-тестов определяется совместно с картой болей из анализа issues. Наличие endpoint само по себе не делает его приоритетным.
-
-**Результат:** карта API, список расхождений в документации и приоритизированный набор сценариев для автоматизации.
-
-### 1.4. Ревью тестов предыдущего QA
-
-Изучаю существующие материалы в `test/`, включая Playwright-конфигурацию, тест-кейсы и вспомогательные файлы.
-
-Для каждого элемента определяю:
-
-- что он проверяет и соответствует ли это текущему продукту;
-- запускается ли он сейчас;
-- насколько тест стабилен и диагностируем;
-- можно ли использовать его структуру, фикстуры или данные;
-- сколько будет стоить восстановление по сравнению с переписыванием;
-- относится ли сценарий к установленным приоритетам.
-
-Решение принимается по результатам ревью, а не заранее. Возможные варианты: оставить, исправить, использовать частично как источник сценариев или удалить после фиксации полезной информации.
-
-**Результат:** краткий отчёт по существующим тестам и решение по каждому полезному блоку.
+The outcome should be not only a strategy, but also a repository with a clear structure, working tests, and a simple way to run them locally and in CI.
 
 ---
 
-## Этап 2. Стратегия и техническая основа
+## Principles
 
-На основании первого этапа фиксирую минимальную стратегию тестирования.
-
-### Что определяем
-
-- критичные пользовательские и технические сценарии;
-- какие проверки нужны на уровне Go unit/integration, API и UI e2e;
-- минимальный набор тестовых окружений;
-- подход к тестовым данным и очистке состояния;
-- правила работы с секретами в тестах;
-- способ формирования отчётов и диагностики падений;
-- что запускается на каждый PR, а что — по расписанию или перед релизом;
-- критерии, по которым тест считается готовым и поддерживаемым.
-
-### Выбор инструментов
-
-Приоритет отдаётся уже используемому стеку проекта, если он пригоден:
-
-- стандартные средства Go для unit и integration-тестов;
-- API-тесты на языке и фреймворке, которые легко поддерживать основной команде;
-- Playwright для небольшого числа критичных UI-сценариев, если существующая конфигурация жизнеспособна;
-- GitHub Actions для CI;
-- существующая OpenAPI/Dredd-инфраструктура — после проверки её актуальности и полезности.
-
-Новый инструмент добавляется только тогда, когда он решает конкретную проблему лучше существующего и не создаёт неоправданную стоимость поддержки.
-
-**Результат:** короткая стратегия, схема тестовых уровней, выбранный стек и структура тестового проекта.
+1. **Start with product pain points, not the tool.** First identify where and why defects occur, then choose the tests and technologies.
+2. **Critical scenarios are more important than coverage percentage.** First protect authentication, access control, secrets, task execution, repositories, and upgrades.
+3. **API is the primary starting level.** API tests are generally faster and more stable than UI e2e tests while allowing business logic and access control to be tested directly.
+4. **Use UI e2e selectively.** Through the browser, cover only critical user journeys and functionality that cannot be sufficiently verified at a lower level.
+5. **Everything must be maintainable by a single engineer.** Running tests, diagnosing failures, and adding a new test should not require a separate infrastructure team.
+6. **Handover is built in from day one.** Decisions, run commands, limitations, and known issues are documented throughout the work.
 
 ---
 
-## Этап 3. Реализация первой рабочей версии
+## Phase 1. Research and Prioritization
 
-Создаю минимальный, но полноценный набор тестов, который уже приносит пользу и служит образцом для дальнейшего развития.
+This is the starting phase. Its purpose is to collect the facts on which the testing strategy and initial implementation will be based.
 
-Предварительный сквозной сценарий:
+### 1.1. Analysis of Open and Closed Issues
 
-1. запуск чистого тестового окружения;
-2. создание или вход тестового пользователя;
-3. создание проекта;
-4. добавление репозитория, inventory, ключа и шаблона задачи;
-5. запуск задачи;
-6. ожидание завершения;
-7. проверка статуса и результата;
-8. проверка доступов другой ролью или пользователем;
-9. очистка созданных данных.
+Review open and closed issues, primarily those labeled `bug`, `regression`, and `security`, as well as issues related to releases.
 
-Точный состав определяется после анализа issues и API. Помимо позитивного сценария в первую версию должны войти проверки наиболее опасных отказов: неверные права, чужой проект, некорректные входные данные, ошибка внешней зависимости или утечка чувствительных данных.
+The following needs to be determined:
 
-### Требования к первой версии
+* which parts of the product fail most frequently;
+* which defects recur;
+* which problems have the greatest impact on users;
+* which scenarios are difficult to reproduce manually;
+* where missing automation slows down releases or bug fixes;
+* which defects have already been fixed but may return.
 
-- один очевидный способ запуска;
-- воспроизводимость на чистой машине;
-- независимые или безопасно изолированные тесты;
-- понятные фикстуры и тестовые данные;
-- диагностируемые сообщения об ошибках;
-- отсутствие реальных секретов в репозитории и логах;
-- разумное время выполнения;
-- примеры, по которым следующий инженер сможет написать новый тест.
+Issues are grouped by functional area:
 
-**Результат:** рабочий базовый набор API/integration-тестов и, при необходимости, несколько критичных UI e2e-тестов.
+* authentication and user management;
+* RBAC and cross-project access;
+* task creation and execution;
+* runners, queue, and parallel execution;
+* secrets, keys, and Variable Groups;
+* Git repositories and integrations;
+* inventory and environments;
+* schedules;
+* migrations and different databases;
+* UI;
+* installation and upgrades.
 
----
+The initial pass covered all 2,192 issues: 865 open and 1,327 closed. For each record, the user complaint, symptom, fix status, available evidence, and primary system component were recorded. The complete registry is stored in `outputs/issues-assessment/semaphore-issues-register.xlsx`.
 
-## Этап 4. Подключение к CI
+#### Results of the Issue Analysis
 
-Добавляю тесты в CI по уровням стоимости:
+The highest concentration of reports and explicitly labeled defects was found in the following components:
 
-- быстрые проверки на каждый PR;
-- более тяжёлые интеграционные и e2e-тесты по расписанию или перед релизом;
-- сохранение логов, скриншотов, traces и других артефактов при падении;
-- таймауты и понятный результат выполнения;
-- правила временного отключения нестабильного теста с обязательной причиной и задачей на исправление.
+| Component                          | Total issues | Issues with `bug` label | Open | Issues with `critical` label |
+| ---------------------------------- | -----------: | ----------------------: | ---: | ---------------------------: |
+| Git repositories                   |          450 |                      68 |  152 |                           17 |
+| Authentication and sessions        |          295 |                      50 |  126 |                           17 |
+| Keys, secrets, and Variable Groups |          208 |                      22 |   89 |                           10 |
+| Scheduling and time                |          164 |                      23 |   88 |                           12 |
+| Task output and events             |          137 |                      24 |   52 |                            5 |
+| Task templates                     |          127 |                      18 |   66 |                            5 |
 
-На старте тесты не должны блокировать разработку, пока не подтверждена их стабильность. После периода наблюдения надёжные критичные проверки переводятся в обязательный gate.
+Key findings:
 
-**Результат:** работающий CI-пайплайн и понятный процесс разбора падений.
+* **Git repositories are the largest problem area.** The most common risks include clone/pull, SSH and HTTPS access, branches and refs, playbook paths, and the Git cache.
+* **Authentication is one of the highest-risk areas.** This includes login, API tokens, LDAP, OIDC, TOTP, sessions, and related access checks.
+* **Secrets form a critical dependency chain with repositories and task execution.** Problems with access keys, Vault, Variable Groups, encryption, or secret transmission can block the end-to-end user workflow.
+* **Scheduling has a large unresolved backlog:** 88 of 164 issues are open (53.7%). Particular attention is required for cron, time zones/DST, one-time runs, and parameter passing.
+* **Templates also remain a problematic area:** 66 of 127 issues are open (52%). The main risks are at the intersection of launch parameters, survey variables, inventory, repositories, and secrets.
 
-**Текущий статус:** этап реализован. Pull-request workflow выполняет framework quality gate и `core-sqlite-local`; ежедневная matrix job запускает PostgreSQL, MySQL, MariaDB и persistent runner; еженедельный и ручной release workflow проверяет upgrade SQLite/PostgreSQL. Jobs имеют таймауты, `fail-fast: false` для матриц, сохраняют JUnit/HTML/Allure и Compose diagnostics, а cleanup выполняется всегда. Upgrade workflow отделён от PR gate и остаётся красным до исправления подтверждённого дефекта продукта. После каждого запуска отдельные Allure-отчёты профилей собираются reusable workflow в готовый HTML artifact, включая отчёты упавших jobs. GitHub Pages deployment приостановлен из-за тарифного ограничения private-репозитория.
+The number of issues does not equal the number of confirmed defects: the dataset also contains feature requests, questions, and reports without a `bug` label. Therefore, priority is determined by a combination of frequency, criticality, and impact on the main user flow.
 
----
+#### First Automation Priority
 
-## Этап 5. Дорожная карта развития
+1. User login and API token acquisition.
+2. Project creation and Git repository configuration.
+3. Access key creation and verification of secure secret handling.
+4. Inventory and task template creation, followed by task execution.
+5. Verification of the task lifecycle, final status, and output.
+6. Schedule creation with cron, time zone, and execution parameters.
+7. Negative RBAC and project isolation checks.
 
-После запуска основы формирую backlog следующих улучшений. Каждая задача содержит:
+This end-to-end flow covers the main user actions while also touching the five most problematic components.
 
-- риск или проблему, которую она закрывает;
-- рекомендуемый уровень тестирования;
-- примерный объём;
-- зависимости;
-- критерии завершения;
-- приоритет.
+**Result:** a map of product pain points and a preliminary list of critical scenarios with an explanation of their priorities.
 
-Предварительные направления:
+### 1.2. Local Test Environment
 
-- расширение RBAC-матрицы;
-- негативные сценарии работы с секретами;
-- конкурентный запуск и остановка задач;
-- Git-интеграции и недоступные remote;
-- расписания и работа со временем;
-- миграции между версиями;
-- тестирование на поддерживаемых СУБД;
-- критичные UI-пути;
-- установка и обновление;
-- нагрузочные и security-проверки.
+Set up Semaphore locally and document a reproducible path from cloning the repository to running the service.
 
-**Результат:** практичный план развития на первые 2–3 месяца работы следующего инженера.
+**Current status:** a minimal `v2.19.7` environment with SQLite has been started using Docker Compose. The UI, authentication, and basic read-only API requests have been verified. Startup commands and smoke-test results are stored in `test-environment/`.
 
----
+The Java-based Bookwright v1.4.0 framework has been selected for automation. Gradle/JUnit 5, Retrofit/OkHttp, Guice, Allure, Playwright, deterministic typed fixtures, target/domain APIs and steps, architecture self-tests, typed precondition state, and LIFO cleanup have been adapted to the test repository. The end-to-end Java API smoke suite successfully verifies health, login, project and owner role, a local Git fixture, inventory, template, Ansible task execution, output, an inactive cron schedule, guest access to an assigned project, denial of guest access-key modification, and isolation of an unassigned project. A separate security smoke test creates a `login_password` key, actually uses the password during task execution, and verifies the absence of plaintext in API responses, structured/raw task output, and test artifacts. The Git suite verifies task execution from an explicitly selected branch, expected failure for a missing ref and an unavailable authenticated HTTPS remote, including the absence of credentials in diagnostics. The RBAC suite verifies the permission bitmask and `manager`/`task_runner` boundaries: permitted task execution, permitted manager resource management, and restrictions on project/resource/member mutations according to the role. The task lifecycle suite, after confirming the start of a long-running playbook, verifies both regular stop and force-stop, terminal `stopped` status, and the absence of execution of the subsequent step. Project test data is removed automatically; the RBAC fixture user is reused between runs because Semaphore v2.19.7 does not allow deleting a user with a history of login sessions.
 
-## Этап 6. Документация и передача
+The following is verified:
 
-Передача считается завершённой, когда новый инженер может без устных подсказок:
+* which dependencies are required;
+* which startup method is most convenient for test development;
+* how to create users, projects, and test data;
+* how to clean up or recreate state;
+* how to obtain application and task logs;
+* which external dependencies are required for the tests;
+* whether the same environment can be run locally and in CI.
 
-- поднять окружение;
-- запустить все уровни тестов;
-- понять причину типового падения;
-- добавить новый тест по существующему образцу;
-- открыть PR и получить корректный результат CI.
+The initial configuration matrix and the approach to extending it are documented in `test-environment/configuration-testing-overview.md`. Instead of exhaustive combinations, the approach uses fast configuration checks, several representative end-to-end profiles, and independent feature profiles. `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, and the production-like `prod-postgres-runner` profiles have been implemented: manifests pin the configuration, a unified lifecycle command manages startup/setup and records runtime metadata and exact image digests in Allure. A single core API suite passes on SQLite, PostgreSQL, MySQL 8.4, and MariaDB 10.11, both locally and through a separate persistent runner; the runner API verifies registration, default/online status, and heartbeat. Separate `upgrade-sqlite-local` and `upgrade-postgres-local` profiles reproduce N-1 → current upgrades against a preserved database. They identified a blocking incompatibility in `v2.19.6 → v2.19.7`: the current release cannot read access keys from the previous release's schema because migration fields `v2.20.1` were removed. The automation and report are ready, but the upgrade jobs must remain red until the product defect is fixed.
 
-### Передаваемые материалы
+**Result:** a working test environment and a documented startup procedure.
 
-- README по локальному запуску;
-- описание структуры тестов;
-- правила тестовых данных и секретов;
-- команды запуска разных наборов;
-- описание CI;
-- известные ограничения и источники нестабильности;
-- карта рисков и приоритетов;
-- backlog дальнейшей автоматизации;
-- короткая архитектурная схема;
-- несколько стартовых задач для нового инженера.
+### 1.3. API and Documentation Analysis
 
-Желательно завершить передачу совместной работой над первым PR нового инженера. Это покажет, что система действительно понятна и пригодна для дальнейшего развития.
+Study application routes, `api-docs.yml`, actual API behavior, and discrepancies between the implementation and the documentation.
 
----
+The following is verified:
 
-## Основные результаты проекта
+* completeness and up-to-dateness of the API specification;
+* authentication mechanisms;
+* core CRUD operations and resource lifecycles;
+* role and project-ownership checks;
+* error contracts and input validation;
+* asynchronous operations: task execution, statuses, logs, and stopping;
+* API suitability for preparing and cleaning up test data;
+* feasibility of contract testing against the specification.
 
-1. Карта продуктовых болей на основании issues и истории дефектов.
-2. Приоритизированная модель рисков и критичных сценариев.
-3. Воспроизводимое локальное тестовое окружение.
-4. Анализ API и состояния API-документации.
-5. Решение по наследию предыдущего QA.
-6. Короткая стратегия и выбранный инструментальный стек.
-7. Рабочий базовый набор автоматизированных тестов.
-8. Запуск тестов в CI с диагностическими артефактами.
-9. Backlog развития на 2–3 месяца.
-10. Документация и передача следующему инженеру.
+The initial API test list is determined together with the pain-point map from the issue analysis. The existence of an endpoint alone does not make it a priority.
 
----
+**Result:** an API map, a list of documentation discrepancies, and a prioritized set of scenarios for automation.
 
-## Что нужно уточнить в начале
+### 1.4. Review of Previous QA Tests
 
-- Входит ли в работу закрытая часть `pro/` и доступна ли она для тестирования?
-- Тестируется только self-hosted Semaphore или также SaaS-портал?
-- Какие способы установки и СУБД реально важны пользователям сейчас?
-- Какие регрессии или инциденты заказчик считает самыми болезненными?
-- Где будет выполняться CI и есть ли ограничения по ресурсам?
-- Кто сможет ревьюить изменения в приложении и тестовой инфраструктуре?
-- Есть ли желаемый срок первой рабочей версии и передачи проекта?
+Review existing materials in `test/`, including Playwright configuration, test cases, and helper files.
+
+For each item, determine:
+
+* what it verifies and whether it matches the current product;
+* whether it currently runs;
+* how stable and diagnosable the test is;
+* whether its structure, fixtures, or data can be reused;
+* how much it would cost to restore compared with rewriting it;
+* whether the scenario belongs to the established priorities.
+
+The decision is made based on the review rather than in advance. Possible outcomes: keep, fix, partially reuse as a source of scenarios, or remove after documenting useful information.
+
+**Result:** a brief report on existing tests and a decision for each useful block.
 
 ---
 
-## Оценка сроков
+## Phase 2. Strategy and Technical Foundation
 
-Точную оценку разумно зафиксировать после первого исследовательского этапа: объём сильно зависит от состояния окружения, актуальности API-документации и качества существующих тестов.
+Based on Phase 1, establish the minimum testing strategy.
 
-Предварительный ориентир:
+### What to Define
 
-| Блок | Оценка |
-|---|---:|
-| Исследование issues, окружения, API и старых тестов | 5–8 рабочих дней |
-| Стратегия и техническая основа | 2–3 рабочих дня |
-| Первая рабочая версия тестов | 5–10 рабочих дней |
-| CI, документация и передача | 3–5 рабочих дней |
-| **Итого до первой передаваемой версии** | **15–26 рабочих дней** |
+* critical user and technical scenarios;
+* which checks are required at the Go unit/integration, API, and UI e2e levels;
+* the minimum set of test environments;
+* the approach to test data and state cleanup;
+* rules for handling secrets in tests;
+* reporting and failure-diagnostics mechanisms;
+* what runs on every PR and what runs on a schedule or before a release;
+* criteria for considering a test complete and maintainable.
 
-Это ориентир, а не фиксированное обязательство до завершения первичного анализа. После Этапа 1 план и оценка уточняются на основании фактов.
+### Tool Selection
+
+Priority is given to the project's existing technology stack where it is suitable:
+
+* standard Go tooling for unit and integration tests;
+* API testing in a language and framework that the main team can easily maintain;
+* Playwright for a small number of critical UI scenarios, if the existing configuration is viable;
+* GitHub Actions for CI;
+* existing OpenAPI/Dredd infrastructure, after verifying its current relevance and usefulness.
+
+A new tool is introduced only when it solves a specific problem better than the existing solution and does not create an unjustified maintenance cost.
+
+**Result:** a concise testing strategy, test-level model, selected stack, and test-project structure.
+
+---
+
+## Phase 3. Implementation of the First Working Version
+
+Create a minimal but complete set of tests that already provides value and serves as an example for further development.
+
+Preliminary end-to-end scenario:
+
+1. start a clean test environment;
+2. create or log in as a test user;
+3. create a project;
+4. add a repository, inventory, key, and task template;
+5. run the task;
+6. wait for completion;
+7. verify the status and result;
+8. verify access using another role or user;
+9. clean up the created data.
+
+The exact scope is determined after analyzing issues and the API. In addition to the positive scenario, the first version must include checks for the most dangerous failure modes: incorrect permissions, access to another user's project, invalid input data, external dependency failures, and leakage of sensitive data.
+
+### First-Version Requirements
+
+* one obvious way to run the tests;
+* reproducibility on a clean machine;
+* independent or safely isolated tests;
+* clear fixtures and test data;
+* diagnostic error messages;
+* no real secrets in the repository or logs;
+* reasonable execution time;
+* examples that allow the next engineer to write a new test based on an existing pattern.
+
+**Result:** a working baseline set of API/integration tests and, where necessary, several critical UI e2e tests.
+
+---
+
+## Phase 4. CI Integration
+
+Integrate the tests into CI according to their cost level:
+
+* fast checks on every PR;
+* heavier integration and e2e tests on a schedule or before releases;
+* preservation of logs, screenshots, traces, and other artifacts on failure;
+* timeouts and clear execution results;
+* rules for temporarily disabling an unstable test, with a mandatory reason and a tracking issue for fixing it.
+
+Initially, tests should not block development until their stability has been confirmed. After an observation period, reliable critical checks are promoted to a mandatory gate.
+
+**Result:** a working CI pipeline and a clear process for analyzing failures.
+
+**Current status:** this phase has been implemented. The pull-request workflow runs the framework quality gate and `core-sqlite-local`; a daily matrix job runs PostgreSQL, MySQL, MariaDB, and the persistent runner; a weekly and manual release workflow verifies SQLite/PostgreSQL upgrades. Jobs have timeouts, `fail-fast: false` for matrices, preserve JUnit/HTML/Allure and Compose diagnostics, and always perform cleanup. The upgrade workflow is separated from the PR gate and remains red until the confirmed product defect is fixed. After each run, separate Allure reports for each profile are collected by a reusable workflow into a ready-to-view HTML artifact, including reports from failed jobs. GitHub Pages deployment is currently paused due to a pricing limitation of the private repository.
+
+---
+
+## Phase 5. Development Roadmap
+
+After the foundation is launched, create a backlog of further improvements. Each task should contain:
+
+* the risk or problem it addresses;
+* the recommended testing level;
+* an approximate effort;
+* dependencies;
+* completion criteria;
+* priority.
+
+Preliminary areas:
+
+* expanding the RBAC matrix;
+* negative secret-handling scenarios;
+* concurrent task execution and stopping;
+* Git integrations and unavailable remotes;
+* scheduling and time-related behavior;
+* version-to-version migrations;
+* testing against supported databases;
+* critical UI paths;
+* installation and upgrades;
+* load and security testing.
+
+**Result:** a practical development plan for the first 2–3 months of work by the next engineer.
+
+---
+
+## Phase 6. Documentation and Handover
+
+The handover is considered complete when a new engineer can, without verbal guidance:
+
+* start the environment;
+* run all test levels;
+* understand the cause of a typical failure;
+* add a new test based on an existing example;
+* open a PR and obtain a correct CI result.
+
+### Handover Materials
+
+* README for local setup;
+* description of the test structure;
+* test data and secret-handling rules;
+* commands for running different test suites;
+* CI documentation;
+* known limitations and sources of instability;
+* risk and priority map;
+* backlog for further automation;
+* a short architecture diagram;
+* several starter tasks for the new engineer.
+
+Ideally, the handover should be completed by working together on the new engineer's first PR. This will demonstrate that the system is genuinely understandable and suitable for further development.
+
+---
+
+## Main Project Outcomes
+
+1. A map of product pain points based on issues and defect history.
+2. A prioritized risk model and list of critical scenarios.
+3. A reproducible local test environment.
+4. API analysis and an assessment of the API documentation state.
+5. A decision regarding the legacy work of the previous QA engineer.
+6. A concise strategy and selected technology stack.
+7. A working baseline set of automated tests.
+8. CI test execution with diagnostic artifacts.
+9. A 2–3 month development backlog.
+10. Documentation and handover to the next engineer.
+
+---
+
+## What Needs to Be Clarified at the Start
+
+* Is the closed-source `pro/` part of the scope, and is it available for testing?
+* Is only self-hosted Semaphore being tested, or the SaaS portal as well?
+* Which installation methods and databases are actually important to users today?
+* Which regressions or incidents does the customer consider the most painful?
+* Where will CI run, and are there resource constraints?
+* Who will be able to review changes to the application and test infrastructure?
+* Is there a desired deadline for the first working version and project handover?
+
+---
+
+## Timeline Estimate
+
+A precise estimate should reasonably be established after the initial research phase: the scope depends heavily on the state of the environment, the current state of the API documentation, and the quality of the existing tests.
+
+Preliminary estimate:
+
+| Block                                                    |               Estimate |
+| -------------------------------------------------------- | ---------------------: |
+| Research of issues, environment, API, and existing tests |       5–8 working days |
+| Strategy and technical foundation                        |       2–3 working days |
+| First working version of the tests                       |      5–10 working days |
+| CI, documentation, and handover                          |       3–5 working days |
+| **Total to the first handover-ready version**            | **15–26 working days** |
+
+This is an estimate rather than a fixed commitment before the initial analysis is completed. After Phase 1, the plan and estimate will be refined based on the actual findings.
