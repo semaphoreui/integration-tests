@@ -6,18 +6,20 @@ services:
     command:
       - |
         set -eu
-        cp -R /source/. /repository/
+        find /repository -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+        cp -R -T /source /repository
         chown -R 0:0 /repository
-        git -C /repository init -b main
-        git -C /repository config user.name "Semaphore Test Fixture"
-        git -C /repository config user.email "fixture@localhost"
-        git -C /repository add .
-        git -C /repository diff --cached --quiet || git -C /repository commit -m "Prepare safe smoke fixture"
-        git -C /repository branch -f bookwright-fixture-ref HEAD
+        cd /repository
+        git init -b main
+        git config user.name "Semaphore Test Fixture"
+        git config user.email "fixture@localhost"
+        git add --all
+        git commit -m "Prepare safe smoke fixture"
+        git branch bookwright-fixture-ref
         chown -R 1001:0 /repository
     volumes:
-      - fixture-repository:/repository
-      - ./fixtures/ansible:/source:ro
+      - ./fixtures:/source/test-environment/fixtures:ro
+      - repository:/repository
 
   semaphore:
     image: ${SEMAPHORE_IMAGE:-semaphoreui/semaphore:v2.19.7}
@@ -30,11 +32,11 @@ services:
       SEMAPHORE_ADMIN_EMAIL: admin@localhost
       SEMAPHORE_ACCESS_KEY_ENCRYPTION: IlRqgrrO5Gp27MlWakDX1xVrPv4jhoUx+ARY+qGyDxQ=
     volumes:
-      - fixture-repository:/fixtures/ansible:ro
+      - repository:/repository:ro
     restart: unless-stopped
     depends_on:
       fixture-init:
         condition: service_completed_successfully
 
 volumes:
-  fixture-repository:
+  repository:

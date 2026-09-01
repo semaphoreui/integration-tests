@@ -24,7 +24,7 @@ services:
       retries: 45
     volumes:
       - runner-data:/var/lib/semaphore
-      - fixture-repository:/fixtures/ansible:ro
+      - repository:/repository:ro
 
   runner-configure:
     image: semaphoreui/runner:v2.19.7

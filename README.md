@@ -24,6 +24,37 @@ test-environment/profile up core-sqlite-local
 
 Semaphore будет доступен на <http://localhost:3000>.
 
+## Running tests against a local Semaphore checkout
+
+`run-local.sh` provides a fast feedback loop for integration test development,
+letting you validate local Semaphore and fixture changes without the
+commit-and-push cycle required for a stand to consume updated fixtures.
+
+Build a Docker image from the local Semaphore checkout:
+
+```bash
+cd ../semaphore
+task docker:build:server tag=local
+# Creates the semaphoreui/semaphore:local image.
+```
+
+By default, `run-local.sh` uses the `semaphoreui/semaphore:local` image and
+runs the complete API test suite:
+
+```bash
+./run-local.sh
+```
+
+`run-local.sh` packages the working-tree files under `test-environment/fixtures`
+into a temporary local Git repository. Override the image or run a specific
+test when necessary:
+
+```bash
+SEMAPHORE_IMAGE=semaphoreui/semaphore:another-tag \
+./run-local.sh \
+  --tests 'io.bookwright.tests.semaphore.SemaphoreProjectSmokeTest'
+```
+
 ## Первый API smoke
 
 ```bash

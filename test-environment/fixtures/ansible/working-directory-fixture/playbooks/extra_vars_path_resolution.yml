@@ -1,0 +1,13 @@
+---
+- name: Verify extra-vars path resolution
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Confirm extra-vars file was loaded
+      ansible.builtin.assert:
+        that:
+          - wd_extra_vars_marker == "SEMAPHORE_WD_EXTRA_VARS_OK"
+
+    - name: Emit extra-vars resolution marker
+      ansible.builtin.debug:
+        msg: SEMAPHORE_WD_EXTRA_VARS_OK

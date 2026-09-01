@@ -1,0 +1,4 @@
+---
+- name: Confirm role was loaded from the configured working directory
+  ansible.builtin.debug:
+    msg: SEMAPHORE_WORKING_DIRECTORY_FIXTURE_OK
