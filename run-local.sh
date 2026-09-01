@@ -67,6 +67,7 @@ run_integration_tests() {
     -w /workspace \
     eclipse-temurin:21-jdk \
     ./gradlew apiTest \
+      --rerun-tasks \
       -DSTAND=semaphore \
       -DSEMAPHORE_PROFILE=core-sqlite-local \
       -Dapi.base.url="$base_url/api/" \
