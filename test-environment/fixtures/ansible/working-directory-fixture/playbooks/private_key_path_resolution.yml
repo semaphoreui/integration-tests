@@ -1,0 +1,13 @@
+---
+- name: Verify private-key path resolution
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Confirm private-key file was resolved from the working directory
+      ansible.builtin.assert:
+        that:
+          - lookup('ansible.builtin.file', ansible_private_key_file) == 'SEMAPHORE_WD_PRIVATE_KEY_PATH_OK'
+
+    - name: Emit private-key resolution marker
+      ansible.builtin.debug:
+        msg: SEMAPHORE_WD_PRIVATE_KEY_PATH_OK

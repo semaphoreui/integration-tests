@@ -9,6 +9,7 @@ import io.bookwright.di.UiModule;
 import io.bookwright.fixtures.database.HotelDatabaseFixtures;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
+import io.bookwright.fixtures.semaphore.AnsibleWorkingDirectoryFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
 import io.bookwright.steps.ApiSteps;
@@ -40,6 +41,7 @@ public class StepsParameterResolver implements ParameterResolver {
         || type == SauceDemoFixtures.class
         || type == LocalUserFixtures.class
         || type == HotelDatabaseFixtures.class
+        || type == AnsibleWorkingDirectoryFixtures.class
         || type == SemaphoreFixtures.class
         || type == SemaphoreUpgradeFixtures.class
         || SUPPORTED.contains(type);
@@ -63,6 +65,10 @@ public class StepsParameterResolver implements ParameterResolver {
     }
     if (type == HotelDatabaseFixtures.class) {
       return HotelDatabaseFixtures.seeded();
+    }
+    if (type == AnsibleWorkingDirectoryFixtures.class) {
+      return AnsibleWorkingDirectoryFixtures.from(
+          io.bookwright.config.Configs.main(), TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreFixtures.class) {
       return SemaphoreFixtures.from(

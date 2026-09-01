@@ -1,0 +1,6 @@
+---
+- name: Verify working directory configuration
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - wd_check

@@ -10,4 +10,6 @@ public record Template(
     @JsonProperty("repository_id") long repositoryId,
     String playbook,
     String app,
-    String type) {}
+    String type,
+    String arguments,
+    @JsonProperty("working_directory") String workingDirectory) {}
