@@ -101,7 +101,7 @@ test-environment/profile test prod-postgres-runner
 
 При первом старте runner регистрируется через тестовый global registration token и сохраняет выданный долгоживущий token в `runner-data`. Авторегистрация создаёт global runner с `is_default=false`, а задачи без runner tag выбирают только default runners. Поэтому one-shot `runner-configure` после регистрации входит через admin API, выставляет `is_default=true`, и lifecycle не объявляет профиль готовым до успешного завершения этой настройки.
 
-Git fixture монтируется по одинаковому пути `/fixtures/ansible` в server и runner. Иначе локальный repository был бы доступен server, но отсутствовал бы в реальной среде исполнения задачи.
+Git fixture монтируется по одинаковому пути `/repository` в server и runner. Иначе локальный repository был бы доступен server, но отсутствовал бы в реальной среде исполнения задачи.
 
 API-набор дополнительно проверяет, что runner активен, зарегистрирован, назначен default, имеет статус `online` и отправляет heartbeat. Успешные task/output и stop/force-stop сценарии при включённом remote mode подтверждают фактическое выполнение на runner.
 
@@ -133,7 +133,7 @@ test-environment/profile upgrade-test upgrade-postgres-local
 
 Raw Allure results каждого job загружаются отдельным artifact. Финальный reusable workflow скачивает их, генерирует независимый HTML-отчёт для каждого профиля и загружает общий сайт как downloadable artifact. Сборка выполняется и после тестового падения, включая pull request, поэтому диагностику красного run можно открыть без GitHub Pages. Pages deployment приостановлен, пока private-репозиторий остаётся на тарифе без private Pages.
 
-Compose-сервис `fixture-init` создаёт отдельный Git repository из `fixtures/ansible` с ветками `main` и `bookwright-fixture-ref`. Инициализация безопасно повторяется для существующего volume и завершается ошибкой при сбое Git-команды. Repository монтируется в Semaphore read-only и используется для проверки task lifecycle, выбора ветки и отсутствующего ref. `long-running.yml` содержит marker начала, контролируемую паузу и marker завершения для детерминированной проверки stop/force-stop.
+Compose-сервис `fixture-init` создаёт отдельный Git repository из `fixtures` с ветками `main` и `bookwright-fixture-ref`, сохраняя пути относительно корня проекта под `test-environment/fixtures`. Инициализация безопасно повторяется для существующего volume и завершается ошибкой при сбое Git-команды. Repository монтируется в Semaphore read-only и используется для проверки task lifecycle, выбора ветки и отсутствующего ref. `long-running.yml` содержит marker начала, контролируемую паузу и marker завершения для детерминированной проверки stop/force-stop.
 
 ## Быстрая проверка
 

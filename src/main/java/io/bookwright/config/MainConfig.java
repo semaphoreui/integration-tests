@@ -49,7 +49,7 @@ public interface MainConfig extends Config {
   boolean teardownFailOnError();
 
   @Key("semaphore.repository.url")
-  @DefaultValue("https://github.com/semaphoreui/integration-test-fixtures.git")
+  @DefaultValue("https://github.com/semaphoreui/integration-tests.git")
   String semaphoreRepositoryUrl();
 
   @Key("semaphore.repository.branch")

@@ -45,13 +45,12 @@ runs the complete API test suite:
 ./run-local.sh
 ```
 
-By default, `run-local.sh` mounts an `integration-test-fixtures` checkout
-located next to `semaphore-test-api`. Override the image and fixture location,
-or run a specific test, when necessary:
+`run-local.sh` packages the working-tree files under `test-environment/fixtures`
+into a temporary local Git repository. Override the image or run a specific
+test when necessary:
 
 ```bash
 SEMAPHORE_IMAGE=semaphoreui/semaphore:another-tag \
-SEMAPHORE_FIXTURES_DIR=/path/to/integration-test-fixtures \
 ./run-local.sh \
   --tests 'io.bookwright.tests.semaphore.SemaphoreProjectSmokeTest'
 ```

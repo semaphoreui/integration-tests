@@ -25,12 +25,16 @@ public record SemaphoreUpgradeFixtures(
             "login_password",
             "bookwright-upgrade-user",
             "Bookwright-upgrade-password-42!"),
-        new Repository("bookwright-upgrade-repository", "file:///fixtures/ansible", "main"),
+        new Repository("bookwright-upgrade-repository", "file:///repository", "main"),
         new Inventory(
             "bookwright-upgrade-inventory",
             "[local]\nlocalhost ansible_connection=local",
             "static"),
-        new Template("bookwright-upgrade-template", "smoke.yml", "ansible", ""),
+        new Template(
+            "bookwright-upgrade-template",
+            "test-environment/fixtures/ansible/smoke.yml",
+            "ansible",
+            ""),
         new Schedule("bookwright-upgrade-schedule", "0 0 * * *", false, ""),
         "semaphore-bookwright-smoke-ok");
   }

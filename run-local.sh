@@ -8,9 +8,8 @@ semaphore_image="${SEMAPHORE_IMAGE:-semaphoreui/semaphore:local}"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-# By default, use an integration-test-fixtures checkout next to semaphore-test-api.
-fixtures_host_path="${SEMAPHORE_FIXTURES_DIR:-$script_dir/../integration-test-fixtures}"
-fixtures_mount_path="/integration-test-fixtures"
+repository_url="file:///repository"
+repository_branch="main"
 compose_file="$script_dir/test-environment/compose.yml"
 base_url="http://localhost:$port"
 
@@ -24,8 +23,6 @@ compose() {
 			  semaphore:
 			    ports: !override
 			      - "127.0.0.1:$port:3000"
-			    volumes:
-			      - "$fixtures_host_path:$fixtures_mount_path:ro"
 		YAML
 }
 
@@ -74,7 +71,8 @@ run_integration_tests() {
       -DSEMAPHORE_PROFILE=core-sqlite-local \
       -Dapi.base.url="$base_url/api/" \
       -Dui.base.url="$base_url" \
-      -Dsemaphore.repository.url="$fixtures_mount_path" \
+      -Dsemaphore.repository.url="$repository_url" \
+      -Dsemaphore.repository.branch="$repository_branch" \
       "$@"
 }
 
