@@ -228,7 +228,13 @@ publish_s3() {
         fi
     done
 
-    docker compose run test-runner ./scripts/publish-to-s3.sh $cmd_args
+    docker compose run \
+        -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+        -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+        -e AWS_S3_BUCKET="$AWS_S3_BUCKET" \
+        -e AWS_S3_REGION="$AWS_S3_REGION" \
+        -e AWS_S3_ENDPOINT="$AWS_S3_ENDPOINT" \
+        test-runner ./scripts/publish-to-s3.sh $cmd_args
 }
 
 # Main command router

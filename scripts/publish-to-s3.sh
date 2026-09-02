@@ -26,7 +26,7 @@ env
 #   --region REGION              AWS регион (или AWS_S3_REGION, default: us-east-1)
 #   --access-key KEY             Access key (или AWS_ACCESS_KEY_ID)
 #   --secret-key SECRET          Secret key (или AWS_SECRET_ACCESS_KEY)
-#   --endpoint URL               Custom S3 endpoint (для MinIO, etc.)
+#   --endpoint URL               Custom S3 endpoint (or AWS_S3_ENDPOINT)
 #   --skip-validate              Пропустить проверку доступа
 #   --title "Заголовок"          Заголовок отчета в индексе
 #
