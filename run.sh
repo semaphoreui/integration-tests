@@ -313,12 +313,12 @@ main() {
             publish_s3 "$@"
             ;;
         external:test-and-publish)
-            # Публикуем результаты в S3 даже если тесты упали,
-            # но сохраняем exit-код тестов для CI
             set +e
+            echo "Running external tests..."
             test_external "$@"
             local test_exit=$?
             set -e
+            echo "Publishing test results to S3..."
             publish_s3 "$@"
             exit $test_exit
             ;;
