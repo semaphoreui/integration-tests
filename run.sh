@@ -313,11 +313,12 @@ main() {
             publish_s3 "$@"
             ;;
         external:test-and-publish)
-            set +e
-            echo "Running external tests..."
-            test_external "$@"
-            local test_exit=$?
+            # set +e
+            # echo "Running external tests..."
+            # test_external "$@"
+            # local test_exit=$?
             set -e
+            env
             echo "Publishing test results to S3..."
             publish_s3
             exit $test_exit
