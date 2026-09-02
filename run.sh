@@ -319,7 +319,7 @@ main() {
             local test_exit=$?
             set -e
             echo "Publishing test results to S3..."
-            publish_s3 "$@"
+            publish_s3
             exit $test_exit
             ;;
         help|--help|-h)
