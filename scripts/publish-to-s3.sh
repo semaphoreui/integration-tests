@@ -2,37 +2,37 @@
 
 set -eu
 
-# Публикация результатов тестов в S3 хранилище
-# Использует curl для загрузки файлов в S3
+# Publish test results to S3 storage
+# Uses curl to upload files to S3
 #
-# Использование:
+# Usage:
 #   ./publish-to-s3.sh \
 #     --bucket my-bucket \
 #     --region us-east-1 \
 #     --access-key AKIAIOSFODNN7EXAMPLE \
 #     --secret-key wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 #
-# Или через переменные окружения:
+# Or via environment variables:
 #   export AWS_S3_BUCKET=my-bucket
 #   export AWS_S3_REGION=us-east-1
 #   export AWS_ACCESS_KEY_ID=AKIA...
 #   export AWS_SECRET_ACCESS_KEY=...
 #   ./publish-to-s3.sh
 #
-# Аргументы:
-#   --bucket BUCKET              S3 бакет (или AWS_S3_BUCKET)
-#   --region REGION              AWS регион (или AWS_S3_REGION, default: us-east-1)
-#   --access-key KEY             Access key (или AWS_ACCESS_KEY_ID)
-#   --secret-key SECRET          Secret key (или AWS_SECRET_ACCESS_KEY)
+# Arguments:
+#   --bucket BUCKET              S3 bucket (or AWS_S3_BUCKET)
+#   --region REGION              AWS region (or AWS_S3_REGION, default: us-east-1)
+#   --access-key KEY             Access key (or AWS_ACCESS_KEY_ID)
+#   --secret-key SECRET          Secret key (or AWS_SECRET_ACCESS_KEY)
 #   --endpoint URL               Custom S3 endpoint (or AWS_S3_ENDPOINT)
-#   --skip-validate              Пропустить проверку доступа
-#   --title "Заголовок"          Заголовок отчета в индексе
+#   --skip-validate              Skip the access check
+#   --title "Title"              Report title in the index
 #
-# Примеры:
+# Examples:
 #   # AWS S3
 #   ./publish-to-s3.sh --bucket test-results --region us-east-1
 #
-#   # MinIO (локальный)
+#   # MinIO (local)
 #   ./publish-to-s3.sh \
 #     --bucket test-results \
 #     --endpoint http://localhost:9000 \
@@ -41,9 +41,9 @@ set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_dir="$script_dir/.."
-echo "📂 Репозиторий: $repo_dir"
+echo "📂 Repository: $repo_dir"
 
-# Значения по умолчанию
+# Default values
 s3_bucket="${AWS_S3_BUCKET:-}"
 s3_region="${AWS_S3_REGION:-us-east-1}"
 aws_access_key="${AWS_ACCESS_KEY_ID:-}"
@@ -52,7 +52,7 @@ s3_endpoint="${AWS_S3_ENDPOINT:-}"
 skip_validate=false
 report_title="Test Results"
 
-# Разбор аргументов
+# Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         --bucket)
@@ -84,36 +84,36 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         *)
-            echo "Неизвестный аргумент: $1" >&2
+            echo "Unknown argument: $1" >&2
             exit 1
             ;;
     esac
 done
 
-# Проверка обязательных параметров
+# Check required parameters
 if [ -z "$s3_bucket" ]; then
-    echo "❌ Ошибка: Не указан S3 бакет" >&2
-    echo "   Используйте: --bucket BUCKET или переменную AWS_S3_BUCKET" >&2
+    echo "❌ Error: S3 bucket not specified" >&2
+    echo "   Use: --bucket BUCKET or the AWS_S3_BUCKET variable" >&2
     exit 1
 fi
 
 if [ -z "$aws_access_key" ] || [ -z "$aws_secret_key" ]; then
-    echo "❌ Ошибка: Не указаны AWS ключи" >&2
-    echo "   Используйте: --access-key и --secret-key" >&2
-    echo "   Или переменные AWS_ACCESS_KEY_ID и AWS_SECRET_ACCESS_KEY" >&2
+    echo "❌ Error: AWS keys not specified" >&2
+    echo "   Use: --access-key and --secret-key" >&2
+    echo "   Or the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY variables" >&2
     exit 1
 fi
 
-# Проверка наличия результатов тестов
+# Check that test results exist
 if [ ! -d "$repo_dir/build/allure-results" ] || [ -z "$(find "$repo_dir/build/allure-results" -maxdepth 1 -type f -name '*-result.json' -print -quit)" ]; then
-    echo "❌ Результаты тестов не найдены в build/allure-results/" >&2
-    echo "   Сначала запустите тесты" >&2
+    echo "❌ Test results not found in build/allure-results/" >&2
+    echo "   Run the tests first" >&2
     exit 1
 fi
 
-# Определение S3 хоста
+# Determine the S3 host
 if [ -n "$s3_endpoint" ]; then
-    # Custom endpoint (MinIO, и т.д.)
+    # Custom endpoint (MinIO, etc.)
     s3_host="$s3_endpoint"
     s3_url_base="$s3_endpoint"
 else
@@ -122,42 +122,42 @@ else
     s3_url_base="https://${s3_host}"
 fi
 
-# Удаление протокола если есть
+# Strip the protocol if present
 s3_host=$(echo "$s3_host" | sed 's|^https://||;s|^http://||')
 
-# Определение протокола
+# Determine the protocol
 if [[ "$s3_endpoint" == http://* ]]; then
     protocol="http"
 else
     protocol="https"
 fi
 
-echo "📊 Подготовка к загрузке в S3..."
-echo "   Бакет: $s3_bucket"
-echo "   Регион: $s3_region"
-echo "   Хост: $s3_host"
+echo "📊 Preparing to upload to S3..."
+echo "   Bucket: $s3_bucket"
+echo "   Region: $s3_region"
+echo "   Host: $s3_host"
 
-# Проверка доступа к S3
+# Check S3 access
 if [ "$skip_validate" = false ]; then
-    echo "🔍 Проверка доступа к S3..."
+    echo "🔍 Checking S3 access..."
 
     response=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "Authorization: AWS4-HMAC-SHA256 Credential=$aws_access_key/$(date +%Y%m%d)/${s3_region}/s3/aws4_request" \
         "${protocol}://${s3_host}/" 2>/dev/null || echo "000")
 
     if [ "$response" = "000" ] || [ "$response" = "403" ] || [ "$response" = "404" ]; then
-        echo "⚠️  Не удалось проверить доступ к S3"
-        echo "   Проверьте ключи и бакет, продолжаю..."
+        echo "⚠️  Could not verify S3 access"
+        echo "   Check the keys and bucket, continuing..."
     else
-        echo "✓ Доступ к S3 OK"
+        echo "✓ S3 access OK"
     fi
 fi
 
-# Скачать Allure CLI если нужно
+# Download Allure CLI if needed
 if [ ! -x "$repo_dir/build/allure/commandline/bin/allure" ]; then
-    echo "⬇️  Скачивание Allure CLI..."
+    echo "⬇️  Downloading Allure CLI..."
     download_log=$(JAVA_HOME=/opt/homebrew/opt/openjdk@21 "$repo_dir/gradlew" --no-daemon downloadAllure 2>&1) || {
-        echo "❌ Не удалось скачать Allure CLI" >&2
+        echo "❌ Failed to download Allure CLI" >&2
         echo "$download_log" >&2
         exit 1
     }
@@ -165,8 +165,8 @@ fi
 
 allure_bin="$repo_dir/build/allure/commandline/bin/allure"
 
-# Собрать отчет Allure
-echo "📝 Собрание отчета Allure..."
+# Build the Allure report
+echo "📝 Building the Allure report..."
 temp_report=$(mktemp -d)
 trap "rm -rf '$temp_report'" EXIT
 
@@ -175,47 +175,47 @@ trap "rm -rf '$temp_report'" EXIT
     --single-file \
     --output "$temp_report/report" >/dev/null 2>&1
 
-# Структура загрузки в S3
+# S3 upload structure
 timestamp=$(date '+%Y/%m/%d/%H-%M-%S')
 s3_path="reports/$timestamp"
 
-echo "📤 Загрузка файлов в S3..."
-echo "   Путь: s3://$s3_bucket/$s3_path/"
+echo "📤 Uploading files to S3..."
+echo "   Path: s3://$s3_bucket/$s3_path/"
 
-# Функция для загрузки файла в S3
+# Function for uploading a file to S3
 upload_to_s3() {
     local file_path="$1"
     local s3_key="$2"
     local content_type="${3:-text/html}"
 
-    # Если используется MinIO endpoint, используем mc (MinIO Client)
+    # If a MinIO endpoint is used, upload with mc (MinIO Client)
     if [ -n "$s3_endpoint" ]; then
-        # Убедимся, что mc установлен
+        # Make sure mc is installed
         if ! command -v mc &> /dev/null; then
-            echo "  ✗ mc (MinIO Client) не установлен. Используйте: brew install minio-mc" >&2
+            echo "  ✗ mc (MinIO Client) is not installed. Use: brew install minio-mc" >&2
             return 1
         fi
 
-        # Настроим alias для MinIO если его нет
+        # Set up the MinIO alias if it does not exist
         if ! mc alias list 2>/dev/null | grep -q "^minio "; then
             mc alias set minio "$s3_endpoint" "$aws_access_key" "$aws_secret_key" >/dev/null 2>&1
         fi
 
-        # Загрузим через mc
+        # Upload via mc
         if mc cp "$file_path" "minio/$s3_bucket/$s3_key" >/dev/null 2>&1; then
-            echo "  ✓ Загружен: $s3_key"
+            echo "  ✓ Uploaded: $s3_key"
             return 0
         else
-            echo "  ✗ Ошибка при загрузке: $s3_key" >&2
+            echo "  ✗ Failed to upload: $s3_key" >&2
             return 1
         fi
     fi
 
-    # Для AWS S3 используем AWS Signature V4
+    # For AWS S3 use AWS Signature V4
     local amz_date=$(date -u '+%Y%m%dT%H%M%SZ')
     local datestamp=$(date -u '+%Y%m%d')
 
-    # Хеш файла
+    # File hash
     local payload_hash=$(openssl dgst -sha256 -hex "$file_path" | awk '{print $2}')
 
     # Canonical request
@@ -267,28 +267,28 @@ SIGN
         "${protocol}://${s3_host}/${s3_key}")
 
     if [ "$http_code" = "200" ] || [ "$http_code" = "204" ]; then
-        echo "  ✓ Загружен: $s3_key"
+        echo "  ✓ Uploaded: $s3_key"
         return 0
     else
-        echo "  ✗ Ошибка $http_code при загрузке: $s3_key" >&2
+        echo "  ✗ Error $http_code while uploading: $s3_key" >&2
         return 1
     fi
 }
 
-# Загрузить HTML отчет
+# Upload the HTML report
 echo ""
 upload_to_s3 "$temp_report/report/index.html" "$s3_path/index.html" "text/html; charset=utf-8"
 
-# Создать index страницу со ссылками
-echo "📋 Создание индекса..."
+# Create an index page with links
+echo "📋 Creating the index..."
 
 cat > "$temp_report/index-page.html" << 'INDEX_PAGE'
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Результаты тестов Semaphore</title>
+    <title>Semaphore Test Results</title>
     <style>
         :root {
             color-scheme: light dark;
@@ -355,11 +355,11 @@ cat > "$temp_report/index-page.html" << 'INDEX_PAGE'
 </head>
 <body>
     <div class="container">
-        <h1>📊 Результаты тестов Semaphore</h1>
-        <p>Результаты автоматизированных тестов, загруженные в S3</p>
+        <h1>📊 Semaphore Test Results</h1>
+        <p>Automated test results uploaded to S3</p>
         <div id="reports" class="report-list"></div>
         <div id="empty" class="no-reports">
-            <p>Пока нет опубликованных результатов</p>
+            <p>No published results yet</p>
         </div>
     </div>
 </body>
@@ -369,28 +369,28 @@ INDEX_PAGE
 upload_to_s3 "$temp_report/index-page.html" "index.html" "text/html; charset=utf-8"
 
 echo ""
-echo "✅ Результаты опубликованы в S3!"
+echo "✅ Results published to S3!"
 echo ""
 
-# Вывод информации об доступе
+# Print access information
 if [ -n "$s3_endpoint" ]; then
     # Custom endpoint
-    echo "📊 Адрес отчета:"
+    echo "📊 Report URL:"
     echo "   ${protocol}://${s3_host}/${s3_path}/index.html"
     echo ""
-    echo "📋 Главная страница:"
+    echo "📋 Main page:"
     echo "   ${protocol}://${s3_host}/index.html"
 else
     # AWS S3
-    echo "📊 Адрес отчета (S3):"
+    echo "📊 Report URL (S3):"
     echo "   s3://${s3_bucket}/${s3_path}/index.html"
     echo ""
-    echo "📊 Адрес отчета (HTTP, если public):"
+    echo "📊 Report URL (HTTP, if public):"
     echo "   https://${s3_bucket}.s3.${s3_region}.amazonaws.com/${s3_path}/index.html"
     echo ""
-    echo "📋 Главная страница:"
+    echo "📋 Main page:"
     echo "   https://${s3_bucket}.s3.${s3_region}.amazonaws.com/index.html"
 fi
 
 echo ""
-echo "💡 Совет: Для публичного доступа установите публичное ACL на объекты S3"
+echo "💡 Tip: For public access, set a public ACL on the S3 objects"

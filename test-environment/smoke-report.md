@@ -1,55 +1,55 @@
-# Smoke-проверка локального Semaphore UI
+# Smoke check of the local Semaphore UI
 
-**Дата:** 2026-08-07  
-**Версия:** Semaphore UI `v2.19.7`  
-**Конфигурация:** Docker Compose, SQLite, один контейнер
+**Date:** 2026-08-07  
+**Version:** Semaphore UI `v2.19.7`  
+**Configuration:** Docker Compose, SQLite, single container
 
-## Результат
+## Result
 
-Минимальное окружение запущено и пригодно для дальнейшего исследования UI и API.
+The minimal environment is up and suitable for further exploration of the UI and API.
 
-Независимый исполняемый smoke `api-smoke.mjs` также успешно проходит полный цикл создания и удаления временного проекта.
+The standalone executable smoke `api-smoke.mjs` also successfully passes the full cycle of creating and deleting a temporary project.
 
-Тот же сценарий перенесён на Java-каркас Bookwright и реализован в `SemaphoreProjectSmokeTest`. Тест использует Retrofit/OkHttp, Guice, Allure steps, AssertJ и автоматический LIFO cleanup. Сценарий расширен цепочкой access key → repository → inventory → task template.
+The same scenario was ported to the Bookwright Java framework and implemented in `SemaphoreProjectSmokeTest`. The test uses Retrofit/OkHttp, Guice, Allure steps, AssertJ, and automatic LIFO cleanup. The scenario was extended with the access key → repository → inventory → task template chain.
 
-| Проверка | Ожидаемый результат | Фактический результат | Статус |
+| Check | Expected result | Actual result | Status |
 |---|---|---|---|
-| `GET /api/ping` | `200`, тело `pong` | `200`, `pong` | Pass |
-| `POST /api/auth/login` | Успешная аутентификация | `204` | Pass |
-| Загрузка UI | Открывается форма входа | `200`, форма отображается | Pass |
-| Вход через UI | Открывается Dashboard | Dashboard проекта `demo` | Pass |
-| `GET /api/projects` | Доступен список проектов | `200`, 1 проект | Pass |
-| `GET /api/project/1/repositories` | Доступны репозитории | `200`, 1 репозиторий | Pass |
-| `GET /api/project/1/inventory` | Доступен inventory | `200`, 3 записи | Pass |
-| `GET /api/project/1/templates` | Доступны шаблоны | `200`, 8 шаблонов | Pass |
-| `GET /api/project/1/tasks` | Доступна история задач | `200`, 2 успешные задачи | Pass |
-| Неверный пароль | Вход отклонён | `401` | Pass |
-| Создание временного проекта | Проект создан | `201`, получен ID | Pass |
-| Роль создателя проекта | `owner` | `200`, роль `owner` | Pass |
-| Cleanup временного проекта | Проект удалён | `204` | Pass |
-| Bookwright `SemaphoreProjectSmokeTest` | Полный Java API smoke | Pass | Pass |
-| Создание core resource chain | Key, repository, inventory и template связаны корректно | Pass | Pass |
-| Выполнение доверенного playbook | Task достигает `success` | Pass | Pass |
-| Проверка task output | Найден маркер `semaphore-bookwright-smoke-ok` | Pass | Pass |
-| Неактивный cron schedule | Create/get/list и связь с template | Pass | Pass |
+| `GET /api/ping` | `200`, body `pong` | `200`, `pong` | Pass |
+| `POST /api/auth/login` | Successful authentication | `204` | Pass |
+| UI load | Login form opens | `200`, form is displayed | Pass |
+| Login via UI | Dashboard opens | Dashboard of the `demo` project | Pass |
+| `GET /api/projects` | Project list accessible | `200`, 1 project | Pass |
+| `GET /api/project/1/repositories` | Repositories accessible | `200`, 1 repository | Pass |
+| `GET /api/project/1/inventory` | Inventory accessible | `200`, 3 records | Pass |
+| `GET /api/project/1/templates` | Templates accessible | `200`, 8 templates | Pass |
+| `GET /api/project/1/tasks` | Task history accessible | `200`, 2 successful tasks | Pass |
+| Wrong password | Login rejected | `401` | Pass |
+| Temporary project creation | Project created | `201`, ID received | Pass |
+| Project creator role | `owner` | `200`, role `owner` | Pass |
+| Temporary project cleanup | Project deleted | `204` | Pass |
+| Bookwright `SemaphoreProjectSmokeTest` | Full Java API smoke | Pass | Pass |
+| Core resource chain creation | Key, repository, inventory, and template linked correctly | Pass | Pass |
+| Trusted playbook execution | Task reaches `success` | Pass | Pass |
+| Task output check | Marker `semaphore-bookwright-smoke-ok` found | Pass | Pass |
+| Inactive cron schedule | Create/get/list and link to template | Pass | Pass |
 
-Полный локальный прогон инфраструктурных self-tests Bookwright вместе с Semaphore smoke завершён успешно.
+A full local run of the Bookwright infrastructure self-tests together with the Semaphore smoke completed successfully.
 
-Ошибок и предупреждений в консоли браузера при входе и открытии раздела Repositories не обнаружено.
+No errors or warnings were found in the browser console during login and when opening the Repositories section.
 
-## Наблюдения
+## Observations
 
-- При первом запуске image автоматически применяет миграции и создаёт администратора.
-- В начальном состоянии автоматически создаётся демонстрационный проект `demo` с репозиторием, inventory, шаблонами и историей успешных задач.
-- Демонстрационные данные удобны для smoke-проверки, но не должны использоваться как основа независимых автотестов.
-- Для автоматизации потребуется контролируемое создание данных через API и гарантированный сброс SQLite volume.
-- В `api-docs.yml` описано 77 путей: 55 операций `GET`, 34 `POST`, 16 `PUT` и 22 `DELETE`.
+- On first start, the image automatically applies migrations and creates an administrator.
+- In the initial state, a demo project `demo` is automatically created with a repository, inventory, templates, and a history of successful tasks.
+- The demo data is convenient for smoke checking but must not be used as a basis for independent automated tests.
+- Automation will require controlled data creation via the API and a guaranteed reset of the SQLite volume.
+- `api-docs.yml` describes 77 paths: 55 `GET` operations, 34 `POST`, 16 `PUT`, and 22 `DELETE`.
 
-## Следующий шаг
+## Next step
 
-Карта API первого сквозного сценария подготовлена в `api-map.md`. Базовый независимый API smoke реализован. Следующий шаг — расширить его ресурсами проекта:
+The API map of the first end-to-end scenario is prepared in `api-map.md`. The basic independent API smoke is implemented. The next step is to extend it with project resources:
 
-1. отдельная API-сессия второго пользователя;
-2. RBAC и изоляция проектов;
-3. негативные сценарии Git clone и branch/ref;
-4. проверка отсутствия секретов в output.
+1. a separate API session for a second user;
+2. RBAC and project isolation;
+3. negative Git clone and branch/ref scenarios;
+4. verification that no secrets appear in the output.

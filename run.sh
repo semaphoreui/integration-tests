@@ -9,43 +9,43 @@ print_help() {
 Usage: ./run.sh [COMMAND] [PARAMS...]
 
 Commands:
-  test:external [PARAMS]            Запуск тестов против запущенного Semaphore UI
-                                    Параметры: host=VALUE port=VALUE
+  test:external [PARAMS]            Run tests against a running Semaphore UI
+                                    Parameters: host=VALUE port=VALUE
                                                api_base_url=URL ui_base_url=URL
-                                    (api_base_url/ui_base_url имеют приоритет над host/port)
+                                    (api_base_url/ui_base_url take priority over host/port)
 
-  sqlite:up                         Запуск SQLite окружения
-  sqlite:test                       Запуск тестов SQLite
-  sqlite:down                       Остановка SQLite окружения
-  sqlite:clean                      Очистка SQLite окружения
-  sqlite                            Запуск полного цикла SQLite (up → test → down)
+  sqlite:up                         Start the SQLite environment
+  sqlite:test                       Run SQLite tests
+  sqlite:down                       Stop the SQLite environment
+  sqlite:clean                      Clean the SQLite environment
+  sqlite                            Run the full SQLite cycle (up → test → down)
 
-  mysql:up                          Запуск MySQL окружения
-  mysql:test                        Запуск тестов MySQL
-  mysql:down                        Остановка MySQL окружения
-  mysql:clean                       Очистка MySQL окружения
-  mysql                             Запуск полного цикла MySQL (up → test → down)
+  mysql:up                          Start the MySQL environment
+  mysql:test                        Run MySQL tests
+  mysql:down                        Stop the MySQL environment
+  mysql:clean                       Clean the MySQL environment
+  mysql                             Run the full MySQL cycle (up → test → down)
 
-  mariadb:up                        Запуск MariaDB окружения
-  mariadb:test                      Запуск тестов MariaDB
-  mariadb:down                      Остановка MariaDB окружения
-  mariadb:clean                     Очистка MariaDB окружения
-  mariadb                           Запуск полного цикла MariaDB (up → test → down)
+  mariadb:up                        Start the MariaDB environment
+  mariadb:test                      Run MariaDB tests
+  mariadb:down                      Stop the MariaDB environment
+  mariadb:clean                     Clean the MariaDB environment
+  mariadb                           Run the full MariaDB cycle (up → test → down)
 
-  prod:up                           Запуск Production Postgres окружения
-  prod:test                         Запуск тестов Production
-  prod:down                         Остановка Production окружения
-  prod:clean                        Очистка Production окружения
-  prod                              Запуск полного цикла Production (up → test → down)
+  prod:up                           Start the Production Postgres environment
+  prod:test                         Run Production tests
+  prod:down                         Stop the Production environment
+  prod:clean                        Clean the Production environment
+  prod                              Run the full Production cycle (up → test → down)
 
-  clean:all                         Очистка всех окружений
+  clean:all                         Clean all environments
 
-  external:localhost                Запуск тестов против Semaphore на localhost:3000
-  external:docker                   Запуск тестов против Semaphore в Docker на host.docker.internal:3000
+  external:localhost                Run tests against Semaphore on localhost:3000
+  external:docker                   Run tests against Semaphore in Docker on host.docker.internal:3000
 
-  publish:s3 [PARAMS]               Опубликовать результаты тестов в S3
+  publish:s3 [PARAMS]               Publish test results to S3
 
-  help                              Показать это сообщение
+  help                              Show this message
 
 Examples:
   ./run.sh sqlite
@@ -198,7 +198,7 @@ external_docker() {
 
 test_external() {
     local host=$(get_param "host" "$@" 2>/dev/null || echo "host.docker.internal")
-    local port=$(get_param "port" "$@" 2>/dev/null || echo "3000")
+    local port=$(bget_param "port" "$@" 2>/dev/null || echo "3000")
     local api_base_url=$(get_param "api_base_url" "$@" 2>/dev/null || echo "http://${host}:${port}/api/")
     local ui_base_url=$(get_param "ui_base_url" "$@" 2>/dev/null || echo "http://${host}:${port}")
 
@@ -206,7 +206,7 @@ test_external() {
     echo "  API_BASE_URL: $api_base_url"
     echo "  UI_BASE_URL:  $ui_base_url"
 
-    # Передаём параметры через переменные окружения
+    # Pass parameters via environment variables
     docker compose run \
         -e API_BASE_URL="$api_base_url" \
         -e UI_BASE_URL="$ui_base_url" \

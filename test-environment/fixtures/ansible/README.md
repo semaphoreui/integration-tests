@@ -1,7 +1,7 @@
 # Ansible fixture
 
-Доверенный минимальный playbook для проверки task lifecycle и output.
+A trusted minimal playbook for verifying the task lifecycle and output.
 
-Он не изменяет систему и выводит только детерминированный маркер `semaphore-bookwright-smoke-ok`.
+It does not modify the system and outputs only the deterministic marker `semaphore-bookwright-smoke-ok`.
 
-При запуске Compose сервис `fixture-init` упаковывает эту папку в локальный Git repository. Semaphore получает repository через отдельный read-only volume и использует URL `file:///fixtures/ansible`. Это исключает выполнение кода из внешнего репозитория.
+On Compose startup, the `fixture-init` service packs this folder into a local Git repository. Semaphore receives the repository via a separate read-only volume and uses the URL `file:///fixtures/ansible`. This rules out executing code from an external repository.

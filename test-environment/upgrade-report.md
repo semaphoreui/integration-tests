@@ -1,46 +1,46 @@
-# Проверка обновления Semaphore v2.19.6 → v2.19.7
+# Semaphore upgrade check v2.19.6 → v2.19.7
 
-**Дата проверки:** 2026-08-14
+**Check date:** 2026-08-14
 
-**Статус:** воспроизводимый блокирующий дефект продукта
-**СУБД:** SQLite и PostgreSQL 14.3
+**Status:** reproducible blocking product defect
+**Database:** SQLite and PostgreSQL 14.3
 
-## Что проверяется
+## What is verified
 
-На release image `semaphoreui/semaphore:v2.19.6` создаётся связанный fixture:
+On the release image `semaphoreui/semaphore:v2.19.6`, a linked fixture is created:
 
 ```text
 project → encrypted access key → repository → inventory → template
 → successful task/output → inactive schedule
 ```
 
-После успешной seed-фазы server container заменяется на `semaphoreui/semaphore:v2.19.7`. Database и Git fixture volumes не меняются. Verify-фаза входит старой admin-учётной записью, находит сохранённый проект и должна проверить все ресурсы, старый task output и повторное выполнение template.
+After a successful seed phase, the server container is replaced with `semaphoreui/semaphore:v2.19.7`. The database and Git fixture volumes are not changed. The verify phase logs in with the old admin account, finds the preserved project, and must check all resources, the old task output, and re-execution of the template.
 
-## Фактический результат
+## Actual result
 
-Для SQLite и PostgreSQL результат одинаков:
+The result is the same for SQLite and PostgreSQL:
 
-1. `v2.19.6` стартует на чистой БД, создаёт fixture и успешно выполняет Ansible task.
-2. `v2.19.7` стартует на той же БД и успешно выполняет login.
-3. Сохранённый проект, repository, inventory, template, schedule и успешный task доступны.
-4. `GET /api/project/1/keys` возвращает `400` с пустым response body.
-5. Server log содержит: `gorp: no fields [task_id expire_at] in type AccessKey`.
+1. `v2.19.6` starts on a clean database, creates the fixture, and successfully runs an Ansible task.
+2. `v2.19.7` starts on the same database and logs in successfully.
+3. The preserved project, repository, inventory, template, schedule, and successful task are accessible.
+4. `GET /api/project/1/keys` returns `400` with an empty response body.
+5. The server log contains: `gorp: no fields [task_id expire_at] in type AccessKey`.
 
-Из-за отказа access key API нельзя подтвердить доступность сохранённых credentials и безопасно продолжить выполнение шаблонов, которые от них зависят. Upgrade считается неуспешным.
+Because of the access key API failure, it is impossible to confirm that the preserved credentials are available and to safely continue running the templates that depend on them. The upgrade is considered failed.
 
-## Причина
+## Cause
 
-Tag `v2.19.6` (`ff0cf4cbaa5760ea57fb02973b9f909e619b1856`) содержит и применяет миграции `v2.20.0` и `v2.20.1`. Миграция `v2.20.1` добавляет:
+Tag `v2.19.6` (`ff0cf4cbaa5760ea57fb02973b9f909e619b1856`) contains and applies the `v2.20.0` and `v2.20.1` migrations. Migration `v2.20.1` adds:
 
 - `access_key.task_id`;
 - `access_key.expire_at`;
-- индекс `access_key__task_id`.
+- the `access_key__task_id` index.
 
-Tag `v2.19.7` (`e9dc41a1de8a747569334f7a2b76c320b945d4f0`) удаляет эти migration entries и файлы, а также поля `TaskID` и `ExpireAt` из Go-модели `AccessKey`. Уже применённая схема не откатывается. Gorp получает дополнительные колонки из существующей таблицы и не может сопоставить их с моделью текущего release.
+Tag `v2.19.7` (`e9dc41a1de8a747569334f7a2b76c320b945d4f0`) removes these migration entries and files, as well as the `TaskID` and `ExpireAt` fields from the Go `AccessKey` model. The already-applied schema is not rolled back. Gorp sees extra columns in the existing table and cannot map them to the current release's model.
 
-Это не расхождение тестовой DTO: ошибка возникает внутри server при чтении БД и подтверждается на двух dialect.
+This is not a mismatch in a test DTO: the error occurs inside the server when reading the database and is confirmed on two dialects.
 
-## Воспроизведение
+## Reproduction
 
 ```bash
 test-environment/profile upgrade-test upgrade-sqlite-local
@@ -48,16 +48,16 @@ test-environment/profile down upgrade-sqlite-local
 test-environment/profile upgrade-test upgrade-postgres-local
 ```
 
-При падении команда сохраняет текущие containers и volumes и выводит последние server logs. Повторный запуск начинает с чистых volumes только выбранного upgrade-профиля.
+On failure, the command preserves the current containers and volumes and prints the latest server logs. A repeated run starts from clean volumes of only the selected upgrade profile.
 
-## Критерии исправления
+## Fix criteria
 
-- `v2.19.7` или следующий исправленный release корректно открывает БД, созданную `v2.19.6`;
-- список и отдельное чтение старых access keys возвращают успешный ответ без plaintext secrets;
-- связи repository/inventory с сохранённым key не меняются;
-- старый task output доступен;
-- сохранённый template повторно выполняется успешно;
-- после upgrade проходит обычная core API suite;
-- сценарий зелёный для SQLite и PostgreSQL.
+- `v2.19.7` or the next fixed release correctly opens a database created by `v2.19.6`;
+- listing and individual reads of old access keys return a successful response without plaintext secrets;
+- the repository/inventory links to the preserved key do not change;
+- the old task output is accessible;
+- the preserved template re-executes successfully;
+- the regular core API suite passes after the upgrade;
+- the scenario is green for SQLite and PostgreSQL.
 
-MySQL и MariaDB используют ту же общую миграцию, но отдельно не прогонялись: двух подтверждённых dialect достаточно для первичной локализации. После исправления их следует добавить в release compatibility job, если support policy требует полный upgrade gate для каждой СУБД.
+MySQL and MariaDB use the same shared migration but were not run separately: two confirmed dialects are enough for initial localization. After the fix, they should be added to the release compatibility job if the support policy requires a full upgrade gate for every database.

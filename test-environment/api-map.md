@@ -1,42 +1,42 @@
-# Карта API для первой автоматизации
+# API map for the first automation
 
-**Версия стенда:** Semaphore UI `v2.19.7`  
-**Источники:** `api-docs.yml`, `api/router.go`, read-only запросы к локальному стенду
+**Stand version:** Semaphore UI `v2.19.7`  
+**Sources:** `api-docs.yml`, `api/router.go`, read-only requests to the local stand
 
-## Общая картина
+## Big picture
 
-В `api-docs.yml` описано 77 путей и 127 операций:
+`api-docs.yml` describes 77 paths and 127 operations:
 
-| Метод | Количество |
+| Method | Count |
 |---|---:|
 | GET | 55 |
 | POST | 34 |
 | PUT | 16 |
 | DELETE | 22 |
 
-Спецификация покрывает основную модель продукта, но не полностью соответствует фактическому router. Поэтому генерацию тестов напрямую из OpenAPI пока нельзя считать надёжной без дополнительной проверки маршрутов и схем.
+The specification covers the product's core model but does not fully match the actual router. Therefore generating tests directly from OpenAPI cannot yet be considered reliable without additional verification of routes and schemas.
 
-## Сквозной сценарий
+## End-to-end scenario
 
-| Шаг | Основные операции | Ожидаемые коды | Что проверять |
+| Step | Main operations | Expected codes | What to verify |
 |---|---|---|---|
-| Health | `GET /api/ping` | 200 | Доступность и точное тело `pong` |
-| Login | `GET`, `POST /api/auth/login` | 200, 204 | Метаданные входа, корректные и неверные credentials, cookie-сессия |
-| Projects | `GET`, `POST /api/projects` | 200, 201 | Создание изолированного проекта, обязательность имени, уникальность данных |
-| Project role | `GET /api/project/{project_id}/role` | 200 | Роль и permissions текущего пользователя |
-| Keys | CRUD `/api/project/{project_id}/keys` | 200/201/204 | Типы `none`, `ssh`, `login_password`, скрытие секретов, refs и удаление |
-| Repositories | CRUD `/api/project/{project_id}/repositories` | 200/201/204 | Git URL, branch/ref, access key, branches, playbooks, ошибки clone |
-| Inventory | CRUD `/api/project/{project_id}/inventory` | 200/201/204 | `static`, `static-yaml`, `file`, связи с key/repository, validation |
-| Templates | CRUD `/api/project/{project_id}/templates` | 200/201/204 | Связи repository/inventory/key, playbook, arguments, survey variables |
-| Tasks | `POST /tasks`, `GET /tasks/{id}` | 201, 200 | Queue и lifecycle, параметры запуска, итоговый статус |
-| Task output | `GET /tasks/{id}/output`, `/raw_output` | 200 | Структурированный и сырой output, отсутствие секретов |
-| Stop task | `POST /tasks/{id}/stop` | 204 | Обычная и принудительная остановка |
+| Health | `GET /api/ping` | 200 | Availability and the exact body `pong` |
+| Login | `GET`, `POST /api/auth/login` | 200, 204 | Login metadata, valid and invalid credentials, cookie session |
+| Projects | `GET`, `POST /api/projects` | 200, 201 | Creating an isolated project, name being required, data uniqueness |
+| Project role | `GET /api/project/{project_id}/role` | 200 | Role and permissions of the current user |
+| Keys | CRUD `/api/project/{project_id}/keys` | 200/201/204 | Types `none`, `ssh`, `login_password`, secret hiding, refs, and deletion |
+| Repositories | CRUD `/api/project/{project_id}/repositories` | 200/201/204 | Git URL, branch/ref, access key, branches, playbooks, clone errors |
+| Inventory | CRUD `/api/project/{project_id}/inventory` | 200/201/204 | `static`, `static-yaml`, `file`, links to key/repository, validation |
+| Templates | CRUD `/api/project/{project_id}/templates` | 200/201/204 | Repository/inventory/key links, playbook, arguments, survey variables |
+| Tasks | `POST /tasks`, `GET /tasks/{id}` | 201, 200 | Queue and lifecycle, launch parameters, final status |
+| Task output | `GET /tasks/{id}/output`, `/raw_output` | 200 | Structured and raw output, absence of secrets |
+| Stop task | `POST /tasks/{id}/stop` | 204 | Regular and forced stop |
 | Schedules | CRUD `/api/project/{project_id}/schedules` | 200/201/204 | cron, `run_at`, active, timezone/DST, task params |
-| Project users | CRUD `/api/project/{project_id}/users` | 200/204 | Роли owner/manager/task_runner/guest и project isolation |
-| Global runners | `GET /api/runners` | 200 | Регистрация, active/default flags, online status и heartbeat |
-| Cleanup | DELETE созданных ресурсов и проекта | 204 | Удаление в обратном порядке и отсутствие остаточных данных |
+| Project users | CRUD `/api/project/{project_id}/users` | 200/204 | Roles owner/manager/task_runner/guest and project isolation |
+| Global runners | `GET /api/runners` | 200 | Registration, active/default flags, online status, and heartbeat |
+| Cleanup | DELETE of the created resources and project | 204 | Deletion in reverse order and no leftover data |
 
-## Зависимости ресурсов
+## Resource dependencies
 
 ```text
 Project
@@ -49,11 +49,11 @@ Project
     └── Schedule ──> Cron/Run-at + Task Parameters
 ```
 
-Это определяет порядок создания тестовых данных и обратный порядок очистки.
+This defines the order of test data creation and the reverse order of cleanup.
 
-## Подтверждённые read-only проверки
+## Confirmed read-only checks
 
-| Endpoint | Результат |
+| Endpoint | Result |
 |---|---|
 | `/api/project/1/role` | 200 |
 | `/api/project/1/users` | 200 |
@@ -67,81 +67,81 @@ Project
 | `/api/project/1/tasks/1/output` | 200 |
 | `/api/project/1/tasks/1/raw_output` | 200 |
 
-## Найденные расхождения документации и реализации
+## Discovered discrepancies between documentation and implementation
 
-### 1. Не описан `GET /project/{project_id}/schedules`
+### 1. `GET /project/{project_id}/schedules` is not documented
 
-В `api-docs.yml` для collection endpoint описан только `POST`, но `api/router.go` регистрирует также `GET` и `HEAD`. Живой запрос `GET /api/project/1/schedules` возвращает 200.
+In `api-docs.yml`, only `POST` is described for the collection endpoint, but `api/router.go` also registers `GET` and `HEAD`. A live request `GET /api/project/1/schedules` returns 200.
 
-Расхождение подтверждено автоматизированным smoke: неактивный cron schedule успешно создаётся, читается по ID и находится через collection `GET`.
+The discrepancy is confirmed by the automated smoke: an inactive cron schedule is successfully created, read by ID, and found via the collection `GET`.
 
-### 2. Query-параметры `sort` и `order` ошибочно помечены обязательными
+### 2. The `sort` and `order` query parameters are incorrectly marked as required
 
-В OpenAPI они имеют `required: true` для пользователей, ключей, репозиториев, inventory и templates. Живые запросы без этих параметров возвращают 200. Для клиентов, сгенерированных по спецификации, это создаёт лишнее ограничение.
+In the OpenAPI they have `required: true` for users, keys, repositories, inventory, and templates. Live requests without these parameters return 200. For clients generated from the specification this creates an unnecessary constraint.
 
-### 3. Request schemas не задают обязательные поля
+### 3. Request schemas do not define required fields
 
-У `Login`, `ProjectRequest`, `AccessKeyRequest`, `RepositoryRequest`, `InventoryRequest`, `TemplateRequest` и `ScheduleRequest` отсутствуют массивы `required`. По спецификации почти любое пустое тело выглядит допустимым, хотя реализация ожидает конкретные поля.
+`Login`, `ProjectRequest`, `AccessKeyRequest`, `RepositoryRequest`, `InventoryRequest`, `TemplateRequest`, and `ScheduleRequest` lack `required` arrays. According to the specification, almost any empty body looks acceptable, although the implementation expects specific fields.
 
-### 4. Router содержит дополнительные важные операции
+### 4. The router contains additional important operations
 
-В реализации присутствуют маршруты, отсутствующие или неполно представленные в текущей выборке OpenAPI:
+The implementation has routes that are missing or incompletely represented in the current OpenAPI sample:
 
-- подтверждение и отклонение задачи;
-- task stages и Ansible hosts/errors;
-- repository branches, playbooks и refs;
-- refs ресурсов перед удалением;
+- task confirmation and rejection;
+- task stages and Ansible hosts/errors;
+- repository branches, playbooks, and refs;
+- resource refs before deletion;
 - cron validation;
-- активация schedule;
+- schedule activation;
 - template permissions;
 - project roles;
 - secret storages;
-- очистка project cache.
+- project cache cleanup.
 
-Перед контрактным тестированием необходимо автоматически сравнить router и OpenAPI целиком.
+Before contract testing, the router and the OpenAPI must be compared automatically in full.
 
-### 5. Sensitive fields access key не возвращаются в plaintext
+### 5. Access key sensitive fields are not returned in plaintext
 
-Автоматизированный security smoke для `login_password` key подтверждает, что уникальный password marker отсутствует в ответах create/get/list. Ключ используется как inventory credential при реальном запуске локальной Ansible-задачи; marker также отсутствует в structured output, raw output, Allure и JUnit artifacts.
+The automated security smoke for a `login_password` key confirms that the unique password marker is absent from the create/get/list responses. The key is used as an inventory credential during a real run of a local Ansible task; the marker is also absent from the structured output, raw output, Allure, and JUnit artifacts.
 
-## Первая очередь API-тестов
+## First wave of API tests
 
-### P0 — обязательный smoke
+### P0 — mandatory smoke
 
-1. Health и валидный/невалидный login.
-2. Создание и чтение проекта.
-3. Создание key, repository, inventory и template.
-4. Запуск task и ожидание terminal status.
-5. Проверка output и отсутствия секретов.
-6. Удаление созданных данных.
+1. Health and valid/invalid login.
+2. Project creation and reading.
+3. Creation of a key, repository, inventory, and template.
+4. Task launch and waiting for a terminal status.
+5. Output verification and absence of secrets.
+6. Deletion of the created data.
 
-### P1 — основные риски
+### P1 — main risks
 
-1. Git branch/ref и ошибки clone.
-2. SSH и login/password access keys.
-3. Schedule: cron, run-at, timezone/DST и параметры задачи.
-4. RBAC для manager, task_runner и guest.
-5. Запрет доступа к ресурсам другого проекта.
-6. Stop/force stop и параллельный запуск задач.
+1. Git branch/ref and clone errors.
+2. SSH and login/password access keys.
+3. Schedule: cron, run-at, timezone/DST, and task parameters.
+4. RBAC for manager, task_runner, and guest.
+5. Denial of access to another project's resources.
+6. Stop/force stop and parallel task launches.
 
-### P2 — расширение
+### P2 — extension
 
-1. Variable Groups и secret storage.
-2. Integrations и webhooks.
-3. Runners. Базовый persistent remote runner автоматизирован; остаются disconnect/reconnect, capacity и one-off режимы.
+1. Variable Groups and secret storage.
+2. Integrations and webhooks.
+3. Runners. The basic persistent remote runner is automated; disconnect/reconnect, capacity, and one-off modes remain.
 4. Workflows.
-5. Backup/restore и миграционные сценарии.
+5. Backup/restore and migration scenarios.
 
-## Текущий статус и ближайшее расширение
+## Current status and nearest extension
 
-Исполняемый API smoke реализован на Bookwright v1.4.0: он создаёт изолированные ресурсы без фиксированных ID, использует deterministic typed fixtures, выполняет LIFO cleanup и защищает диагностику от секретов.
+The executable API smoke is implemented on Bookwright v1.4.0: it creates isolated resources without fixed IDs, uses deterministic typed fixtures, performs LIFO cleanup, and protects diagnostics from secrets.
 
-Из Git-рисков P1 автоматизированы успешный запуск из явно выбранной ветки, отсутствующий ref и недоступный authenticated HTTPS remote. Ошибки приводят задачу в ожидаемый статус `error`, сохраняют полезную Git-диагностику и не раскрывают login/password в structured или raw output.
+Of the P1 Git risks, the following are automated: a successful launch from an explicitly selected branch, a missing ref, and an unreachable authenticated HTTPS remote. Failures bring the task to the expected `error` status, preserve useful Git diagnostics, and do not expose the login/password in the structured or raw output.
 
-Для встроенных ролей `manager` и `task_runner` автоматизированы точные permission bitmask и поведенческие границы. Обе роли могут запускать задачи; manager может управлять ресурсами, но не проектом и участниками; task runner не может изменять ресурсы, проект или участников.
+For the built-in `manager` and `task_runner` roles, the exact permission bitmasks and behavioral boundaries are automated. Both roles can run tasks; a manager can manage resources but not the project or its members; a task runner cannot modify resources, the project, or its members.
 
-Обычный stop и force-stop автоматизированы на long-running Ansible fixture. Запрос отправляется после marker фактического начала playbook; затем проверяются terminal `stopped` и отсутствие marker шага после паузы.
+Regular stop and force-stop are automated on the long-running Ansible fixture. The request is sent after the marker of the playbook's actual start; then the terminal `stopped` status and the absence of the post-pause step marker are verified.
 
-Persistent remote runner автоматизирован отдельной API-группой и production-like профилем PostgreSQL. Проверяются регистрация, `active`, `is_default`, `online`, heartbeat и выполнение всей существующей task suite вне server process. Обнаруженный конфигурационный контракт: global runner после авторегистрации не становится default автоматически, а задачи без tag выбирают только `is_default=true` runners.
+The persistent remote runner is automated with a dedicated API group and the production-like PostgreSQL profile. Registration, `active`, `is_default`, `online`, heartbeat, and execution of the entire existing task suite outside the server process are verified. A discovered configuration contract: a global runner does not become default automatically after auto-registration, and tasks without a tag pick only `is_default=true` runners.
 
-Следующее расширение P1: SSH key и cron validation/timezone.
+The next P1 extension: SSH key and cron validation/timezone.

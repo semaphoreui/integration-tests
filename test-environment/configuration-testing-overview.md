@@ -1,114 +1,114 @@
-# Обзор тестирования конфигураций Semaphore UI
+# Semaphore UI configuration testing overview
 
-## Зачем нужна отдельная стратегия
+## Why a separate strategy is needed
 
-Semaphore UI в основном устанавливается в инфраструктуре клиента. Ошибка может зависеть не только от API или UI, но и от сочетания способа установки, СУБД, раннера, сети, авторизации, Git и способа хранения секретов.
+Semaphore UI is mostly installed in the customer's infrastructure. A failure may depend not only on the API or UI, but also on the combination of installation method, database, runner, network, authorization, Git, and secret storage method.
 
-Проверить полный декартов продукт этих настроек невозможно и не нужно. Используем три уровня:
+Testing the full Cartesian product of these settings is impossible and unnecessary. We use three levels:
 
-1. **Широкие configuration checks** — запуск процесса, readiness, валидация конфигурации и миграции на большом числе вариантов.
-2. **Опорные профили** — одинаковый набор критичных API-сценариев на нескольких реалистичных конфигурациях.
-3. **Feature profiles** — отдельные проверки только для LDAP, OIDC, HA, remote runner, encryption rotation и других специальных возможностей.
+1. **Broad configuration checks** — process startup, readiness, configuration validation, and migrations across a large number of variants.
+2. **Reference profiles** — the same set of critical API scenarios on several realistic configurations.
+3. **Feature profiles** — dedicated checks only for LDAP, OIDC, HA, remote runner, encryption rotation, and other special capabilities.
 
-## Подтверждённые варианты конфигурации
+## Confirmed configuration variants
 
-### Способ установки
+### Installation method
 
-Официально документированы:
+Officially documented:
 
-- Docker и Docker Compose;
-- DEB/RPM через package manager;
-- standalone binary и запуск через systemd;
-- Kubernetes через официальный Helm chart;
-- установка в облачной инфраструктуре как один из вариантов размещения.
+- Docker and Docker Compose;
+- DEB/RPM via a package manager;
+- standalone binary and launch via systemd;
+- Kubernetes via the official Helm chart;
+- installation in cloud infrastructure as one of the hosting options.
 
-Snap помечен в документации как deprecated и не должен входить в основную матрицу.
+Snap is marked deprecated in the documentation and must not be part of the core matrix.
 
-Источники: [Installation overview](https://semaphoreui.com/docs/admin-guide/installation), [Package manager](https://semaphoreui.com/docs/admin-guide/installation/package-manager), [Binary file](https://semaphoreui.com/docs/admin-guide/installation/binary-file), [deprecated Snap](https://semaphoreui.com/docs/administration-guide/installation/snap).
+Sources: [Installation overview](https://semaphoreui.com/docs/admin-guide/installation), [Package manager](https://semaphoreui.com/docs/admin-guide/installation/package-manager), [Binary file](https://semaphoreui.com/docs/admin-guide/installation/binary-file), [deprecated Snap](https://semaphoreui.com/docs/administration-guide/installation/snap).
 
-Релизная конфигурация в `.goreleaser.yml` также выпускает бинарные файлы для нескольких OS/architecture и DEB/RPM-пакеты. Docker CI собирает как минимум `linux/amd64` и `linux/arm64`.
+The release configuration in `.goreleaser.yml` also produces binaries for several OS/architecture combinations and DEB/RPM packages. Docker CI builds at least `linux/amd64` and `linux/arm64`.
 
-### СУБД и состояние
+### Database and state
 
-В `config.schema.yaml` поддержаны три dialect:
+Three dialects are supported in `config.schema.yaml`:
 
 - SQLite;
 - MySQL;
 - PostgreSQL.
 
-MariaDB использует MySQL dialect, но upstream CI запускает её отдельно. Это правильно: совместимость драйвера не гарантирует одинаковое поведение двух серверов.
+MariaDB uses the MySQL dialect, but upstream CI runs it separately. This is correct: driver compatibility does not guarantee identical behavior of the two servers.
 
-Отдельная ось — не чистая установка, а обновление существующего состояния:
+A separate axis is not a clean installation but upgrading existing state:
 
-- предыдущий релиз → текущий релиз;
-- миграции каждой поддерживаемой СУБД;
-- резервное копирование и восстановление проекта;
-- BoltDB → SQLite для оставшегося поддерживаемого migration path.
+- previous release → current release;
+- migrations of every supported database;
+- project backup and restore;
+- BoltDB → SQLite for the remaining supported migration path.
 
-### Архитектура выполнения задач
+### Task execution architecture
 
-Поддерживаются два принципиально разных режима:
+Two fundamentally different modes are supported:
 
-- выполнение задач локально процессом сервера;
-- выполнение на отдельно зарегистрированном remote runner.
+- tasks executed locally by the server process;
+- execution on a separately registered remote runner.
 
-Runner может быть постоянным или one-off. Для динамического one-off runner сервер умеет вызывать webhook, после чего созданный runner регистрируется и забирает задачу. Есть ограничения параллельности и привязка runner к проекту; tags относятся к Pro-возможностям.
+A runner can be persistent or one-off. For a dynamic one-off runner, the server can call a webhook, after which the created runner registers and picks up the task. There are concurrency limits and runner-to-project binding; tags belong to the Pro capabilities.
 
-В конфигурации runner обнаружены executor:
+The following executors were found in the runner configuration:
 
-- `local` — subprocess на машине runner;
-- `docker` — отдельный контейнер для задачи;
-- `k8s` — ephemeral Kubernetes pod.
+- `local` — a subprocess on the runner machine;
+- `docker` — a dedicated container per task;
+- `k8s` — an ephemeral Kubernetes pod.
 
-Docker/Kubernetes executor реализованы в `pro/`, поэтому их нужно считать отдельной Pro-матрицей и запускать только при наличии доступной Pro-сборки/лицензии. Источник по эксплуатации runner: [Runners](https://semaphoreui.com/docs/admin-guide/cli/runners).
+The Docker/Kubernetes executors are implemented in `pro/`, so they should be treated as a separate Pro matrix and run only when a Pro build/license is available. Source on runner operation: [Runners](https://semaphoreui.com/docs/admin-guide/cli/runners).
 
-### Источник конфигурации и сеть
+### Configuration source and network
 
-Semaphore читает JSON/YAML config и environment variables; путь задаётся через `SEMAPHORE_CONFIG_PATH`/`--config`, также есть запуск без config file. Environment variables могут переопределять поля файла.
+Semaphore reads a JSON/YAML config and environment variables; the path is set via `SEMAPHORE_CONFIG_PATH`/`--config`, and running without a config file is also possible. Environment variables can override file fields.
 
-Сетевые варианты, влияющие на поведение:
+Network variants that affect behavior:
 
-- прямой HTTP;
-- встроенный TLS и HTTP redirect;
-- reverse proxy с TLS termination;
-- публикация в корне домена или под subpath через web root;
-- собственный CA между runner и сервером;
-- один server node или HA nodes с Redis и общей SQL DB.
+- direct HTTP;
+- built-in TLS and HTTP redirect;
+- reverse proxy with TLS termination;
+- publishing at the domain root or under a subpath via web root;
+- a custom CA between the runner and the server;
+- a single server node or HA nodes with Redis and a shared SQL DB.
 
-Проверять каждый бизнес-тест для JSON, YAML и env не нужно. Достаточно отдельного config-contract набора, который доказывает чтение, override, ошибку неизвестного/некорректного значения и отсутствие секрета в логах.
+There is no need to run every business test for JSON, YAML, and env. A dedicated config-contract suite is enough, one that proves reading, override, an error for an unknown/invalid value, and the absence of secrets in the logs.
 
-Источник: [Configuration](https://semaphoreui.com/docs/admin-guide/configuration).
+Source: [Configuration](https://semaphoreui.com/docs/admin-guide/configuration).
 
-### Авторизация
+### Authorization
 
-Возможные режимы:
+Possible modes:
 
-- локальная учётная запись и пароль;
-- LDAP, включая несколько providers и TLS;
-- OIDC, включая несколько providers, mapping claims и правила связывания аккаунтов;
+- local account and password;
+- LDAP, including multiple providers and TLS;
+- OIDC, including multiple providers, claim mapping, and account linking rules;
 - TOTP/email MFA;
-- отключение password login.
+- disabling password login.
 
-Авторизацию не смешиваем со всей DB-матрицей. Для LDAP и OIDC нужны самостоятельные профили с негативными сценариями account mapping, callback, logout, TLS и RBAC после входа.
+We do not mix authorization with the whole DB matrix. LDAP and OIDC need standalone profiles with negative scenarios for account mapping, callback, logout, TLS, and RBAC after login.
 
-Источники: [LDAP](https://semaphoreui.com/docs/admin-guide/ldap), [OpenID](https://semaphoreui.com/docs/admin-guide/openid).
+Sources: [LDAP](https://semaphoreui.com/docs/admin-guide/ldap), [OpenID](https://semaphoreui.com/docs/admin-guide/openid).
 
-### Git, ключи и секреты
+### Git, keys, and secrets
 
-Оси, которые непосредственно влияют на основной task flow:
+Axes that directly affect the core task flow:
 
-- локальный/file repository, HTTPS и SSH;
-- `cmd_git` и `go_git` clients;
-- ветки, tags/refs, submodules, known_hosts и custom SSH config;
-- password, SSH key и другие access key types;
-- локальное шифрование access keys: legacy key или keyring file с rotation;
-- внешние secret storage implementations, найденные в коде: Vault, environment и file.
+- local/file repository, HTTPS, and SSH;
+- `cmd_git` and `go_git` clients;
+- branches, tags/refs, submodules, known_hosts, and custom SSH config;
+- password, SSH key, and other access key types;
+- local encryption of access keys: a legacy key or a keyring file with rotation;
+- external secret storage implementations found in the code: Vault, environment, and file.
 
-Эти варианты выгоднее проверять небольшими feature-наборами поверх одного стабильного DB-профиля, а не умножать на все СУБД.
+These variants are better verified with small feature suites on top of one stable DB profile rather than multiplied across all databases.
 
-### Инструмент внутри задачи
+### Tool inside a task
 
-В исходном коде есть приложения шаблонов:
+The source code contains template applications:
 
 - Ansible;
 - Terraform;
@@ -117,74 +117,74 @@ Semaphore читает JSON/YAML config и environment variables; путь за�
 - shell;
 - PowerShell.
 
-Ansible остаётся базовым сквозным fixture. Для остальных инструментов нужны по одному минимальному успешному сценарию и характерные ошибки установки/исполнения; проверять каждый из них на каждой СУБД не требуется.
+Ansible remains the base end-to-end fixture. The other tools each need one minimal successful scenario and their characteristic installation/execution errors; verifying each of them on every database is not required.
 
-## Что уже проверяет upstream CI
+## What upstream CI already covers
 
-На исследованном commit upstream отдельно запускает migrate/integration jobs для SQLite, MySQL, MariaDB и PostgreSQL. Это снижает необходимость дублировать всю внутреннюю Go integration suite, но не заменяет black-box проверку опубликованного образа:
+On the examined commit, upstream separately runs migrate/integration jobs for SQLite, MySQL, MariaDB, and PostgreSQL. This reduces the need to duplicate the entire internal Go integration suite, but does not replace black-box verification of the published image:
 
-- upstream проверяет свой build, а мы сейчас запускаем release image;
-- DB jobs не доказывают сквозной task lifecycle с реальным Git/Ansible;
-- они не покрывают клиентскую упаковку, reverse proxy, external auth и upgrade сохранённого стенда как продуктовый сценарий.
+- upstream tests its own build, while we currently run the release image;
+- the DB jobs do not prove the end-to-end task lifecycle with real Git/Ansible;
+- they do not cover customer packaging, reverse proxy, external auth, or upgrading a preserved stand as a product scenario.
 
-Версии СУБД нельзя брать «последние» неявно. Каждый профиль должен фиксировать exact image tag, а периодический compatibility job — отдельно проверять заявленные минимальную и актуальную версии после согласования support policy.
+Database versions must not be taken as "latest" implicitly. Each profile must pin an exact image tag, and a periodic compatibility job must separately verify the declared minimum and current versions once the support policy is agreed.
 
-## Предлагаемые опорные профили
+## Proposed reference profiles
 
-| ID | Конфигурация | Зачем | Запуск |
+| ID | Configuration | Why | Run |
 |---|---|---|---|
-| `core-sqlite-local` | release Docker image, SQLite, local execution, env config, password auth, `cmd_git` | Самый дешёвый smoke и удобная локальная разработка | каждый PR |
-| `core-postgres-local` | Docker Compose, PostgreSQL 14.3, local execution | Black-box совместимость PostgreSQL и миграций без runner-specific переменных | nightly |
-| `prod-postgres-runner` | Docker Compose, PostgreSQL, отдельный persistent runner с local executor, config file | Наиболее полезная проверка production-like границы server ↔ DB ↔ runner | nightly; после стабилизации — PR gate |
-| `core-mysql-local` | Docker Compose, MySQL 8.4, local execution | Black-box совместимость MySQL и миграций | nightly |
-| `core-mariadb-local` | Docker Compose, MariaDB 10.11, local execution | Реальная совместимость MySQL dialect с MariaDB | nightly |
-| `proxy-oidc` | PostgreSQL, reverse proxy TLS, non-root web path, OIDC provider | Callback URL, cookies, redirects, account mapping и RBAC | nightly/по расписанию |
-| `ldap-tls` | PostgreSQL и LDAP с TLS | Bind/search/mapping, отказ TLS и RBAC | по расписанию |
-| `ha-two-node` | два server nodes, PostgreSQL, Redis, remote runner | Очередь, session/state consistency и отказ одного node | по расписанию |
-| `dynamic-runner` | one-off runner, запущенный через webhook | Регистрация, получение ровно одной задачи, timeout и cleanup | по расписанию |
-| `pro-docker-executor` | Pro runner с Docker executor | Изоляция task container, лимиты, cleanup, secret hydration | при наличии Pro, nightly |
-| `pro-k8s-executor` | Helm/Pro runner с Kubernetes executor | pod lifecycle, service account, pull secret и cleanup | при наличии Pro/K8s, release |
+| `core-sqlite-local` | release Docker image, SQLite, local execution, env config, password auth, `cmd_git` | The cheapest smoke and convenient local development | every PR |
+| `core-postgres-local` | Docker Compose, PostgreSQL 14.3, local execution | Black-box PostgreSQL and migration compatibility without runner-specific variables | nightly |
+| `prod-postgres-runner` | Docker Compose, PostgreSQL, dedicated persistent runner with local executor, config file | The most useful check of the production-like server ↔ DB ↔ runner boundary | nightly; after stabilization — PR gate |
+| `core-mysql-local` | Docker Compose, MySQL 8.4, local execution | Black-box MySQL and migration compatibility | nightly |
+| `core-mariadb-local` | Docker Compose, MariaDB 10.11, local execution | Real compatibility of the MySQL dialect with MariaDB | nightly |
+| `proxy-oidc` | PostgreSQL, reverse proxy TLS, non-root web path, OIDC provider | Callback URL, cookies, redirects, account mapping, and RBAC | nightly/scheduled |
+| `ldap-tls` | PostgreSQL and LDAP with TLS | Bind/search/mapping, TLS failure, and RBAC | scheduled |
+| `ha-two-node` | two server nodes, PostgreSQL, Redis, remote runner | Queue, session/state consistency, and failure of one node | scheduled |
+| `dynamic-runner` | one-off runner launched via webhook | Registration, receiving exactly one task, timeout, and cleanup | scheduled |
+| `pro-docker-executor` | Pro runner with the Docker executor | Task container isolation, limits, cleanup, secret hydration | when Pro is available, nightly |
+| `pro-k8s-executor` | Helm/Pro runner with the Kubernetes executor | pod lifecycle, service account, pull secret, and cleanup | when Pro/K8s is available, release |
 
-Базовые пять профилей реализованы. OIDC/LDAP/HA/dynamic runner следует добавлять последовательно, не размножая на них всю DB-матрицу.
+The base five profiles are implemented. OIDC/LDAP/HA/dynamic runner should be added sequentially, without multiplying the whole DB matrix onto them.
 
-CI-распределение также реализовано: `core-sqlite-local` входит в pull-request gate после framework quality checks; остальные четыре базовых профиля запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate и не маскирует известную несовместимость как expected failure.
+The CI distribution is also implemented: `core-sqlite-local` is part of the pull-request gate after the framework quality checks; the other four base profiles run in a daily matrix job; the two release-upgrade profiles run as a separate weekly and manual check. The upgrade workflow deliberately stays out of the PR gate and does not mask the known incompatibility as an expected failure.
 
-## Какие тесты где запускать
+## Which tests run where
 
-| Набор | SQLite | PostgreSQL local | PostgreSQL + runner | MySQL | MariaDB | Feature profile |
+| Suite | SQLite | PostgreSQL local | PostgreSQL + runner | MySQL | MariaDB | Feature profile |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
-| health, login, project CRUD | ✓ | ✓ | ✓ | ✓ | ✓ | короткий smoke |
-| Git → template → task → output → cleanup | ✓ | ✓ | ✓ | ✓ | ✓ | если применимо |
-| RBAC и project isolation | ✓ | ✓ | ✓ | ✓ | ✓ | auth profiles расширяют набор |
+| health, login, project CRUD | ✓ | ✓ | ✓ | ✓ | ✓ | short smoke |
+| Git → template → task → output → cleanup | ✓ | ✓ | ✓ | ✓ | ✓ | where applicable |
+| RBAC and project isolation | ✓ | ✓ | ✓ | ✓ | ✓ | auth profiles extend the suite |
 | task stop/force-stop | local | local | remote | local | local | runner profiles |
 | runner registration/default/heartbeat | — | — | ✓ | — | — | runner profiles |
 | constraints, schedules, cleanup, clean migration | ✓ | ✓ | ✓ | ✓ | ✓ | — |
-| secrets и отсутствие утечек | ✓ | ✓ | ✓ | ✓ | ✓ | encryption/storage расширяют набор |
-| OIDC/LDAP/MFA | — | — | — | — | — | только свой профиль |
-| HA/failover | — | — | — | — | — | только HA profile |
+| secrets and absence of leaks | ✓ | ✓ | ✓ | ✓ | ✓ | encryption/storage extend the suite |
+| OIDC/LDAP/MFA | — | — | — | — | — | dedicated profile only |
+| HA/failover | — | — | — | — | — | HA profile only |
 
-Знак `—` означает сознательное исключение, а не неизвестное покрытие. Это важно фиксировать, иначе матрица со временем снова превратится в неявный полный перебор.
+The `—` sign means a deliberate exclusion, not unknown coverage. This is important to record, otherwise the matrix will eventually turn back into an implicit full enumeration.
 
-## Отдельный release-набор
+## Separate release suite
 
-Перед релизом важнее не повторить все API-тесты, а проверить клиентский путь установки и обновления:
+Before a release, what matters is not repeating all the API tests, but verifying the customer's installation and upgrade path:
 
-1. clean install Docker image, DEB/RPM и Helm;
-2. создание небольшого, но связанного набора данных;
-3. остановка и обновление с N-1 до current;
-4. автоматические DB migrations;
-5. вход, чтение старых данных и запуск старого template после обновления;
-6. проверка schedules, access keys и encryption keys после рестарта;
+1. clean install of the Docker image, DEB/RPM, and Helm;
+2. creation of a small but linked data set;
+3. shutdown and upgrade from N-1 to current;
+4. automatic DB migrations;
+5. login, reading old data, and running an old template after the upgrade;
+6. verification of schedules, access keys, and encryption keys after a restart;
 7. backup/restore;
-8. короткий artifact smoke на `amd64` и `arm64`.
+8. a short artifact smoke on `amd64` and `arm64`.
 
-Полную business suite достаточно оставить на Docker. Package/binary/Helm проверяют упаковку, persistence, permissions, readiness и обновление.
+The full business suite can stay on Docker. Package/binary/Helm verify packaging, persistence, permissions, readiness, and upgrade.
 
-## Как организовать это в тестовом проекте
+## How to organize this in the test project
 
-Не следует копировать Java-тесты или создавать отдельные классы на каждую СУБД. Инфраструктура выбирает профиль, а один и тот же тестовый набор работает с опубликованными capabilities стенда.
+Java tests should not be copied, and separate classes should not be created per database. The infrastructure selects a profile, while the same test suite works with the published capabilities of the stand.
 
-Для каждого профиля нужен manifest со следующими полями:
+Each profile needs a manifest with the following fields:
 
 ```yaml
 id: prod-postgres-runner
@@ -209,9 +209,9 @@ capabilities:
   - schedules
 ```
 
-Manifest должен попадать в Allure environment/labels вместе с image digest. Тогда любое падение можно связать с точной конфигурацией, а тесты с unsupported capability можно пропустить с понятной причиной.
+The manifest must go into the Allure environment/labels along with the image digest. Then any failure can be tied to an exact configuration, and tests with an unsupported capability can be skipped with a clear reason.
 
-Предлагаемый интерфейс запуска:
+Proposed launch interface:
 
 ```bash
 ./test-environment/profile up core-sqlite-local
@@ -219,26 +219,26 @@ Manifest должен попадать в Allure environment/labels вместе
 ./test-environment/profile down core-sqlite-local
 ```
 
-Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local` и `prod-postgres-runner`: она управляет Compose lifecycle, ждёт readiness/setup services, запускает API-тесты и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
+The `profile` command is implemented for `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, and `prod-postgres-runner`: it manages the Compose lifecycle, waits for readiness/setup services, runs the API tests, and records manifest/runtime metadata and image digests into Allure. Subsequent profiles plug into the same interface.
 
-## Обнаруженный риск воспроизводимости
+## Discovered reproducibility risk
 
-Текущий тестовый Compose закреплён на release image `v2.19.7`, а локальная копия исходников находится на commit `80b78a3ef4a074cab6ec33792dd96f9cd85619af`. Tag `v2.19.7` указывает на другой commit — `e9dc41a1de8a747569334f7a2b76c320b945d4f0`.
+The current test Compose is pinned to the release image `v2.19.7`, while the local copy of the sources is at commit `80b78a3ef4a074cab6ec33792dd96f9cd85619af`. The `v2.19.7` tag points to a different commit — `e9dc41a1de8a747569334f7a2b76c320b945d4f0`.
 
-Значит, API schema и детали конфигурации нельзя автоматически считать соответствующими запущенному image. До расширения матрицы нужно выбрать одно из двух правил:
+This means the API schema and configuration details cannot automatically be assumed to match the running image. Before expanding the matrix, one of two rules must be chosen:
 
-- тестируем release image и берём schema/source из соответствующего tag;
-- тестируем сборку текущего source commit и сохраняем commit как версию стенда.
+- test the release image and take the schema/source from the corresponding tag;
+- test a build of the current source commit and record the commit as the stand version.
 
-Для регрессионной системы лучше поддержать оба типа профиля: release image для клиентского сценария и source build для ранней проверки будущего релиза.
+For a regression system it is better to support both profile types: the release image for the customer scenario and a source build for early verification of the upcoming release.
 
-## Рекомендуемая последовательность
+## Recommended sequence
 
-1. Ввести manifest и единый lifecycle профиля.
-2. Перенести существующий стенд в `core-sqlite-local` без изменения тестов. Выполнено.
-3. Добавить PostgreSQL и remote runner. Выполнено: `core-postgres-local` и `prod-postgres-runner` проходят существующую core suite; runner API дополнительно подтверждает default/online/heartbeat contract.
-4. Добавить короткую DB-матрицу MySQL/MariaDB. Выполнено: профили `core-mysql-local` на MySQL 8.4 и `core-mariadb-local` на MariaDB 10.11 проходят ту же core suite после миграции чистой схемы; фактические image digests попадают в Allure.
-5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL. Выполнено: `upgrade-sqlite-local` и `upgrade-postgres-local` автоматически создают данные на `v2.19.6`, переключают server image на `v2.19.7` с сохранением БД и запускают verify/core suite. Оба профиля обнаружили блокирующую несовместимость миграции `v2.20.1`: колонки `access_key.task_id` и `access_key.expire_at` остаются в схеме, но отсутствуют в модели `v2.19.7`, из-за чего access key API возвращает 400. До исправления продукта upgrade jobs должны оставаться красными.
-6. Затем выбирать между OIDC, LDAP и HA по частоте релевантных issues и доступной инфраструктуре.
+1. Introduce the manifest and a unified profile lifecycle.
+2. Move the existing stand to `core-sqlite-local` without changing the tests. Done.
+3. Add PostgreSQL and the remote runner. Done: `core-postgres-local` and `prod-postgres-runner` pass the existing core suite; the runner API additionally confirms the default/online/heartbeat contract.
+4. Add a short MySQL/MariaDB DB matrix. Done: the `core-mysql-local` profile on MySQL 8.4 and `core-mariadb-local` on MariaDB 10.11 pass the same core suite after a clean-schema migration; the actual image digests go into Allure.
+5. Implement the N-1 → current upgrade for SQLite and PostgreSQL. Done: `upgrade-sqlite-local` and `upgrade-postgres-local` automatically create data on `v2.19.6`, switch the server image to `v2.19.7` while preserving the database, and run the verify/core suite. Both profiles discovered a blocking incompatibility of the `v2.20.1` migration: the `access_key.task_id` and `access_key.expire_at` columns remain in the schema but are missing from the `v2.19.7` model, causing the access key API to return 400. Until the product is fixed, the upgrade jobs must stay red.
+6. Then choose between OIDC, LDAP, and HA based on the frequency of relevant issues and the available infrastructure.
 
-Так мы сначала защищаем типичную установку клиента и самые дорогие точки отказа, но сохраняем окружение понятным для одного инженера.
+This way we first protect the typical customer installation and the most expensive failure points, while keeping the environment understandable for a single engineer.

@@ -22,11 +22,11 @@
 .DS_Store
 Thumbs.db
 
-# Dependencies (будут загружены в контейнере)
+# Dependencies (will be downloaded inside the container)
 # gradle/
 
-# Test files (опционально)
+# Test files (optional)
 # test-environment/
 
-# Documentation (опционально)
+# Documentation (optional)
 *.md

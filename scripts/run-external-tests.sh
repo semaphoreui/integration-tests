@@ -2,39 +2,39 @@
 
 set -eu
 
-# Запуск тестов против запущенного экземпляра Semaphore UI
+# Run tests against a running Semaphore UI instance
 #
-# Использование:
-#   ./run-external-tests.sh [--host ХОСТ] [--port ПОРТ] [--username ПОЛЬЗОВАТЕЛЬ] [--password ПАРОЛЬ] [аргументы gradle...]
+# Usage:
+#   ./run-external-tests.sh [--host HOST] [--port PORT] [--username USER] [--password PASSWORD] [gradle args...]
 #
-# Переменные окружения (переопределяют аргументы CLI):
-#   API_BASE_URL          - Полный URL API, например http://my-semaphore:3000/api/
-#   API_USERNAME          - Пользователь API (по умолчанию: admin)
-#   API_PASSWORD          - Пароль API (по умолчанию: test-password)
-#   UI_BASE_URL           - Полный URL UI, например http://my-semaphore:3000
-#   UI_USER               - Пользователь UI (по умолчанию: admin)
-#   UI_PASSWORD           - Пароль UI (по умолчанию: test-password)
-#   UI_HEADLESS           - Запуск Playwright в режиме headless (по умолчанию: true)
+# Environment variables (override CLI arguments):
+#   API_BASE_URL          - Full API URL, e.g. http://my-semaphore:3000/api/
+#   API_USERNAME          - API user (default: admin)
+#   API_PASSWORD          - API password (default: test-password)
+#   UI_BASE_URL           - Full UI URL, e.g. http://my-semaphore:3000
+#   UI_USER               - UI user (default: admin)
+#   UI_PASSWORD           - UI password (default: test-password)
+#   UI_HEADLESS           - Run Playwright in headless mode (default: true)
 #
-# Примеры:
-#   # Тестирование против локального Semaphore
+# Examples:
+#   # Testing against a local Semaphore
 #   ./run-external-tests.sh
 #
-#   # Тестирование против удаленного Semaphore
+#   # Testing against a remote Semaphore
 #   ./run-external-tests.sh --host my-semaphore.com --port 3000
 #
-#   # Использование переменных окружения
+#   # Using environment variables
 #   export API_BASE_URL=http://prod-semaphore:3000/api/
 #   export API_USERNAME=qa_user
 #   export API_PASSWORD=qa_password
 #   ./run-external-tests.sh
 #
-#   # Передача пользовательских аргументов Gradle
+#   # Passing custom Gradle arguments
 #   ./run-external-tests.sh -i includeTags=@smoke
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-# Разбор аргументов командной строки
+# Parse command-line arguments
 host="${API_HOST:-localhost}"
 port="${API_PORT:-3000}"
 username="${API_USERNAME:-admin}"
@@ -88,22 +88,22 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Использование переопределений переменных окружения, если они установлены
+# Use environment variable overrides if they are set
 api_base_url="${API_BASE_URL:-http://${host}:${port}/api/}"
 ui_base_url="${UI_BASE_URL:-http://${ui_host}:${ui_port}}"
 
-# Конфигурация Java, если необходимо
+# Configure Java if necessary
 if ! java -version >/dev/null 2>&1; then
     macos_java_home=/opt/homebrew/opt/openjdk@21
     if [ -x "$macos_java_home/bin/java" ]; then
         export JAVA_HOME=$macos_java_home
     else
-        echo "Java 21 недоступна; установите JAVA_HOME перед запуском тестов" >&2
+        echo "Java 21 is not available; set JAVA_HOME before running the tests" >&2
         exit 1
     fi
 fi
 
-echo "Запуск тестов против Semaphore: $api_base_url"
+echo "Running tests against Semaphore: $api_base_url"
 echo "UI: $ui_base_url"
 
 cd "$script_dir/.."

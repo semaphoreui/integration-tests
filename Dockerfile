@@ -1,17 +1,17 @@
-# Образ для запуска тестов Semaphore
-# Содержит: Java 21, Docker CLI, Git, Gradle и необходимые утилиты
+# Image for running Semaphore tests
+# Contains: Java 21, Docker CLI, Git, Gradle and required utilities
 
 FROM ubuntu:24.04
 
 LABEL maintainer="Semaphore UI Testing"
 LABEL description="Docker image for Semaphore UI automated testing with Java 21 and Docker CLI"
 
-# Установка переменных окружения
+# Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV GRADLE_HOME=/opt/gradle
 ENV PATH=$GRADLE_HOME/bin:$PATH
 
-# Установка зависимостей и Java 21
+# Install dependencies and Java 21
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Java 21
     openjdk-21-jdk \
@@ -22,17 +22,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Git
     git \
     \
-    # Основные утилиты
+    # Core utilities
     curl \
     wget \
     unzip \
     ca-certificates \
     \
-    # Для тестов
+    # For tests
     bash \
     coreutils \
     \
-    # Для отладки
+    # For debugging
     vim \
     nano \
     less \
@@ -40,41 +40,41 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Установка docker-compose бинарного файла
+# Install the docker-compose binary
 RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
     chmod +x /usr/local/bin/docker-compose
 
-# Проверка установки Java и установка JAVA_HOME
+# Verify Java installation and set JAVA_HOME
 RUN java_path=$(dirname $(dirname $(readlink -f $(which java)))) && \
     echo "export JAVA_HOME=$java_path" >> /etc/profile.d/java.sh && \
     export JAVA_HOME=$java_path && \
     java -version && \
     javac -version
 
-# Проверка установки Docker CLI
+# Verify Docker CLI installation
 RUN docker --version
 
-# Создание рабочей директории
+# Create the working directory
 WORKDIR /workspace
 
-# Копирование скриптов запуска
+# Copy launch scripts
 COPY gradlew /workspace/
 COPY gradle /workspace/gradle/
 RUN chmod +x /workspace/gradlew
 
-# Копирование конфигурации Gradle
+# Copy Gradle configuration
 COPY gradle.properties /workspace/
 COPY settings.gradle.kts /workspace/
 COPY build.gradle.kts /workspace/
 
-# Загрузка зависимостей Gradle (для ускорения последующих сборок)
+# Download Gradle dependencies (to speed up subsequent builds)
 RUN ./gradlew --version && \
     ./gradlew downloadAllure --no-daemon 2>/dev/null || true
 
-# Копирование исходного кода
+# Copy source code
 COPY . /workspace/
 
-# Создание точки входа
+# Create the entry point
 RUN chmod +x /workspace/run-external-tests.sh 2>/dev/null || true && \
     chmod +x /workspace/publish-results-local.sh 2>/dev/null || true
 
@@ -82,6 +82,6 @@ RUN chmod +x /workspace/run-external-tests.sh 2>/dev/null || true && \
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
     CMD java -version && docker --version
 
-# Точка входа по умолчанию
+# Default entry point
 # ENTRYPOINT ["/bin/bash"]
 # CMD ["-c", "echo 'Semaphore test runner ready. Run: ./run-external-tests.sh or ./gradlew externalTest'"]

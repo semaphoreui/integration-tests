@@ -5,7 +5,7 @@ vars:
 
 tasks:
   test:external:
-    desc: "Запуск тестов против запущенного Semaphore UI"
+    desc: "Run tests against a running Semaphore UI"
     cmds:
       - docker compose run test-runner ./scripts/run-external-tests.sh {{.CLI_ARGS}}
   sqlite:up:
@@ -105,15 +105,15 @@ tasks:
       - task: prod:clean
 
   external:localhost:
-    desc: "Запуск тестов против Semaphore на localhost:3000"
+    desc: "Run tests against Semaphore on localhost:3000"
     cmds:
       - docker compose run test-runner ./scripts/run-external-tests.sh --host localhost --port 3000
   external:docker:
-    desc: "Запуск тестов против Semaphore в Docker на host.docker.internal:3000"
+    desc: "Run tests against Semaphore in Docker on host.docker.internal:3000"
     cmds:
       - docker compose run test-runner ./scripts/run-external-tests.sh --host host.docker.internal --port 3000
 
   publish:s3:
-    desc: "Опубликовать результаты тестов в S3"
+    desc: "Publish test results to S3"
     cmds:
       - docker compose run test-runner ./scripts/publish-to-s3.sh {{.CLI_ARGS}}
