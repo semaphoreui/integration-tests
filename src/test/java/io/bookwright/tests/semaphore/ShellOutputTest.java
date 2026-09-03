@@ -44,7 +44,7 @@ class ShellOutputTest {
     var output =
         api.semaphore().tasks().getTaskOutputText(template.projectId(), completedTask.id());
 
-    assertThat(elapsed).isLessThan(Duration.ofSeconds(8));
+    assertThat(elapsed).isLessThan(fixtures.expectations().maximumBackgroundCompletionTime());
     assertOutputMarkers(output, fixtures);
   }
 

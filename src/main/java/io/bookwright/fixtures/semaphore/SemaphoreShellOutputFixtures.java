@@ -6,6 +6,7 @@ import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
 import io.bookwright.util.TestData;
+import java.time.Duration;
 
 /** Typed data and expectations for Bash output capture regressions. */
 public record SemaphoreShellOutputFixtures(
@@ -38,7 +39,10 @@ public record SemaphoreShellOutputFixtures(
                 "bash/capture-output/background.sh",
                 "bash",
                 "")),
-        new Expectations("stdout", "stderr"));
+        new Expectations(
+            "semaphore-shell-stdout-marker",
+            "semaphore-shell-stderr-marker",
+            Duration.ofSeconds(30)));
   }
 
   public record AccessKey(String name, String type) {
@@ -68,5 +72,6 @@ public record SemaphoreShellOutputFixtures(
 
   public record Templates(Template normal, Template backgroundChild) {}
 
-  public record Expectations(String stdoutMarker, String stderrMarker) {}
+  public record Expectations(
+      String stdoutMarker, String stderrMarker, Duration maximumBackgroundCompletionTime) {}
 }
