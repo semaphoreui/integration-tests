@@ -202,11 +202,13 @@ upload_to_s3() {
         fi
 
         # Upload via mc
-        if mc cp "$file_path" "minio/$s3_bucket/$s3_key" >/dev/null 2>&1; then
+        local mc_output
+        if mc_output=$(mc cp "$file_path" "minio/$s3_bucket/$s3_key" 2>&1 >/dev/null); then
             echo "  ✓ Uploaded: $s3_key"
             return 0
         else
             echo "  ✗ Failed to upload: $s3_key" >&2
+            [ -n "$mc_output" ] && echo "    $mc_output" >&2
             return 1
         fi
     fi
@@ -257,7 +259,8 @@ SIGN
     local auth_header="AWS4-HMAC-SHA256 Credential=${aws_access_key}/${datestamp}/${s3_region}/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=${signature}"
 
     # Upload file
-    local http_code=$(curl -s -w "%{http_code}" -o /dev/null \
+    local response_body=$(mktemp)
+    local http_code=$(curl -s -w "%{http_code}" -o "$response_body" \
         -X PUT \
         -H "host: ${s3_host}" \
         -H "x-amz-content-sha256: ${payload_hash}" \
@@ -267,10 +270,16 @@ SIGN
         "${protocol}://${s3_host}/${s3_key}")
 
     if [ "$http_code" = "200" ] || [ "$http_code" = "204" ]; then
+        rm -f "$response_body"
         echo "  ✓ Uploaded: $s3_key"
         return 0
     else
         echo "  ✗ Error $http_code while uploading: $s3_key" >&2
+        if [ -s "$response_body" ]; then
+            echo "    Response:" >&2
+            sed 's/^/    /' "$response_body" >&2
+        fi
+        rm -f "$response_body"
         return 1
     fi
 }
