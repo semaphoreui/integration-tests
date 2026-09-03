@@ -69,6 +69,31 @@ class SafeHttpReportingInterceptorTest {
   }
 
   @Test
+  void redactsSshPrivateKeyAndPassphraseFromRequestReport() throws IOException {
+    Request request =
+        new Request.Builder()
+            .url(server.url("/access-keys"))
+            .post(
+                RequestBody.create(
+                    """
+                        {
+                          "type": "ssh",
+                          "ssh": {
+                            "login": "fixture",
+                            "passphrase": "ssh-passphrase-secret",
+                            "private_key": "ssh-private-key-secret"
+                          }
+                        }
+                        """,
+                    MediaType.get("application/json")))
+            .build();
+
+    assertThat(SafeHttpReportingInterceptor.requestReport(request))
+        .contains("fixture", SecretSanitizer.REDACTED)
+        .doesNotContain("ssh-passphrase-secret", "ssh-private-key-secret");
+  }
+
+  @Test
   void redactsSensitiveResponseHeadersAndJsonFields() throws IOException {
     server.enqueue(
         new MockResponse()
@@ -91,6 +116,46 @@ class SafeHttpReportingInterceptorTest {
               SecretSanitizer.REDACTED)
           .doesNotContain("response-cookie-secret", "response-token-secret");
     }
+  }
+
+  @Test
+  void omitsSemaphoreApiTokenCreationBodyWithGenericSecretId() throws IOException {
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(201)
+            .addHeader("Content-Type", "application/json")
+            .setBody(
+                "{\"id\":\"generated-bearer-secret\",\"name\":\"ci-token\",\"expired\":false}"));
+    Request request =
+        new Request.Builder()
+            .url(server.url("/api/user/tokens"))
+            .post(RequestBody.create("{}", MediaType.get("application/json")))
+            .build();
+
+    try (Response response = new OkHttpClient().newCall(request).execute()) {
+      assertThat(SafeHttpReportingInterceptor.responseReport(response, 8))
+          .contains(SecretSanitizer.OMITTED_BODY)
+          .doesNotContain("generated-bearer-secret");
+    }
+  }
+
+  @Test
+  void redactsTotpEnrollmentAndVerificationMaterial() {
+    String report =
+        SecretSanitizer.body(
+            """
+            {
+              "url": "otpauth://totp/Semaphore:user?secret=BASE32SECRET",
+              "recovery_code": "recovery-secret",
+              "passcode": "123456",
+              "status": "ready"
+            }
+            """,
+            MediaType.get("application/json"));
+
+    assertThat(report)
+        .contains("ready", SecretSanitizer.REDACTED)
+        .doesNotContain("BASE32SECRET", "recovery-secret", "123456");
   }
 
   @Test

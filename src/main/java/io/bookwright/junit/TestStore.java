@@ -4,6 +4,7 @@ import io.bookwright.api.AuthSession;
 import io.bookwright.api.model.CreatedBooking;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.SemaphoreTestUser;
+import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.util.TestData;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -58,6 +59,10 @@ public class TestStore {
     return getRequired(Precondition.SEMAPHORE_PROJECT_KEY, Project.class);
   }
 
+  public Template semaphoreTemplate() {
+    return getRequired(Precondition.SEMAPHORE_TEMPLATE_KEY, Template.class);
+  }
+
   void putBooking(CreatedBooking booking) {
     put(Precondition.BOOKING_KEY, booking);
   }
@@ -68,5 +73,9 @@ public class TestStore {
 
   void putSemaphoreProject(Project project) {
     put(Precondition.SEMAPHORE_PROJECT_KEY, project);
+  }
+
+  void putSemaphoreTemplate(Template template) {
+    put(Precondition.SEMAPHORE_TEMPLATE_KEY, template);
   }
 }

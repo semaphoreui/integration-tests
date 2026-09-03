@@ -1,0 +1,55 @@
+services:
+  semaphore:
+    environment:
+      GIT_SSL_CAINFO: /run/git-https/server-cert.pem
+      SEMAPHORE_FORWARDED_ENV_VARS: '["GIT_SSL_CAINFO"]'
+    volumes:
+      - ../build/test-fixtures/git-https/server-cert.pem:/run/git-https/server-cert.pem:ro
+    depends_on:
+      git-https-fixture:
+        condition: service_healthy
+
+  git-https-init:
+    image: semaphoreui/semaphore:v2.19.8
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        rm -rf /srv/git/ansible.git
+        git config --global --add safe.directory /source
+        git config --global --add safe.directory /source/.git
+        git clone --bare /source /srv/git/ansible.git
+        git --git-dir=/srv/git/ansible.git update-server-info
+        chmod -R a+rX /srv/git
+    depends_on:
+      fixture-init:
+        condition: service_completed_successfully
+    volumes:
+      - fixture-repository:/source:ro
+      - git-https-repository:/srv/git
+
+  git-https-fixture:
+    image: nginx:1.27.5-alpine
+    restart: unless-stopped
+    depends_on:
+      git-https-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-check-certificate -qO- https://127.0.0.1/health | grep -q ok",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - git-https-repository:/srv/git:ro
+      - ./profiles/feature-git-https/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./profiles/feature-git-https/.htpasswd:/etc/nginx/.htpasswd:ro
+      - ../build/test-fixtures/git-https/server-cert.pem:/run/git-https/server-cert.pem:ro
+      - ../build/test-fixtures/git-https/server-key.pem:/run/git-https/server-key.pem:ro
+
+volumes:
+  git-https-repository:

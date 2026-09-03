@@ -84,10 +84,15 @@ class RepositoryGitTest {
                     .request(project.id(), repository.id(), inventory.id()));
     var failedTask = api.semaphore().tasks().startAndWaitForFailure(project.id(), template.id());
 
+    assertThat(repository.gitBranch())
+        .isEqualTo(fixtures.repositories().missingBranch().gitBranch());
     assertThat(failedTask.status()).isEqualTo(fixtures.expectations().failedTaskStatus());
+    api.semaphore()
+        .tasks()
+        .waitUntilTaskOutputContains(
+            project.id(), failedTask.id(), fixtures.expectations().cloneFailureMarker());
     assertThat(api.semaphore().tasks().getTaskOutputText(project.id(), failedTask.id()))
-        .containsIgnoringCase(fixtures.expectations().cloneFailureMarker())
-        .contains(fixtures.repositories().missingBranch().gitBranch());
+        .containsIgnoringCase(fixtures.expectations().cloneFailureMarker());
   }
 
   @Test

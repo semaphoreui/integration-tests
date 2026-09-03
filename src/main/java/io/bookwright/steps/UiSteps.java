@@ -3,6 +3,7 @@ package io.bookwright.steps;
 import com.google.inject.Inject;
 import io.bookwright.steps.ui.local.LocalUiSteps;
 import io.bookwright.steps.ui.saucedemo.SauceDemoSteps;
+import io.bookwright.steps.ui.semaphore.SemaphoreUiSteps;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
@@ -12,4 +13,5 @@ import lombok.experimental.Accessors;
 public class UiSteps {
   @Inject private SauceDemoSteps sauceDemo;
   @Inject private LocalUiSteps local;
+  @Inject private SemaphoreUiSteps semaphore;
 }

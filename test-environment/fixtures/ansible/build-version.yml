@@ -1,0 +1,14 @@
+---
+- name: Verify Semaphore build version propagation
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Verify build task metadata
+      ansible.builtin.assert:
+        that:
+          - lookup('ansible.builtin.env', 'SEMAPHORE_TASK_TYPE') == 'build'
+          - lookup('ansible.builtin.env', 'SEMAPHORE_TASK_TARGET_VERSION') == semaphore_vars.task_details.target_version
+
+    - name: Publish safe build-version marker
+      ansible.builtin.debug:
+        msg: "semaphore-bookwright-build-version={{ lookup('ansible.builtin.env', 'SEMAPHORE_TASK_TARGET_VERSION') }}"

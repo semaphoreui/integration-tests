@@ -116,6 +116,8 @@ fun Test.configureBookwrightTestRuntime() {
     listOf(
         "STAND",
         "SEMAPHORE_PROFILE",
+        "SEMAPHORE_SCHEDULE_TIMEZONE",
+        "SEMAPHORE_ENCRYPTION_ROTATION_PHASE",
         "SEMAPHORE_UPGRADE_PHASE",
         "DB_PASSWORD",
         "SSH_PASSWORD",
@@ -123,7 +125,13 @@ fun Test.configureBookwrightTestRuntime() {
     ).forEach { key ->
         (System.getProperty(key) ?: System.getenv(key))?.let { systemProperty(key, it) }
     }
-    val configPrefixes = listOf("api.", "ui.", "db.", "ssh.", "teardown.", "local.booking.", "local.user.")
+    mapOf(
+        "bookwright.test.ssl.trustStore" to "javax.net.ssl.trustStore",
+        "bookwright.test.ssl.trustStorePassword" to "javax.net.ssl.trustStorePassword",
+    ).forEach { (source, target) ->
+        System.getProperty(source)?.let { systemProperty(target, it) }
+    }
+    val configPrefixes = listOf("api.", "ui.", "db.", "ssh.", "runner.", "teardown.", "local.booking.", "local.user.")
     System.getProperties().stringPropertyNames()
         .filter { key -> configPrefixes.any(key::startsWith) }
         .forEach { key -> systemProperty(key, System.getProperty(key)) }
@@ -172,10 +180,33 @@ tasks.register<Test>("upgradeTest") {
     filter { includeTestsMatching("io.bookwright.tests.semaphore.UpgradeCompatibilityTest") }
 }
 
+tasks.register<Test>("encryptionRotationTest") {
+    group = "verification"
+    description = "Runs one phase of the Semaphore database-encryption key rotation scenario."
+    filter { includeTestsMatching("io.bookwright.tests.semaphore.EncryptionKeyRotationTest") }
+}
+
 tasks.register<Test>("uiTest") {
     group = "verification"
     description = "Runs Playwright product scenarios."
     filter { includeTestsMatching("io.bookwright.tests.ui.*") }
+}
+
+tasks.register<Test>("totpTest") {
+    group = "verification"
+    description = "Runs the Semaphore API and browser TOTP lifecycle scenarios."
+    filter {
+        includeTestsMatching("io.bookwright.tests.semaphore.SemaphoreTotpAuthenticationTest")
+        includeTestsMatching("io.bookwright.tests.ui.semaphore.SemaphoreTotpLoginTest")
+    }
+}
+
+tasks.register<JavaExec>("playwrightInstallChromium") {
+    group = "verification"
+    description = "Installs Chromium and its Linux dependencies for Playwright product tests."
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "com.microsoft.playwright.CLI"
+    args("install", "--with-deps", "chromium")
 }
 
 tasks.register<Test>("dbTest") {

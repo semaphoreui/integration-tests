@@ -61,6 +61,26 @@
 
 ## Следующий проход
 
+### Локально найдено: survey enum default не валидируется в `v2.19.8`
+
+Black-box API-прогон подтвердил, что template с enum `default_value` вне `values` создаётся с `201` и сохраняет некорректное значение. В upstream это уже исправлено commit [`eb29c3e8`](https://github.com/semaphoreui/semaphore/commit/eb29c3e802df4890dc803709954dc373ae8968b2), входящим в `v2.20.0-alpha1`: добавлена backend-валидация совместимости survey type/default/values. Полный reproducer и критерий переключения регрессионной проверки находятся в `test-environment/survey-default-validation-defect.md`.
+
+### Локально найдено: task завершается error при отсутствии matching runner
+
+На `v2.19.8` matching runner с исчерпанной capacity корректно оставляет task в `waiting`, но временно inactive runner или неизвестный required tag дают terminal `error: no runners available`. Новый runner позже не может подобрать уже завершённую задачу, что противоречит ожидаемому offline recovery в TC-027/TC-028. Persistent-runner reproducer, impact и source-level boundary описаны в `test-environment/runner-unavailable-routing-defect.md`.
+
+### Локально найдено: remote runner теряет secret survey variables
+
+На `v2.19.8` один и тот же survey/task launch успешно выполняется локальным executor, но на persistent runner завершается ошибкой undefined variable: server очищает неперсистентный `task.secret` и не передаёт отдельную in-memory копию remote job. Значение секрета в output не раскрывается. Дефект исправлен upstream PR [#4086](https://github.com/semaphoreui/semaphore/pull/4086), commit [`081425d2`](https://github.com/semaphoreui/semaphore/commit/081425d2bc20d5fe41def47ec6a429e2e43cf715), и входит в `v2.20.0-alpha1`, но отсутствует в `v2.19.8`. Reproducer и regression criterion находятся в `test-environment/remote-runner-survey-secrets-defect.md`.
+
+### Локально найдено: project restore принимает дублирующиеся имена ресурсов
+
+На `v2.19.8` backup с двумя repositories одного имени восстанавливается с `200`, и оба объекта сохраняются. Связи backup задаются именами, поэтому template получает неоднозначную ссылку. Причина находится в общем `verifyDuplicate`: дубликат отклоняется только при `n > 2`, а два совпадения проходят. Canary также подтверждает корректные соседние границы — `401` для non-admin и `400` для отсутствующей repository-ссылки. Полный reproducer, impact и дополнительный gap пустой error response находятся в `test-environment/project-backup-restore-validation-defect.md`.
+
+### Regression status: #2293
+
+API baseline для rename Variable Group secret добавлен и проходит на SQLite и PostgreSQL `v2.19.8`: новое имя сохраняется, старое значение продолжает работать в реальной Ansible task, plaintext отсутствует в API и output. Это подтверждает backend persistence, но исходная жалоба была на UI, поэтому issue нельзя считать полностью закрытым без отдельной browser-проверки payload формы Environment.
+
 1. Разобрать оставшиеся открытые bug-issues по компонентам без глубокого анализа fix.
 2. Выбрать по 3–5 наиболее содержательных тикетов из кластеров `TASKS/SCHEDULES`, `AUTH/RBAC`, `SECRETS`, `REPOSITORIES`, `RUNNERS` и `MIGRATIONS`.
 3. Для выбранных закрытых тикетов проверить timeline, PR, commit и текущий код.

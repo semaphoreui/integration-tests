@@ -1,0 +1,18 @@
+[req]
+prompt = no
+distinguished_name = subject
+x509_extensions = extensions
+
+[subject]
+CN = localhost
+O = Bookwright Test Fixture
+
+[extensions]
+subjectAltName = @alternative_names
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+basicConstraints = critical, CA:TRUE
+
+[alternative_names]
+DNS.1 = localhost
+IP.1 = 127.0.0.1

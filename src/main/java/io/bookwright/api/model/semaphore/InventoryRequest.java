@@ -6,5 +6,13 @@ public record InventoryRequest(
     String name,
     @JsonProperty("project_id") long projectId,
     String inventory,
-    @JsonProperty("ssh_key_id") long sshKeyId,
-    String type) {}
+    @JsonProperty("ssh_key_id") Long sshKeyId,
+    @JsonProperty("become_key_id") Long becomeKeyId,
+    @JsonProperty("repository_id") Long repositoryId,
+    String type) {
+
+  public InventoryRequest(
+      String name, long projectId, String inventory, long sshKeyId, String type) {
+    this(name, projectId, inventory, sshKeyId, null, null, type);
+  }
+}

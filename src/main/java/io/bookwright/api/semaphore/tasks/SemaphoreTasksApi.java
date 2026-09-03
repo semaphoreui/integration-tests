@@ -18,6 +18,10 @@ public interface SemaphoreTasksApi {
   @GET("project/{projectId}/tasks")
   Call<List<Task>> getTasks(@Path("projectId") long projectId);
 
+  @GET("project/{projectId}/templates/{templateId}/tasks")
+  Call<List<Task>> getTemplateTasks(
+      @Path("projectId") long projectId, @Path("templateId") long templateId);
+
   @POST("project/{projectId}/tasks")
   Call<Task> startTask(@Path("projectId") long projectId, @Body TaskRequest request);
 

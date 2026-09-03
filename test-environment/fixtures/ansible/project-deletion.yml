@@ -1,0 +1,16 @@
+---
+- name: Semaphore project deletion fixture
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Signal that the project owns a running task
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-project-delete-ready
+
+    - name: Keep the task active during the deletion request
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Signal unexpected completion
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-project-delete-completed

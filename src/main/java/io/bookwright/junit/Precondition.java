@@ -2,6 +2,7 @@ package io.bookwright.junit;
 
 import io.bookwright.api.model.CreatedBooking;
 import io.bookwright.api.model.semaphore.Project;
+import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.User;
 import io.bookwright.config.Configs;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
@@ -33,6 +34,37 @@ public enum Precondition implements IPrecondition {
         store.putSemaphoreProject(project);
       }),
 
+  SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS(
+      "Create an executable Semaphore template",
+      (api, store) -> {
+        SemaphoreFixtures fixtures = SemaphoreFixtures.from(Configs.main(), store.testData());
+        Project project = store.semaphoreProject();
+        var key =
+            api.semaphore()
+                .accessKeys()
+                .create(project.id(), fixtures.accessKey().request(project.id()));
+        var repository =
+            api.semaphore()
+                .repositories()
+                .create(
+                    project.id(),
+                    fixtures.repositories().primary().request(project.id(), key.id()));
+        var inventory =
+            api.semaphore()
+                .inventories()
+                .create(project.id(), fixtures.inventory().request(project.id(), key.id()));
+        Template template =
+            api.semaphore()
+                .templates()
+                .create(
+                    project.id(),
+                    fixtures
+                        .templates()
+                        .primary()
+                        .request(project.id(), repository.id(), inventory.id()));
+        store.putSemaphoreTemplate(template);
+      }),
+
   SEMAPHORE_RBAC_USER_EXISTS(
       "Ensure the Semaphore RBAC fixture user exists",
       (api, store) -> {
@@ -44,6 +76,7 @@ public enum Precondition implements IPrecondition {
 
   static final String BOOKING_KEY = "createdBooking";
   static final String SEMAPHORE_PROJECT_KEY = "semaphoreProject";
+  static final String SEMAPHORE_TEMPLATE_KEY = "semaphoreTemplate";
   static final String SEMAPHORE_RBAC_USER_KEY = "semaphoreRbacUser";
 
   private final String title;

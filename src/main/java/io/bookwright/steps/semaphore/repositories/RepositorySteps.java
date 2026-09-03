@@ -32,7 +32,7 @@ public class RepositorySteps {
 
   @Step("Find required repository {name} in Semaphore project {projectId}")
   public Repository requireByName(long projectId, String name) {
-    List<Repository> repositories = Calls.body(api.getRepositories(projectId), 200, "repositories");
+    List<Repository> repositories = getRepositories(projectId);
     return repositories.stream()
         .filter(repository -> name.equals(repository.name()))
         .findFirst()
@@ -44,5 +44,10 @@ public class RepositorySteps {
                             name,
                             projectId,
                             repositories.stream().map(Repository::name).toList())));
+  }
+
+  @Step("Get repositories in Semaphore project {projectId}")
+  public List<Repository> getRepositories(long projectId) {
+    return Calls.body(api.getRepositories(projectId), 200, "repositories");
   }
 }

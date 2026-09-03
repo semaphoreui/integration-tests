@@ -1,0 +1,47 @@
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_LDAP_ACTIVATED: "yes"
+      SEMAPHORE_LDAP_HOST: ldap
+      SEMAPHORE_LDAP_PORT: "636"
+      SEMAPHORE_LDAP_NEEDTLS: "yes"
+      SEMAPHORE_LDAP_DN_BIND: cn=admin,dc=bookwright,dc=test
+      SEMAPHORE_LDAP_PASSWORD: Bookwright-LDAP-Bind-42!
+      SEMAPHORE_LDAP_DN_SEARCH: ou=people,dc=bookwright,dc=test
+      SEMAPHORE_LDAP_SEARCH_FILTER: (&(objectClass=inetOrgPerson)(uid=%s))
+      SEMAPHORE_LDAP_MAPPING_DN: dn
+      SEMAPHORE_LDAP_MAPPING_USERNAME: uid
+      SEMAPHORE_LDAP_MAPPING_FULLNAME: cn
+      SEMAPHORE_LDAP_MAPPING_EMAIL: mail
+    depends_on:
+      ldap:
+        condition: service_healthy
+
+  ldap:
+    image: osixia/openldap:1.5.0
+    environment:
+      LDAP_ORGANISATION: Bookwright
+      LDAP_DOMAIN: bookwright.test
+      LDAP_BASE_DN: dc=bookwright,dc=test
+      LDAP_ADMIN_PASSWORD: Bookwright-LDAP-Bind-42!
+      LDAP_TLS: "true"
+      LDAP_TLS_VERIFY_CLIENT: never
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
+    volumes:
+      - ./profiles/feature-ldap-tls/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "LDAPTLS_REQCERT=never ldapsearch -x -H ldaps://127.0.0.1:636 -D 'cn=admin,dc=bookwright,dc=test' -w 'Bookwright-LDAP-Bind-42!' -b 'dc=bookwright,dc=test' -s base >/dev/null",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  ldap-data:
+  ldap-config:
