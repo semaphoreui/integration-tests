@@ -384,7 +384,6 @@ echo ""
 
 # Print access information
 if [ -n "$report_public_url" ]; then
-    # Custom endpoint
     echo "📊 Report URL:"
     echo "   ${report_public_url}/${s3_path}"
     echo ""
