@@ -23,6 +23,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreOidcFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreProjectDeletionFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreRunnerRoutingFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreScheduleFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreShellOutputFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreStaticInventoryFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSurveyFixtures;
@@ -75,6 +76,7 @@ public class StepsParameterResolver implements ParameterResolver {
         || type == SemaphoreProjectDeletionFixtures.class
         || type == SemaphoreRunnerRoutingFixtures.class
         || type == SemaphoreScheduleFixtures.class
+        || type == SemaphoreShellOutputFixtures.class
         || type == SemaphoreSshFixtures.class
         || type == SemaphoreStaticInventoryFixtures.class
         || type == SemaphoreSurveyFixtures.class
@@ -149,6 +151,9 @@ public class StepsParameterResolver implements ParameterResolver {
     }
     if (type == SemaphoreScheduleFixtures.class) {
       return SemaphoreScheduleFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
+    if (type == SemaphoreShellOutputFixtures.class) {
+      return SemaphoreShellOutputFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreSshFixtures.class) {
       return SemaphoreSshFixtures.from(TestDataExtension.getOrCreate(extensionContext));
