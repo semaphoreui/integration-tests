@@ -274,3 +274,24 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `test-environment/survey-default-validation-defect.md` — отсутствие enum default validation в `v2.19.8`.
 
 Исходный код Semaphore хранится локально в `/semaphore/` и исключён из этого репозитория.
+
+## Безопасная проверка внешнего Semaphore
+
+`externalTest` запускает только read-only сценарии с тегом `external`: health, password login,
+system info и список доступных проектов. Он не создаёт проекты, пользователей, templates или tasks и
+не зависит от локальных Git/SSH/runner fixtures.
+
+Адрес и credentials задаются явно через environment, чтобы случайно не направить полный локальный
+набор на пользовательский стенд и не передавать пароль аргументом launcher-скрипта:
+
+```bash
+export API_BASE_URL=https://semaphore.example.test/api/
+export API_USERNAME=qa-reader
+export API_PASSWORD='set-from-secret-storage'
+scripts/run-external-tests.sh
+```
+
+Дополнительные Gradle arguments передаются после имени скрипта. Для self-signed TLS можно передать
+существующие `-Dbookwright.test.ssl.trustStore=...` и
+`-Dbookwright.test.ssl.trustStorePassword=...`. Обычный `apiTest` остаётся локальным полным набором и
+никогда не вызывается launcher-ом внешнего стенда.

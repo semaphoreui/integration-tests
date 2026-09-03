@@ -174,6 +174,51 @@ tasks.register<Test>("apiTest") {
     filter { includeTestsMatching("io.bookwright.tests.semaphore.*") }
 }
 
+tasks.register<Test>("externalTest") {
+    group = "verification"
+    description = "Runs read-only API checks against a user-managed Semaphore instance."
+    useJUnitPlatform { includeTags("external") }
+    filter { includeTestsMatching("io.bookwright.tests.external.*") }
+    systemProperty("STAND", "external")
+    maxParallelForks = 1
+
+    val externalConfig =
+        mapOf(
+            "API_BASE_URL" to "api.base.url",
+            "API_USERNAME" to "api.username",
+            "API_PASSWORD" to "api.password",
+        )
+
+    externalConfig.forEach { (environmentName, configKey) ->
+        System.getenv(environmentName)
+            ?.takeIf(String::isNotBlank)
+            ?.let { value -> environment(configKey, value) }
+    }
+
+    doFirst {
+        val missing =
+            externalConfig.filter { (environmentName, configKey) ->
+                System.getenv(environmentName).isNullOrBlank() &&
+                    System.getProperty(configKey).isNullOrBlank()
+            }
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "externalTest requires " +
+                    missing.entries.joinToString { (environmentName, configKey) ->
+                        "$environmentName or -D$configKey"
+                    },
+            )
+        }
+
+        val baseUrl = System.getProperty("api.base.url") ?: System.getenv("API_BASE_URL")
+        if (baseUrl == null || !baseUrl.matches(Regex("https?://.+/api/"))) {
+            throw GradleException(
+                "External API base URL must use http(s) and end with /api/: $baseUrl",
+            )
+        }
+    }
+}
+
 tasks.register<Test>("upgradeTest") {
     group = "verification"
     description = "Runs the seed or verify phase of the Semaphore release-upgrade scenario."

@@ -76,6 +76,11 @@ public class ProjectSteps {
                         .formatted(name, projects.stream().map(Project::name).toList())));
   }
 
+  @Step("Get visible Semaphore projects")
+  public List<Project> getProjects() {
+    return Calls.body(api.getProjects(), 200, "projects");
+  }
+
   @Step("Get Semaphore project {projectId}")
   public Project getProject(long projectId) {
     return Calls.body(api.getProject(projectId), 200, "project");

@@ -10,6 +10,7 @@ public final class TestTags {
   public static final String API = "api";
   public static final String UI = "ui";
   public static final String DB = "db";
+  public static final String EXTERNAL = "external";
 
   private TestTags() {}
 }

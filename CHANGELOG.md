@@ -6,6 +6,7 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- Read-only `externalTest` suite with explicit target credentials and no dependency on local task fixtures.
 - API-token lifecycle coverage for creation, prefix-only listing, bearer authentication, project access, revocation, expiry validation, and secret-safe HTTP diagnostics.
 - Supported local-user lifecycle coverage for create, update, delete, absence verification, and recreation; unsupported deactivate/reactivate semantics are documented explicitly.
 - Private HTTPS Git profile with trusted self-signed TLS, Basic Auth, successful playbook execution, missing-credential failure, and credential-leak checks.
