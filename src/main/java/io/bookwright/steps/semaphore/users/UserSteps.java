@@ -5,6 +5,7 @@ import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.ProjectMemberRequest;
 import io.bookwright.api.model.semaphore.User;
 import io.bookwright.api.model.semaphore.UserRequest;
+import io.bookwright.api.model.semaphore.UserTotp;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.SemaphoreUserNotFoundException;
 import io.bookwright.api.semaphore.users.SemaphoreUsersApi;
@@ -38,6 +39,42 @@ public class UserSteps {
     return Calls.body(api.getUsers(), 200, "users");
   }
 
+  @Step("Get current isolated Semaphore user")
+  public User currentUser(SemaphoreSessionApis session) {
+    return Calls.body(session.users().getCurrentUser(), 200, "current user");
+  }
+
+  @Step("Get full Semaphore user {userId}")
+  public User getUser(long userId) {
+    return Calls.body(api.getUser(userId), 200, "Semaphore user");
+  }
+
+  @Step("Enable TOTP for isolated Semaphore user {userId}")
+  public UserTotp enableTotp(SemaphoreSessionApis session, long userId) {
+    UserTotp totp = Calls.body(session.users().enableTotp(userId), 200, "TOTP enrollment");
+    teardown.push(
+        "Disable TOTP %d for Semaphore user %d".formatted(totp.id(), userId),
+        () -> disableTotpIfPresent(userId, totp.id()));
+    return totp;
+  }
+
+  @Step("Ensure TOTP is disabled for Semaphore user {user.id}")
+  public void ensureTotpDisabled(User user) {
+    User fullUser = getUser(user.id());
+    if (fullUser.totp() != null) {
+      disableTotpIfPresent(fullUser.id(), fullUser.totp().id());
+    }
+  }
+
+  private void disableTotpIfPresent(long userId, long totpId) {
+    var response = Calls.response(api.disableTotp(userId, totpId));
+    if (response.code() != 204 && response.code() != 400) {
+      throw new IllegalStateException(
+          "TOTP cleanup for user %d expected HTTP 204 or 400 but received %d"
+              .formatted(userId, response.code()));
+    }
+  }
+
   @Step("Create Semaphore user")
   public User create(UserRequest request) {
     try {
@@ -46,6 +83,29 @@ public class UserSteps {
       throw new IllegalStateException(
           "Failed to create Semaphore user '%s'".formatted(request.username()), error);
     }
+  }
+
+  @Step("Create disposable Semaphore user")
+  public User createDisposable(UserRequest request) {
+    User user = create(request);
+    teardown.push("Delete Semaphore user " + user.id(), () -> deleteIfPresent(user.id()));
+    return user;
+  }
+
+  @Step("Update Semaphore user {userId}")
+  public User update(long userId, UserRequest request) {
+    Calls.expectStatus(api.updateUser(userId, request), 204);
+    return getUser(userId);
+  }
+
+  @Step("Delete Semaphore user {userId}")
+  public void delete(long userId) {
+    Calls.expectStatus(api.deleteUser(userId), 204);
+  }
+
+  @Step("Verify Semaphore user {userId} does not exist")
+  public void verifyMissing(long userId) {
+    Calls.expectStatus(api.getUser(userId), 404);
   }
 
   @Step("Get or create Semaphore user {request.username}")
@@ -68,6 +128,15 @@ public class UserSteps {
                 .formatted(request.username()),
             creationError);
       }
+    }
+  }
+
+  private void deleteIfPresent(long userId) {
+    var response = Calls.response(api.deleteUser(userId));
+    if (response.code() != 204 && response.code() != 404) {
+      throw new IllegalStateException(
+          "User cleanup for %d expected HTTP 204 or 404 but received %d"
+              .formatted(userId, response.code()));
     }
   }
 

@@ -116,6 +116,8 @@ fun Test.configureBookwrightTestRuntime() {
     listOf(
         "STAND",
         "SEMAPHORE_PROFILE",
+        "SEMAPHORE_SCHEDULE_TIMEZONE",
+        "SEMAPHORE_ENCRYPTION_ROTATION_PHASE",
         "SEMAPHORE_UPGRADE_PHASE",
         "DB_PASSWORD",
         "SSH_PASSWORD",
@@ -123,7 +125,13 @@ fun Test.configureBookwrightTestRuntime() {
     ).forEach { key ->
         (System.getProperty(key) ?: System.getenv(key))?.let { systemProperty(key, it) }
     }
-    val configPrefixes = listOf("api.", "ui.", "db.", "ssh.", "teardown.", "local.booking.", "local.user.")
+    mapOf(
+        "bookwright.test.ssl.trustStore" to "javax.net.ssl.trustStore",
+        "bookwright.test.ssl.trustStorePassword" to "javax.net.ssl.trustStorePassword",
+    ).forEach { (source, target) ->
+        System.getProperty(source)?.let { systemProperty(target, it) }
+    }
+    val configPrefixes = listOf("api.", "ui.", "db.", "ssh.", "runner.", "teardown.", "local.booking.", "local.user.")
     System.getProperties().stringPropertyNames()
         .filter { key -> configPrefixes.any(key::startsWith) }
         .forEach { key -> systemProperty(key, System.getProperty(key)) }
@@ -166,16 +174,84 @@ tasks.register<Test>("apiTest") {
     filter { includeTestsMatching("io.bookwright.tests.semaphore.*") }
 }
 
+tasks.register<Test>("externalTest") {
+    group = "verification"
+    description = "Runs read-only API checks against a user-managed Semaphore instance."
+    useJUnitPlatform { includeTags("external") }
+    filter { includeTestsMatching("io.bookwright.tests.external.*") }
+    systemProperty("STAND", "external")
+    maxParallelForks = 1
+
+    val externalConfig =
+        mapOf(
+            "API_BASE_URL" to "api.base.url",
+            "API_USERNAME" to "api.username",
+            "API_PASSWORD" to "api.password",
+        )
+
+    externalConfig.forEach { (environmentName, configKey) ->
+        System.getenv(environmentName)
+            ?.takeIf(String::isNotBlank)
+            ?.let { value -> environment(configKey, value) }
+    }
+
+    doFirst {
+        val missing =
+            externalConfig.filter { (environmentName, configKey) ->
+                System.getenv(environmentName).isNullOrBlank() &&
+                    System.getProperty(configKey).isNullOrBlank()
+            }
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "externalTest requires " +
+                    missing.entries.joinToString { (environmentName, configKey) ->
+                        "$environmentName or -D$configKey"
+                    },
+            )
+        }
+
+        val baseUrl = System.getProperty("api.base.url") ?: System.getenv("API_BASE_URL")
+        if (baseUrl == null || !baseUrl.matches(Regex("https?://.+/api/"))) {
+            throw GradleException(
+                "External API base URL must use http(s) and end with /api/: $baseUrl",
+            )
+        }
+    }
+}
+
 tasks.register<Test>("upgradeTest") {
     group = "verification"
     description = "Runs the seed or verify phase of the Semaphore release-upgrade scenario."
     filter { includeTestsMatching("io.bookwright.tests.semaphore.UpgradeCompatibilityTest") }
 }
 
+tasks.register<Test>("encryptionRotationTest") {
+    group = "verification"
+    description = "Runs one phase of the Semaphore database-encryption key rotation scenario."
+    filter { includeTestsMatching("io.bookwright.tests.semaphore.EncryptionKeyRotationTest") }
+}
+
 tasks.register<Test>("uiTest") {
     group = "verification"
     description = "Runs Playwright product scenarios."
     filter { includeTestsMatching("io.bookwright.tests.ui.*") }
+}
+
+tasks.register<Test>("totpTest") {
+    group = "verification"
+    description = "Runs the Semaphore API and browser TOTP lifecycle scenarios."
+    filter {
+        includeTestsMatching("io.bookwright.tests.semaphore.SemaphoreTotpAuthenticationTest")
+        includeTestsMatching("io.bookwright.tests.ui.semaphore.SemaphoreTotpLoginTest")
+    }
+}
+
+tasks.register<JavaExec>("playwrightInstallChromium") {
+    group = "verification"
+    description = "Installs Chromium and its Linux dependencies for Playwright product tests."
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "com.microsoft.playwright.CLI"
+    args("install", "--with-deps", "chromium")
 }
 
 tasks.register<Test>("dbTest") {

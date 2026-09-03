@@ -1,6 +1,7 @@
 package io.bookwright.steps.semaphore.system;
 
 import com.google.inject.Inject;
+import io.bookwright.api.model.semaphore.SemaphoreSystemInfo;
 import io.bookwright.api.semaphore.system.SemaphoreSystemApi;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
@@ -25,5 +26,10 @@ public class SystemSteps {
     } catch (IOException e) {
       throw new IllegalStateException("Could not read health response", e);
     }
+  }
+
+  @Step("Get Semaphore system information")
+  public SemaphoreSystemInfo info() {
+    return Calls.body(api.info(), 200, "system information");
   }
 }

@@ -1,6 +1,6 @@
 services:
   fixture-init:
-    image: semaphoreui/semaphore:v2.19.7
+    image: semaphoreui/semaphore:v2.19.8
     user: "0:0"
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -20,7 +20,7 @@ services:
       - ./fixtures/ansible:/source:ro
 
   semaphore:
-    image: ${SEMAPHORE_IMAGE:-semaphoreui/semaphore:v2.19.7}
+    image: ${SEMAPHORE_IMAGE:-semaphoreui/semaphore:v2.19.8}
     ports:
       - "3000:3000"
     environment:

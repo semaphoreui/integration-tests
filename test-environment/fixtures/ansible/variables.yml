@@ -1,0 +1,17 @@
+---
+- name: Semaphore Variable Group fixture
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Verify plain and secret Variable Group values
+      ansible.builtin.assert:
+        that:
+          - region == 'eu-west-1'
+          - lookup('env', 'LOG_LEVEL') == 'debug'
+          - db_password_renamed | hash('sha256') == expected_db_password_hash
+          - lookup('env', 'API_TOKEN') | hash('sha256') == lookup('env', 'EXPECTED_API_TOKEN_HASH')
+      no_log: true
+
+    - name: Emit safe Variable Group proof
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-variable-group-ok

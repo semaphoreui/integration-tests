@@ -1,7 +1,7 @@
-# План запуска тестирования Semaphore UI
+# План развития тестирования Semaphore UI
 
 **Проект:** [semaphoreui/semaphore](https://github.com/semaphoreui/semaphore)  
-**Формат работы:** анализ текущего состояния, создание основы автоматизированного тестирования и передача проекта инженеру, который будет развивать и поддерживать тесты дальше.
+**Формат работы:** анализ текущего состояния, создание и постоянное развитие автоматизированного тестирования одним владельцем проекта.
 
 ---
 
@@ -15,7 +15,7 @@
 - выбрать практичный стек;
 - реализовать первые полезные тесты;
 - подключить их к CI;
-- подготовить документацию и передать систему следующему инженеру.
+- поддерживать документацию, тесты и CI в актуальном состоянии по мере развития продукта.
 
 Результатом должна стать не только стратегия, но и репозиторий с понятной структурой, рабочими тестами и простым способом запуска локально и в CI.
 
@@ -28,7 +28,7 @@
 3. **API — основной стартовый уровень.** API-тесты обычно быстрее и стабильнее UI e2e, при этом позволяют проверять бизнес-логику и права доступа напрямую.
 4. **UI e2e используется выборочно.** Через браузер покрываем только критичные пользовательские пути и то, что нельзя достаточно проверить на более низком уровне.
 5. **Всё должно быть поддерживаемо одним инженером.** Запуск, диагностика падений и добавление нового теста не должны требовать отдельной инфраструктурной команды.
-6. **Передача закладывается с первого дня.** Решения, команды запуска, ограничения и известные проблемы документируются по ходу работы.
+6. **Поддерживаемость закладывается с первого дня.** Решения, команды запуска, ограничения и известные проблемы документируются по ходу работы, чтобы к проекту можно было уверенно вернуться после паузы.
 
 ---
 
@@ -106,9 +106,9 @@ Issues группируются по функциональным зонам:
 
 Поднимаю Semaphore локально и фиксирую воспроизводимый путь от клонирования репозитория до работающего сервиса.
 
-**Текущий статус:** минимальный стенд `v2.19.7` с SQLite поднят через Docker Compose. Проверены UI, аутентификация и базовые read-only API-запросы. Команды запуска и результаты smoke-проверки находятся в `test-environment/`.
+**Текущий статус:** тестовые профили обновлены до `v2.19.8`, upstream `develop` — до `ae12f3acac626f78673b95cc57acd62ed873b089`. Полный Linux CI от 2026-08-19 зелёный: core suite прошла на SQLite, PostgreSQL, MySQL 8.4 и MariaDB 10.11, remote runner зарегистрирован и выполняет task-сценарии, оба upgrade-профиля `v2.19.7 → v2.19.8` прошли. Локально на macOS остаётся риск нестабильной финализации task output. `feature-schedule-timezone` воспроизводит отсутствие tasks у active cron/`run_at`, а новый `feature-dynamic-runner` — незавершающийся one-off runner после успешной задачи и `finish` webhook. Оба defect profiles исключены из стабильной CI matrix. Отчёты находятся в `test-environment/v2.19.8-regression-report.md`, `test-environment/schedule-execution-defect.md` и `test-environment/dynamic-runner-one-off-exit-defect.md`.
 
-Для автоматизации выбран Java-каркас Bookwright v1.4.0. В тестовый репозиторий адаптированы Gradle/JUnit 5, Retrofit/OkHttp, Guice, Allure, Playwright, детерминированные typed fixtures, target/domain API и steps, architecture self-tests, typed precondition state и LIFO cleanup. Сквозной Java API smoke успешно проверяет health, login, проект и роль owner, локальный Git fixture, inventory, template, выполнение Ansible-задачи, output, неактивное cron-расписание, гостевой доступ к назначенному проекту, запрет гостю изменять access keys и изоляцию неназначенного проекта. Отдельный security smoke создаёт `login_password` key, реально использует пароль при выполнении задачи и подтверждает отсутствие plaintext в API responses, structured/raw task output и тестовых артефактах. Git-набор проверяет выполнение задачи из явно выбранной ветки, ожидаемый отказ для отсутствующего ref и недоступного authenticated HTTPS remote, включая отсутствие credentials в диагностике. RBAC-набор подтверждает permission bitmask и границы `manager`/`task_runner`: разрешённый запуск задач, разрешённое manager-управление ресурсами и запреты на project/resource/member mutations согласно роли. Task lifecycle-набор после подтверждённого начала long-running playbook проверяет обычный stop и force-stop, terminal `stopped` и отсутствие выполнения последующего шага. Проектные тестовые данные удаляются автоматически; RBAC fixture-пользователь переиспользуется между запусками из-за ограничения удаления пользователя с историей login-сессий в Semaphore v2.19.7.
+Для автоматизации выбран Java-каркас Bookwright v1.4.0. В тестовый репозиторий адаптированы Gradle/JUnit 5, Retrofit/OkHttp, Guice, Allure, Playwright, детерминированные typed fixtures, target/domain API и steps, architecture self-tests, typed precondition state и LIFO cleanup. Сквозной Java API smoke успешно проверяет health, login, проект и роль owner, локальный Git fixture, inventory, template, выполнение Ansible-задачи, output, неактивное cron-расписание, гостевой доступ к назначенному проекту, запрет гостю изменять access keys и изоляцию неназначенного проекта. Отдельный security smoke создаёт `login_password` key, реально использует пароль при выполнении задачи и подтверждает отсутствие plaintext в API responses, structured/raw task output и тестовых артефактах. Variable Group-набор проверяет смешанные JSON/ENV/secret values, rename secret, backend validation и реальное Ansible execution без plaintext; SQLite и PostgreSQL `v2.19.8` зелёные. Survey/task override-набор на SQLite и PostgreSQL local execution проверяет сохранение enum/int/string/env/secret definitions, запуск с template/task arguments и Ansible params, реальное использование значений и отсутствие survey secret в output. На persistent runner `v2.19.8` secret теряется перед dispatch; это подтверждено безопасным canary и исправлено upstream #4086 (`081425d2`) в `v2.20.0-alpha1`. Также найден version-specific gap: `v2.19.8` принимает enum default вне allowed values; upstream fix `eb29c3e8` входит в `v2.20.0-alpha1`. Concurrency-набор доказывает project queue admission при лимитах 1→2 на parallel-capable template. Persistent runner-набор подтверждает exact tags, persisted used_runner_id и capacity requeue; отсутствие matching active runner переводит task в error вместо ожидаемого recoverable waiting и зафиксировано отдельным defect candidate. Webhook integration-набор проверяет token auth, общий project alias, matcher routing, body/header extraction, отсутствие запуска при неверном token/event и реальную передачу extracted values в Ansible task со связью через `integration_id`. Git-набор проверяет выполнение задачи из явно выбранной ветки, ожидаемый отказ для отсутствующего ref и недоступного authenticated HTTPS remote, включая отсутствие credentials в диагностике. SSH feature-набор проверяет Git clone и Ansible target, отрицательную авторизацию, ротацию secret у существующего key ID через два сервера с разными authorized keys и отсутствие private key/passphrase в API, HTTP reports и task output. RBAC-набор подтверждает permission bitmask и границы `manager`/`task_runner`: разрешённый запуск задач, разрешённое manager-управление ресурсами и запреты на project/resource/member mutations согласно роли. Task lifecycle-набор после подтверждённого начала long-running playbook проверяет обычный stop и force-stop, terminal `stopped` и отсутствие выполнения последующего шага. Проектные тестовые данные удаляются автоматически; RBAC fixture-пользователь переиспользуется между запусками из-за ограничения удаления пользователя с историей login-сессий в Semaphore v2.19.7.
 
 Проверяю:
 
@@ -120,7 +120,7 @@ Issues группируются по функциональным зонам:
 - какие внешние зависимости понадобятся для тестов;
 - можно ли одинаково запускать окружение локально и в CI.
 
-Первичная матрица конфигураций и способ её расширения зафиксированы в `test-environment/configuration-testing-overview.md`. Вместо полного перебора используются быстрые configuration checks, несколько опорных end-to-end профилей и самостоятельные feature profiles. Реализованы `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local` и production-like `prod-postgres-runner`: manifests закрепляют конфигурацию, единая lifecycle-команда управляет запуском/setup и записывает runtime metadata и точные image digests в Allure. Один core API-набор проходит на SQLite, PostgreSQL, MySQL 8.4 и MariaDB 10.11, локально и через отдельный persistent runner; runner API подтверждает регистрацию, default/online status и heartbeat. Отдельные `upgrade-sqlite-local` и `upgrade-postgres-local` воспроизводят N-1 → current на сохранённой БД. Они обнаружили блокирующую несовместимость `v2.19.6 → v2.19.7`: текущий релиз не читает access keys из схемы предыдущего релиза из-за удалённых полей миграции `v2.20.1`. Автоматизация и отчёт готовы, но upgrade jobs должны оставаться красными до исправления продукта.
+Первичная матрица конфигураций и способ её расширения зафиксированы в `test-environment/configuration-testing-overview.md`. Вместо полного перебора используются быстрые configuration checks, несколько опорных end-to-end профилей и самостоятельные feature profiles. Реализованы пять DB/execution-профилей, SSH, schedule reproducer, OIDC через pinned Dex, OIDC через HTTPS NGINX/subpath на PostgreSQL, LDAPS через pinned OpenLDAP, TOTP MFA, database encryption keyring rotation и dynamic one-off runner reproducer. На `v2.19.8` core API-набор проходит во всех пяти опорных конфигурациях; OIDC и LDAP покрывают positive login, provisioning/reuse, logout и negative account/provider/credential paths. TOTP покрывает API self-enrollment, challenge, invalid/valid passcode, recovery и одноразовость recovery code, а browser-flow — Security settings, QR rendering, challenge screen и recovery form. OTP material не попадает в HTTP/Allure artifacts, чувствительные UI screenshots/HTML/traces при падении не публикуются. Proxy OIDC дополнительно подтверждает TLS, routing `/semaphore` и `Secure`/`HttpOnly` session cookie. Encryption lifecycle проверяет hot reload нового primary, mixed-key reads, backup/rekey и удаление retired key без потери task fixture. Dynamic runner выполняет задачу, но не завершает one-off process из-за подтверждённой логической ошибки в runner lifecycle. HA исследован и отложен до Enterprise test subscription: community build не содержит Redis-backed coordination и не может дать честную active-active проверку.
 
 **Результат:** рабочее тестовое окружение и документированная команда запуска.
 
@@ -159,6 +159,8 @@ Issues группируются по функциональным зонам:
 Решение принимается по результатам ревью, а не заранее. Возможные варианты: оставить, исправить, использовать частично как источник сценариев или удалить после фиксации полезной информации.
 
 **Результат:** краткий отчёт по существующим тестам и решение по каждому полезному блоку.
+
+**Текущий статус:** ревью завершено. Старые Playwright-тесты не переносятся как код из-за невоспроизводимой конфигурации, хрупкого UI cleanup и зависимости от demo-проекта и текста task output. Их сценарии, 30 ручных test cases и MCP-планы классифицированы в `test-environment/legacy-qa-review.md`; полезные пробелы перенесены в backlog, а уже защищённые API-сценарии отмечены отдельно.
 
 ---
 
@@ -220,9 +222,11 @@ Issues группируются по функциональным зонам:
 - диагностируемые сообщения об ошибках;
 - отсутствие реальных секретов в репозитории и логах;
 - разумное время выполнения;
-- примеры, по которым следующий инженер сможет написать новый тест.
+- примеры, по которым можно быстро написать новый тест без повторного изучения всей архитектуры.
 
 **Результат:** рабочий базовый набор API/integration-тестов и, при необходимости, несколько критичных UI e2e-тестов.
+
+**Текущий статус:** базовая версия реализована и расширена по главным рискам issues: task lifecycle, Git/SSH/private HTTPS Git, static/file/workspace inventories, RBAC, API tokens, поддерживаемый user lifecycle, schedules, Variable Groups, survey/overrides, project/runner concurrency и routing, webhook integrations, project backup/restore, secrets и критичный UI smoke. Password login защищён regression-проверками одинакового ответа для existing/unknown account и отсутствия session cookie; `v2.19.8` не throttles и не аудитит пять повторных ошибок, что записано как security gap. INI `static` и YAML `static-yaml` multi-group inventories сохраняются и реально выполняют только выбранную template `limit` группу. Terraform 1.11.3 и OpenTofu 1.11.0 из release image выполняют plan-only локальный module в выбранных `terraform-workspace`/`tofu-workspace` без внешних providers; Variable Group secret типа `env` с префиксом `TF_VAR_` реально становится input variable, подтверждается безопасным SHA-256 marker и не появляется в API/output/Allure. Build → Deploy chain проверяет назначение `start_version`, ручной выбор successful build, сохранение `build_task_id` и одинаковую target/incoming version в executor; version deploy отображается через вложенный build task в history API. Repository-backed file inventory выполняет playbook из ожидаемой host group; безопасный canary фиксирует create/update validation gap для traversal path. Удаление проекта после остановки task проходит с каскадной очисткой, но `v2.19.8` принимает удаление во время `running`: executor продолжает playbook и затем пишет FK errors; воспроизведение находится в `project-deletion-running-task-defect.md`. Private HTTPS Git проверяется отдельным профилем с trusted self-signed CA и Basic Auth: authenticated clone реально выполняет playbook, запрос без key отклоняется, password отсутствует в API/Allure diagnostics, а login/password — в task output. API-token блок покрывает create/list, expiry, Bearer access, revoke и защиту plaintext в диагностике. User lifecycle покрывает create/update/delete/recreate; deactivate/reactivate не заявляется, потому что текущие router и `db.User` не имеют такого состояния. Webhook-блок покрывает token auth, matcher routing, body/header extraction, negative no-launch и реальное выполнение задачи. Backup/restore проверяет перенос связей, отсутствие task history/plaintext secrets, исполнимость восстановленного template, запрет для non-admin и повреждённые ссылки. Найден off-by-one дефект duplicate validation: два одноимённых ресурса принимаются и создаются; canary и анализ находятся в `project-backup-restore-validation-defect.md`. Workflows и external Secret Storage management подтверждены как Pro-функции с Community stub/feature flags; их честный e2e требует test subscription, а не только локальный Vault toolchain.
 
 ---
 
@@ -240,7 +244,7 @@ Issues группируются по функциональным зонам:
 
 **Результат:** работающий CI-пайплайн и понятный процесс разбора падений.
 
-**Текущий статус:** этап реализован. Pull-request workflow выполняет framework quality gate и `core-sqlite-local`; ежедневная matrix job запускает PostgreSQL, MySQL, MariaDB и persistent runner; еженедельный и ручной release workflow проверяет upgrade SQLite/PostgreSQL. Jobs имеют таймауты, `fail-fast: false` для матриц, сохраняют JUnit/HTML/Allure и Compose diagnostics, а cleanup выполняется всегда. Upgrade workflow отделён от PR gate и остаётся красным до исправления подтверждённого дефекта продукта. После каждого запуска отдельные Allure-отчёты профилей собираются reusable workflow в готовый HTML artifact, включая отчёты упавших jobs. GitHub Pages deployment приостановлен из-за тарифного ограничения private-репозитория.
+**Текущий статус:** этап реализован. Pull-request workflow выполняет framework quality gate, API baseline и короткий Chromium UI smoke на `core-sqlite-local`; browser-набор проверяет password login, запуск API-подготовленного executable template и client-side project-name validation без отправки create request. Ежедневная matrix job запускает PostgreSQL, MySQL, MariaDB, persistent runner, SSH, приватный HTTPS Git, прямой OIDC, HTTPS/subpath OIDC, LDAPS, TOTP и encryption-rotation feature-профили; еженедельный и ручной release workflow проверяет upgrade SQLite/PostgreSQL. Jobs имеют таймауты, `fail-fast: false` для матриц, сохраняют JUnit/HTML/Allure и Compose diagnostics, а cleanup выполняется всегда. Полная ручная configuration matrix на commit `97fbb5c` успешно прошла 2026-08-24: зелёные все 10 существовавших тогда профилей, включая `feature-proxy-oidc` после изоляции локального TLS truststore от Gradle dependency resolution. Новый `feature-git-https` локально прошёл positive и negative paths и добавлен в следующую nightly matrix. Ручной investigation run отдельно подтвердил schedule defect на Linux. После каждого запуска отдельные Allure-отчёты профилей собираются reusable workflow в автономный single-file HTML artifact. GitHub Pages deployment приостановлен из-за тарифного ограничения private-репозитория.
 
 ---
 
@@ -268,13 +272,13 @@ Issues группируются по функциональным зонам:
 - установка и обновление;
 - нагрузочные и security-проверки.
 
-**Результат:** практичный план развития на первые 2–3 месяца работы следующего инженера.
+**Результат:** живой приоритетный backlog для планомерного развития набора самим владельцем проекта.
 
 ---
 
-## Этап 6. Документация и передача
+## Этап 6. Эксплуатация и поддерживаемость
 
-Передача считается завершённой, когда новый инженер может без устных подсказок:
+Система считается пригодной для долгосрочной самостоятельной поддержки, когда владелец проекта может после любой паузы без восстановления контекста из переписки:
 
 - поднять окружение;
 - запустить все уровни тестов;
@@ -282,7 +286,7 @@ Issues группируются по функциональным зонам:
 - добавить новый тест по существующему образцу;
 - открыть PR и получить корректный результат CI.
 
-### Передаваемые материалы
+### Поддерживаемые материалы
 
 - README по локальному запуску;
 - описание структуры тестов;
@@ -291,11 +295,11 @@ Issues группируются по функциональным зонам:
 - описание CI;
 - известные ограничения и источники нестабильности;
 - карта рисков и приоритетов;
-- backlog дальнейшей автоматизации;
+- актуальный backlog дальнейшей автоматизации;
 - короткая архитектурная схема;
-- несколько стартовых задач для нового инженера.
+- журнал известных продуктовых дефектов и инфраструктурных проблем.
 
-Желательно завершить передачу совместной работой над первым PR нового инженера. Это покажет, что система действительно понятна и пригодна для дальнейшего развития.
+Документация обновляется вместе с изменениями тестов, профилей и CI. Передача другому инженеру сейчас не планируется; если это изменится, отдельный handover-процесс будет добавлен позже.
 
 ---
 
@@ -309,8 +313,8 @@ Issues группируются по функциональным зонам:
 6. Короткая стратегия и выбранный инструментальный стек.
 7. Рабочий базовый набор автоматизированных тестов.
 8. Запуск тестов в CI с диагностическими артефактами.
-9. Backlog развития на 2–3 месяца.
-10. Документация и передача следующему инженеру.
+9. Живой приоритетный backlog развития.
+10. Документация для самостоятельной эксплуатации и расширения.
 
 ---
 
@@ -322,22 +326,20 @@ Issues группируются по функциональным зонам:
 - Какие регрессии или инциденты заказчик считает самыми болезненными?
 - Где будет выполняться CI и есть ли ограничения по ресурсам?
 - Кто сможет ревьюить изменения в приложении и тестовой инфраструктуре?
-- Есть ли желаемый срок первой рабочей версии и передачи проекта?
+- Какой регулярный ритм развития, обновления Semaphore и разбора CI-падений нужен проекту?
 
 ---
 
-## Оценка сроков
+## Режим дальнейшей работы
 
-Точную оценку разумно зафиксировать после первого исследовательского этапа: объём сильно зависит от состояния окружения, актуальности API-документации и качества существующих тестов.
+Первоначальная основа уже реализована. Дальнейшая работа ведётся короткими законченными итерациями от риска или найденной проблемы до автоматизированной проверки и результата в CI.
 
-Предварительный ориентир:
+Рекомендуемый цикл:
 
-| Блок | Оценка |
-|---|---:|
-| Исследование issues, окружения, API и старых тестов | 5–8 рабочих дней |
-| Стратегия и техническая основа | 2–3 рабочих дня |
-| Первая рабочая версия тестов | 5–10 рабочих дней |
-| CI, документация и передача | 3–5 рабочих дней |
-| **Итого до первой передаваемой версии** | **15–26 рабочих дней** |
+1. Разобрать новое issue, изменение upstream или CI-падение и оценить риск.
+2. Выбрать минимальный подходящий уровень проверки: API, integration, UI или configuration profile.
+3. Реализовать сценарий с детерминированными fixtures и диагностикой.
+4. Прогнать локально на целевой конфигурации и затем в подходящем CI workflow.
+5. Обновить карту покрытия, известные ограничения и backlog.
 
-Это ориентир, а не фиксированное обязательство до завершения первичного анализа. После Этапа 1 план и оценка уточняются на основании фактов.
+Новые сценарии добавляются по риску и фактической ценности, без фиксированной даты завершения проекта и без цели максимизировать количество тестов.

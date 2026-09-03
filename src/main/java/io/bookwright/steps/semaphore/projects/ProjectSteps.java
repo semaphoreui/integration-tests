@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.ProjectRole;
+import io.bookwright.api.model.semaphore.ProjectUpdateRequest;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.projects.SemaphoreProjectsApi;
 import io.bookwright.teardown.TeardownStorage;
@@ -25,10 +26,41 @@ public class ProjectSteps {
   @Step("Create isolated Semaphore project")
   public Project createProject(ProjectRequest request) {
     Project project = Calls.body(api.createProject(request), 201, "created project");
+    deleteAfterTest(project);
+    return project;
+  }
+
+  @Step("Create isolated Semaphore project through an isolated session")
+  public Project createProject(SemaphoreSessionApis session, ProjectRequest request) {
+    Project project =
+        Calls.body(session.projects().createProject(request), 201, "session-created project");
+    deleteAfterTest(project);
+    return project;
+  }
+
+  @Step("Delete Semaphore project {project.id} after the test")
+  public void deleteAfterTest(Project project) {
     teardown.push(
         "Delete Semaphore project " + project.id(),
         () -> Calls.expectStatus(api.deleteProject(project.id()), 204));
-    return project;
+  }
+
+  @Step("Explicitly delete Semaphore project {project.id} and all its dependents")
+  public void deleteCreatedProject(Project project) {
+    Calls.expectStatus(api.deleteProject(project.id()), 204);
+    teardown.discardAfterExplicitCleanup();
+  }
+
+  @Step("Verify Semaphore project {project.id} is absent")
+  public void verifyDeleted(Project project) {
+    Calls.expectStatus(api.getProject(project.id()), 404);
+    if (Calls.body(api.getProjects(), 200, "projects after deletion").stream()
+        .anyMatch(
+            current -> current.id() == project.id() || current.name().equals(project.name()))) {
+      throw new IllegalStateException(
+          "Deleted Semaphore project %d ('%s') is still present in the project list"
+              .formatted(project.id(), project.name()));
+    }
   }
 
   @Step("Find required Semaphore project {name}")
@@ -44,9 +76,20 @@ public class ProjectSteps {
                         .formatted(name, projects.stream().map(Project::name).toList())));
   }
 
+  @Step("Get visible Semaphore projects")
+  public List<Project> getProjects() {
+    return Calls.body(api.getProjects(), 200, "projects");
+  }
+
   @Step("Get Semaphore project {projectId}")
   public Project getProject(long projectId) {
     return Calls.body(api.getProject(projectId), 200, "project");
+  }
+
+  @Step("Update Semaphore project {projectId}")
+  public Project updateProject(long projectId, ProjectUpdateRequest request) {
+    Calls.expectStatus(api.updateProject(projectId, request), 204);
+    return getProject(projectId);
   }
 
   @Step("Get current role in Semaphore project {projectId}")

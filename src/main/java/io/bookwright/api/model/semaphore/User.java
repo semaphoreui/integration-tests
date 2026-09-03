@@ -7,4 +7,5 @@ public record User(
     String email,
     boolean alert,
     boolean admin,
-    boolean external) {}
+    boolean external,
+    UserTotp totp) {}

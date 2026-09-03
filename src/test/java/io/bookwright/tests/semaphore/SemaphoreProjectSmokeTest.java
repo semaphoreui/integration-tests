@@ -55,6 +55,10 @@ class SemaphoreProjectSmokeTest {
     var startedTask = api.semaphore().tasks().startTask(created.id(), template.id());
     var completedTask =
         api.semaphore().tasks().waitUntilTaskSucceeds(created.id(), startedTask.id());
+    api.semaphore()
+        .tasks()
+        .waitUntilTaskOutputContains(
+            created.id(), completedTask.id(), fixtures.expectations().outputMarker());
     var output = api.semaphore().tasks().getTaskOutput(created.id(), completedTask.id());
     var schedule =
         api.semaphore()

@@ -1,0 +1,37 @@
+---
+- name: Semaphore survey and launch override fixture
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Verify non-secret survey values and launch-time arguments
+      ansible.builtin.assert:
+        that:
+          - deployment_env == 'stg'
+          - replicas | int == 2
+          - feature_name == 'login-redesign'
+          - lookup('env', 'runtime_label') == 'launch-env'
+          - template_arg == 'base'
+          - task_override == 'launch'
+      tags:
+        - survey
+
+    - name: Verify the secret survey value without exposing it
+      ansible.builtin.assert:
+        that:
+          - survey_api_token | hash('sha256') == expected_survey_secret_hash
+      no_log: true
+      tags:
+        - survey
+
+    - name: Emit safe survey and override proof
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-survey-overrides-ok
+      tags:
+        - survey
+
+    - name: Fail if launch skip-tags override is ignored
+      ansible.builtin.fail:
+        msg: suppressed task unexpectedly executed
+      tags:
+        - survey
+        - suppressed

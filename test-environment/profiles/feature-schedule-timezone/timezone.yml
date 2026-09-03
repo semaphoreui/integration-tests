@@ -1,0 +1,4 @@
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_SCHEDULE_TIMEZONE: Pacific/Kiritimati

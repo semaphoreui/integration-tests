@@ -64,17 +64,7 @@ public record SemaphoreFixtures(
         new Templates(
             new Template("bookwright-build-template-" + suffix, "smoke.yml", "ansible", ""),
             new Template(
-                "bookwright-stoppable-template-" + suffix, "long-running.yml", "ansible", ""),
-            new Template(
-                "bookwright-shell-output-template-" + suffix,
-                "bash/capture-output/normal.sh",
-                "bash",
-                ""),
-            new Template(
-                "bookwright-background-shell-output-template-" + suffix,
-                "bash/capture-output/background.sh",
-                "bash",
-                "")),
+                "bookwright-stoppable-template-" + suffix, "long-running.yml", "ansible", "")),
         new Schedule("bookwright-nightly-schedule-" + suffix, "0 0 * * *", false, ""),
         Rbac.standard(),
         new Expectations(
@@ -85,9 +75,7 @@ public record SemaphoreFixtures(
             "semaphore-bookwright-smoke-ok",
             "Failed updating repository",
             "semaphore-bookwright-stop-ready",
-            "semaphore-bookwright-stop-completed",
-            "stdout",
-            "stderr"));
+            "semaphore-bookwright-stop-completed"));
   }
 
   public record Projects(
@@ -137,13 +125,10 @@ public record SemaphoreFixtures(
     }
   }
 
-  public record Templates(
-      Template primary,
-      Template longRunning,
-      Template shellOutput,
-      Template backgroundShellOutput) {}
+  public record Templates(Template primary, Template longRunning) {}
 
   public record Schedule(String name, String cronFormat, boolean active, String type) {
+
     public ScheduleRequest request(long projectId, long templateId) {
       return new ScheduleRequest(name, projectId, templateId, cronFormat, active, type);
     }
@@ -197,7 +182,5 @@ public record SemaphoreFixtures(
       String outputMarker,
       String cloneFailureMarker,
       String stopReadyMarker,
-      String stopCompletedMarker,
-      String shellStdoutMarker,
-      String shellStderrMarker) {}
+      String stopCompletedMarker) {}
 }

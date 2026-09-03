@@ -12,7 +12,9 @@ import io.bookwright.util.Calls;
 import io.bookwright.util.Waits;
 import io.qameta.allure.Step;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
+import org.awaitility.core.ConditionTimeoutException;
 
 public class TaskSteps {
 
@@ -27,8 +29,12 @@ public class TaskSteps {
 
   @Step("Start Semaphore task from template {templateId}")
   public Task startTask(long projectId, long templateId) {
-    Task task =
-        Calls.body(api.startTask(projectId, new TaskRequest(templateId)), 201, "started task");
+    return startTask(projectId, new TaskRequest(templateId));
+  }
+
+  @Step("Start Semaphore task from template {request.templateId} with launch parameters")
+  public Task startTask(long projectId, TaskRequest request) {
+    Task task = Calls.body(api.startTask(projectId, request), 201, "started task");
     teardown.push(
         "Delete Semaphore task " + task.id(),
         () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
@@ -58,6 +64,12 @@ public class TaskSteps {
     return waitUntilTaskSucceeds(projectId, startTask(projectId, templateId).id());
   }
 
+  @Step(
+      "Start Semaphore task from template {request.templateId} with launch parameters and wait for success")
+  public Task startAndWait(long projectId, TaskRequest request) {
+    return waitUntilTaskSucceeds(projectId, startTask(projectId, request).id());
+  }
+
   @Step("Start Semaphore task as isolated user from template {templateId} and wait for success")
   public Task startAndWait(SemaphoreSessionApis session, long projectId, long templateId) {
     Task task =
@@ -74,6 +86,12 @@ public class TaskSteps {
     return waitUntilTaskFails(projectId, startTask(projectId, templateId).id());
   }
 
+  @Step(
+      "Start Semaphore task from template {request.templateId} with launch parameters and wait for failure")
+  public Task startAndWaitForFailure(long projectId, TaskRequest request) {
+    return waitUntilTaskFails(projectId, startTask(projectId, request).id());
+  }
+
   @Step("Wait for Semaphore task {taskId} to succeed")
   public Task waitUntilTaskSucceeds(long projectId, long taskId) {
     return Waits.awaitSlow("Semaphore task %d reaches terminal status".formatted(taskId))
@@ -88,6 +106,55 @@ public class TaskSteps {
         .until(
             () -> Calls.body(api.getTask(projectId, taskId), 200, "task status"),
             task -> isFailedOrThrow(task));
+  }
+
+  @Step("Wait for schedule {scheduleId} to create and complete a Semaphore task")
+  public Task waitForScheduledTaskToSucceed(long projectId, long scheduleId, long templateId) {
+    List<Task> tasks;
+    try {
+      tasks =
+          Waits.awaitSlow("Semaphore schedule %d creates a task".formatted(scheduleId))
+              .until(
+                  () -> Calls.body(api.getTasks(projectId), 200, "scheduled tasks"),
+                  candidates ->
+                      candidates.stream()
+                          .anyMatch(candidate -> belongsTo(candidate, scheduleId, templateId)));
+    } catch (ConditionTimeoutException timeout) {
+      List<Task> observed =
+          Calls.body(api.getTasks(projectId), 200, "scheduled tasks after timeout");
+      throw new IllegalStateException(
+          "Schedule %d did not create a task for template %d in project %d. Observed tasks: %s"
+              .formatted(
+                  scheduleId,
+                  templateId,
+                  projectId,
+                  observed.stream()
+                      .map(
+                          task ->
+                              "%d:schedule=%s:template=%d:status=%s"
+                                  .formatted(
+                                      task.id(),
+                                      task.scheduleId(),
+                                      task.templateId(),
+                                      task.status()))
+                      .toList()),
+          timeout);
+    }
+    Task task =
+        tasks.stream()
+            .filter(candidate -> belongsTo(candidate, scheduleId, templateId))
+            .findFirst()
+            .orElseThrow();
+    teardown.push(
+        "Delete scheduled Semaphore task " + task.id(),
+        () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
+    return waitUntilTaskSucceeds(projectId, task.id());
+  }
+
+  private boolean belongsTo(Task task, long scheduleId, long templateId) {
+    return task.scheduleId() != null
+        && task.scheduleId() == scheduleId
+        && task.templateId() == templateId;
   }
 
   @Step("Wait for Semaphore task {taskId} output marker")
@@ -108,6 +175,48 @@ public class TaskSteps {
         .until(
             () -> Calls.body(api.getTask(projectId, taskId), 200, "task status"),
             task -> isStoppedOrThrow(task));
+  }
+
+  @Step("Get Semaphore task {taskId}")
+  public Task getTask(long projectId, long taskId) {
+    return Calls.body(api.getTask(projectId, taskId), 200, "task");
+  }
+
+  @Step("Get tasks in Semaphore project {projectId}")
+  public List<Task> getTasks(long projectId) {
+    return Calls.body(api.getTasks(projectId), 200, "tasks");
+  }
+
+  @Step("Get tasks for Semaphore template {templateId}")
+  public List<Task> getTasksForTemplate(long projectId, long templateId) {
+    return Calls.body(api.getTemplateTasks(projectId, templateId), 200, "template tasks");
+  }
+
+  @Step("Find persisted Semaphore task {taskId} in project {projectId}")
+  public Task requirePersistedTask(long projectId, long taskId) {
+    List<Task> tasks = getTasks(projectId);
+    return tasks.stream()
+        .filter(task -> task.id() == taskId)
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Task %d was not found in project %d. Available task IDs: %s"
+                        .formatted(taskId, projectId, tasks.stream().map(Task::id).toList())));
+  }
+
+  @Step("Wait for Semaphore task {taskId} to reach status {status}")
+  public Task waitUntilStatus(long projectId, long taskId, String status) {
+    return Waits.awaitSlow("Semaphore task %d reaches status %s".formatted(taskId, status))
+        .until(() -> getTask(projectId, taskId), task -> status.equals(task.status()));
+  }
+
+  @Step("Verify Semaphore task {taskId} remains in status {status}")
+  public Task verifyRemainsInStatus(long projectId, long taskId, String status) {
+    Waits.await("Semaphore task %d remains in status %s".formatted(taskId, status))
+        .during(Duration.ofSeconds(3))
+        .until(() -> getTask(projectId, taskId), task -> status.equals(task.status()));
+    return getTask(projectId, taskId);
   }
 
   private boolean isSuccessfulOrThrow(long projectId, Task task) {

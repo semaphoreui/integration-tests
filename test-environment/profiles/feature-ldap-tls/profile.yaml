@@ -1,0 +1,21 @@
+id: feature-ldap-tls
+description: SQLite with LDAPS authentication through a pinned local OpenLDAP directory
+compose_file: compose.yml
+compose_project: semaphore-test-feature-ldap-tls
+readiness_url: http://localhost:3000/api/ping
+stand: semaphore
+test_task: apiTest
+semaphore_version: v2.19.8
+semaphore_image: semaphoreui/semaphore:v2.19.8
+source_commit: 3449a04f3bfa2522ec7fd60803f71b578c39f6b4
+edition: community
+installation: docker-compose
+architecture: native
+database_type: sqlite
+database_image: embedded
+execution_mode: local
+execution_executor: local
+auth: password,ldaps
+ldap_image: osixia/openldap:1.5.0
+git_client: cmd_git
+capabilities: ldaps-bind,ldap-user-provisioning,ldap-repeat-login,ldap-logout,ldap-invalid-password,ldap-local-account-conflict

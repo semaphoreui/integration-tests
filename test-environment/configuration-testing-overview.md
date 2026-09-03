@@ -52,7 +52,7 @@ MariaDB использует MySQL dialect, но upstream CI запускает 
 - выполнение задач локально процессом сервера;
 - выполнение на отдельно зарегистрированном remote runner.
 
-Runner может быть постоянным или one-off. Для динамического one-off runner сервер умеет вызывать webhook, после чего созданный runner регистрируется и забирает задачу. Есть ограничения параллельности и привязка runner к проекту; tags относятся к Pro-возможностям.
+Runner может быть постоянным или one-off. Для динамического one-off runner сервер умеет вызывать webhook, после чего созданный runner регистрируется и забирает задачу. Есть ограничения параллельности и привязка runner к проекту. Global runner tags и exact routing подтверждены на Community `v2.19.8`; Docker/Kubernetes executors остаются Pro-возможностями.
 
 В конфигурации runner обнаружены executor:
 
@@ -78,6 +78,8 @@ Semaphore читает JSON/YAML config и environment variables; путь за�
 Проверять каждый бизнес-тест для JSON, YAML и env не нужно. Достаточно отдельного config-contract набора, который доказывает чтение, override, ошибку неизвестного/некорректного значения и отсутствие секрета в логах.
 
 Источник: [Configuration](https://semaphoreui.com/docs/admin-guide/configuration).
+
+Active-active HA требует Enterprise subscription: community build оставляет task state in-memory и не предоставляет Redis-backed node registry, distributed claims, schedule deduplication и Pub/Sub. Поэтому два community container с общей PostgreSQL нельзя считать HA — они создадут ложную зелёную проверку и риск двойного исполнения. Полноценный `enterprise-ha` профиль откладывается до получения test subscription key. Источник: [High Availability](https://semaphoreui.com/docs/admin-guide/ha).
 
 ### Авторизация
 
@@ -133,34 +135,55 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 
 | ID | Конфигурация | Зачем | Запуск |
 |---|---|---|---|
-| `core-sqlite-local` | release Docker image, SQLite, local execution, env config, password auth, `cmd_git` | Самый дешёвый smoke и удобная локальная разработка | каждый PR |
+| `core-sqlite-local` | release Docker image, SQLite, local execution, env config, password auth, `cmd_git` | API baseline; browser password login, task launch и client validation | каждый PR |
 | `core-postgres-local` | Docker Compose, PostgreSQL 14.3, local execution | Black-box совместимость PostgreSQL и миграций без runner-specific переменных | nightly |
 | `prod-postgres-runner` | Docker Compose, PostgreSQL, отдельный persistent runner с local executor, config file | Наиболее полезная проверка production-like границы server ↔ DB ↔ runner | nightly; после стабилизации — PR gate |
 | `core-mysql-local` | Docker Compose, MySQL 8.4, local execution | Black-box совместимость MySQL и миграций | nightly |
 | `core-mariadb-local` | Docker Compose, MariaDB 10.11, local execution | Реальная совместимость MySQL dialect с MariaDB | nightly |
-| `proxy-oidc` | PostgreSQL, reverse proxy TLS, non-root web path, OIDC provider | Callback URL, cookies, redirects, account mapping и RBAC | nightly/по расписанию |
-| `ldap-tls` | PostgreSQL и LDAP с TLS | Bind/search/mapping, отказ TLS и RBAC | по расписанию |
-| `ha-two-node` | два server nodes, PostgreSQL, Redis, remote runner | Очередь, session/state consistency и отказ одного node | по расписанию |
-| `dynamic-runner` | one-off runner, запущенный через webhook | Регистрация, получение ровно одной задачи, timeout и cleanup | по расписанию |
+| `feature-ssh-local` | SQLite, два локальных SSH server с разными зашифрованными test keys | Git clone и Ansible target по SSH, key rotation, negative auth и защита секретов | nightly |
+| `feature-git-https` | SQLite, pinned NGINX, self-signed CA и Basic Auth | Успешный private HTTPS clone/execution, отказ без credentials и защита login/password | nightly |
+| `feature-oidc-local` | SQLite и pinned локальный Dex | Discovery, browser login, callback, session/logout, return path, provisioning, repeat login, local-email conflict и provider failure | nightly |
+| `feature-ldap-tls` | SQLite и pinned OpenLDAP с TLS | LDAPS service/user bind, search/mapping, provisioning/reuse, logout, invalid password и local-email conflict | nightly |
+| `feature-totp-local` | SQLite, password auth и TOTP recovery | API lifecycle; browser Security/QR, challenge, invalid/valid passcode и recovery form | nightly |
+| `feature-schedule-timezone` | SQLite, `Pacific/Kiritimati`, local execution | Реальное cron/run-at исполнение и связь schedule → task | вручную; defect reproducer |
+| `feature-proxy-oidc` | PostgreSQL, NGINX TLS, non-root web path, Dex | Callback URL, Secure cookie, redirects, account mapping и negative paths | nightly |
+| `feature-encryption-rotation` | PostgreSQL, file keyring с двумя test-only AES keys | Hot reload primary, mixed-key reads, `vault check`, backup/rekey, удаление retired key и post-rekey execution | nightly |
+| `enterprise-ha-two-node` | два Enterprise server nodes, PostgreSQL, Redis, remote runner | Очередь, session/state consistency и отказ одного node | после получения test subscription |
+| `feature-dynamic-runner` | SQLite и one-off runner, запущенный через webhook | Start/finish webhook, ровно одна задача и завершение runner process | вручную; defect reproducer |
 | `pro-docker-executor` | Pro runner с Docker executor | Изоляция task container, лимиты, cleanup, secret hydration | при наличии Pro, nightly |
 | `pro-k8s-executor` | Helm/Pro runner с Kubernetes executor | pod lifecycle, service account, pull secret и cleanup | при наличии Pro/K8s, release |
 
-Базовые пять профилей реализованы. OIDC/LDAP/HA/dynamic runner следует добавлять последовательно, не размножая на них всю DB-матрицу.
+Базовые пять профилей и девять feature-профилей реализованы. `feature-git-https` проверяет отдельную клиентскую границу private Git с реальным trusted TLS и Basic Auth. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls` и `feature-totp-local` дают зелёные positive и negative auth paths без размножения по всей DB-матрице; proxy-вариант дополнительно фиксирует HTTPS/subpath/cookie contract, а TOTP — passcode/recovery lifecycle. `feature-encryption-rotation` проверяет zero-downtime смену primary, rekey и безопасное удаление retired key. `feature-schedule-timezone` воспроизводит отсутствие cron/run-at tasks, а `feature-dynamic-runner` — незавершающийся one-off runner после успешной task. Оба профиля остаются ручными красными reproducer. HA исследован и корректно отложен как Enterprise-only вместо небезопасной community-имитации.
 
-CI-распределение также реализовано: `core-sqlite-local` входит в pull-request gate после framework quality checks; остальные четыре базовых профиля запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate и не маскирует известную несовместимость как expected failure.
+CI-распределение также реализовано: API baseline и короткий Chromium UI smoke на `core-sqlite-local` входят в pull-request gate после framework quality checks; остальные четыре базовых профиля, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local` и `feature-encryption-rotation` запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate.
 
 ## Какие тесты где запускать
 
 | Набор | SQLite | PostgreSQL local | PostgreSQL + runner | MySQL | MariaDB | Feature profile |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | health, login, project CRUD | ✓ | ✓ | ✓ | ✓ | ✓ | короткий smoke |
+| invalid login, account enumeration, brute-force canary | ✓ | ✓ | ✓ | ✓ | ✓ | core profiles |
 | Git → template → task → output → cleanup | ✓ | ✓ | ✓ | ✓ | ✓ | если применимо |
+| INI/YAML static inventory: multi-group + template limit | ✓ | ✓ | ✓ | ✓ | ✓ | core profiles |
+| file inventory из Git repository | ✓ | ✓ | ✓ | ✓ | ✓ | create traversal defect зафиксирован отдельно |
+| Terraform/OpenTofu plan + workspace inventory + masked `TF_VAR_*` | ✓ | — | — | — | — | `core-sqlite-local`, toolchain/secret-injection coverage |
+| Build → Deploy artifact version chain | ✓ | — | — | — | — | `core-sqlite-local`, template/task contract |
 | RBAC и project isolation | ✓ | ✓ | ✓ | ✓ | ✓ | auth profiles расширяют набор |
 | task stop/force-stop | local | local | remote | local | local | runner profiles |
+| project deletion после stop / во время running | stopped ✓; running defect | planned | planned | planned | planned | `project-deletion-running-task-defect.md` |
 | runner registration/default/heartbeat | — | — | ✓ | — | — | runner profiles |
+| project max parallel / queue admission | ✓ | planned | ✓ | planned | planned | core profiles |
+| runner exact tag / capacity / used runner | — | — | ✓ | — | — | `prod-postgres-runner` |
+| unavailable matching runner recovery | — | — | defect: task error | — | — | `runner-unavailable-routing-defect.md` |
+| secret survey variable dispatch | local ✓ | local ✓ | defect: value lost | local ✓ | local ✓ | `remote-runner-survey-secrets-defect.md` |
+| dynamic start/finish webhook и one-off exit | — | — | — | — | — | `feature-dynamic-runner`, defect |
+| Git over SSH, SSH inventory и key rotation | — | — | — | — | — | `feature-ssh-local` |
+| Private Git over HTTPS и Basic Auth | — | — | — | — | — | `feature-git-https` |
+| реальное cron/run-at execution | — | — | — | — | — | `feature-schedule-timezone`, defect |
 | constraints, schedules, cleanup, clean migration | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | secrets и отсутствие утечек | ✓ | ✓ | ✓ | ✓ | ✓ | encryption/storage расширяют набор |
-| OIDC/LDAP/MFA | — | — | — | — | — | только свой профиль |
+| database encryption key rotation | — | — | — | — | — | `feature-encryption-rotation` |
+| OIDC/LDAP/MFA | — | — | — | — | — | OIDC: `feature-oidc-local`, `feature-proxy-oidc`; LDAP: `feature-ldap-tls`; MFA: `feature-totp-local` |
 | HA/failover | — | — | — | — | — | только HA profile |
 
 Знак `—` означает сознательное исключение, а не неизвестное покрытие. Это важно фиксировать, иначе матрица со временем снова превратится в неявный полный перебор.
@@ -219,11 +242,11 @@ Manifest должен попадать в Allure environment/labels вместе
 ./test-environment/profile down core-sqlite-local
 ```
 
-Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local` и `prod-postgres-runner`: она управляет Compose lifecycle, ждёт readiness/setup services, запускает API-тесты и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
+Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-schedule-timezone`, `feature-dynamic-runner` и upgrade-профилей: она управляет Compose lifecycle, генерирует локальные SSH/TLS/HTTPS-Git/encryption fixtures при необходимости, ждёт readiness/setup services, запускает выбранный test lifecycle и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
 
 ## Обнаруженный риск воспроизводимости
 
-Текущий тестовый Compose закреплён на release image `v2.19.7`, а локальная копия исходников находится на commit `80b78a3ef4a074cab6ec33792dd96f9cd85619af`. Tag `v2.19.7` указывает на другой commit — `e9dc41a1de8a747569334f7a2b76c320b945d4f0`.
+Текущий тестовый Compose закреплён на release image `v2.19.8` (tag commit `3449a04f3bfa2522ec7fd60803f71b578c39f6b4`), а локальная копия upstream `develop` находится на commit `ae12f3acac626f78673b95cc57acd62ed873b089`.
 
 Значит, API schema и детали конфигурации нельзя автоматически считать соответствующими запущенному image. До расширения матрицы нужно выбрать одно из двух правил:
 
@@ -238,7 +261,16 @@ Manifest должен попадать в Allure environment/labels вместе
 2. Перенести существующий стенд в `core-sqlite-local` без изменения тестов. Выполнено.
 3. Добавить PostgreSQL и remote runner. Выполнено: `core-postgres-local` и `prod-postgres-runner` проходят существующую core suite; runner API дополнительно подтверждает default/online/heartbeat contract.
 4. Добавить короткую DB-матрицу MySQL/MariaDB. Выполнено: профили `core-mysql-local` на MySQL 8.4 и `core-mariadb-local` на MariaDB 10.11 проходят ту же core suite после миграции чистой схемы; фактические image digests попадают в Allure.
-5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL. Выполнено: `upgrade-sqlite-local` и `upgrade-postgres-local` автоматически создают данные на `v2.19.6`, переключают server image на `v2.19.7` с сохранением БД и запускают verify/core suite. Оба профиля обнаружили блокирующую несовместимость миграции `v2.20.1`: колонки `access_key.task_id` и `access_key.expire_at` остаются в схеме, но отсутствуют в модели `v2.19.7`, из-за чего access key API возвращает 400. До исправления продукта upgrade jobs должны оставаться красными.
-6. Затем выбирать между OIDC, LDAP и HA по частоте релевантных issues и доступной инфраструктуре.
+5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL. Выполнено: `upgrade-sqlite-local` и `upgrade-postgres-local` создают данные на `v2.19.7`, переключают server image на `v2.19.8` с сохранением БД и запускают verify/core suite. Оба профиля прошли в Linux CI; локально сохраняется наблюдение за гонкой финализации task output.
+6. Добавить SSH feature-профиль. Выполнено: Git clone, Ansible SSH target, неверный ключ, замена secret у существующего key ID и защита key material проверяются на двух изолированных SSH fixtures. `known_hosts` откладывается до релиза с соответствующей upstream-конфигурацией.
+7. Добавить реальное schedule execution. Reproducer реализован для cron и `run_at`; отсутствие task на `v2.19.8` подтверждено локально и в Linux CI. Следующий шаг — upstream issue/fix verification.
+8. Добавить OIDC feature-профиль. Выполнено: pinned Dex, discovery, browser login, callback, session/logout, return path, provisioning, repeat login, local-email conflict и provider failure проходят локально на `v2.19.8`.
+9. Добавить LDAP с TLS. Выполнено: pinned OpenLDAP, LDAPS service/user bind, search/mapping, provisioning/reuse, logout, invalid password и local-email conflict проходят локально на `v2.19.8`.
+10. Добавить dynamic one-off runner. Выполнено как ручной reproducer: webhook запускает runner, task завершается успешно и `finish` webhook приходит, но процесс не выходит на `v2.19.8`. Вероятная недостижимость exit condition зафиксирована в `dynamic-runner-one-off-exit-defect.md`; профиль не добавлен в зелёную CI matrix.
+11. Добавить HTTPS reverse proxy, non-root web path и OIDC. Выполнено: `feature-proxy-oidc` на PostgreSQL/Nginx/Dex проверяет routing `/semaphore`, trusted TLS API, browser callback/return path и `Secure`/`HttpOnly` session cookie.
+12. Исследовать HA. Выполнено: active-active требует Enterprise subscription и Redis-backed overlay, отсутствующий в community build. Реализация отложена до получения test key; два community nodes не используются как ложный HA stand.
+13. Добавить rotation database encryption keyring. Выполнено: `feature-encryption-rotation` на PostgreSQL создаёт secrets со старым primary, hot-reload переключает запись на новый key ID, `vault check` подтверждает mixed state, `vault rekey --backup` мигрирует ciphertext, после чего retired key удаляется и сохранённый template выполняется повторно.
+14. Добавить MFA. Выполнено: `feature-totp-local` проверяет self-enrollment, challenge после password login, invalid/valid RFC 6238 passcode, recovery, повторный enrollment и отказ уже использованного recovery code. TOTP secret и коды исключены из HTTP и Allure artifacts.
+15. Расширить TOTP browser-flow. Выполнено: отдельный UI account включает TOTP в Security settings, проверяет QR/recovery-code rendering, проходит challenge с invalid/valid passcode и восстанавливается через recovery form. Чувствительные UI artifacts при падении не публикуются.
 
 Так мы сначала защищаем типичную установку клиента и самые дорогие точки отказа, но сохраняем окружение понятным для одного инженера.

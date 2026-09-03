@@ -7,6 +7,7 @@ import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.assertions.SecretAssertions;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.SecretAccessKey;
+import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures.SshAccessKey;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
@@ -85,6 +86,29 @@ public class AccessKeySteps {
         created.path("project_id").asLong());
   }
 
+  @Step("Create an SSH key and verify API responses mask its secrets")
+  public AccessKey createAndVerifyMasked(long projectId, SshAccessKey fixture) {
+    var created =
+        Calls.body(
+            api.createAccessKeyDocument(projectId, fixture.request(projectId)),
+            201,
+            "created SSH access key document");
+    SecretAssertions.absent("SSH access-key create response", created.toString(), fixture);
+
+    long keyId = requiredLong(created, "id");
+    teardown.push(
+        "Delete Semaphore access key " + keyId,
+        () -> Calls.expectStatus(api.deleteAccessKey(projectId, keyId), 204));
+
+    verifyMasked(projectId, keyId, fixture);
+
+    return new AccessKey(
+        keyId,
+        requiredText(created, "name"),
+        requiredText(created, "type"),
+        created.path("project_id").asLong());
+  }
+
   @Step("Verify persisted access key {keyId} remains masked")
   public void verifyMasked(long projectId, long keyId, SecretAccessKey fixture) {
     var saved =
@@ -92,6 +116,23 @@ public class AccessKeySteps {
     var listed = Calls.body(api.getAccessKeysDocument(projectId), 200, "access key collection");
     SecretAssertions.absent("access-key GET response", saved.toString(), fixture);
     SecretAssertions.absent("access-key collection response", listed.toString(), fixture);
+  }
+
+  @Step("Verify persisted SSH access key {keyId} remains masked")
+  public void verifyMasked(long projectId, long keyId, SshAccessKey fixture) {
+    var saved =
+        Calls.body(
+            api.getAccessKeyDocument(projectId, keyId), 200, "saved SSH access key document");
+    var listed = Calls.body(api.getAccessKeysDocument(projectId), 200, "access key collection");
+    SecretAssertions.absent("SSH access-key GET response", saved.toString(), fixture);
+    SecretAssertions.absent("SSH access-key collection response", listed.toString(), fixture);
+  }
+
+  @Step("Rotate SSH access key {keyId} and verify API responses mask its new secrets")
+  public void rotateAndVerifyMasked(long projectId, long keyId, SshAccessKey fixture) {
+    Calls.expectStatus(
+        api.updateAccessKey(projectId, keyId, fixture.rotationRequest(projectId, keyId)), 204);
+    verifyMasked(projectId, keyId, fixture);
   }
 
   private long requiredLong(com.fasterxml.jackson.databind.JsonNode document, String field) {

@@ -1,0 +1,5 @@
+include:
+  - path:
+      - ../../compose.base.yml
+      - ../core-postgres-local/postgres.yml
+      - proxy-oidc.yml

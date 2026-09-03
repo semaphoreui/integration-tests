@@ -1,0 +1,14 @@
+---
+- name: Semaphore file inventory fixture
+  hosts: bookwright_file
+  gather_facts: false
+  tasks:
+    - name: Prove the repository inventory file selected the expected host group
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'localhost'
+          - "'bookwright_file' in group_names"
+
+    - name: Emit safe file inventory proof
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-file-inventory-ok

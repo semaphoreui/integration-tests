@@ -1,0 +1,6 @@
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_TOTP_ENABLED: "true"
+      SEMAPHORE_TOTP_ALLOW_RECOVERY: "true"
+      SEMAPHORE_TOTP_ISSUER: Semaphore

@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "30 1 * * *"
   workflow_dispatch:
+    inputs:
+      include_schedule_investigation:
+        description: Include the known-failing schedule execution reproducer
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,11 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile:
-          - core-postgres-local
-          - core-mysql-local
-          - core-mariadb-local
-          - prod-postgres-runner
+        profile: ${{ fromJSON(inputs.include_schedule_investigation && '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-git-https","feature-oidc-local","feature-proxy-oidc","feature-ldap-tls","feature-totp-local","feature-encryption-rotation","feature-schedule-timezone"]' || '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-git-https","feature-oidc-local","feature-proxy-oidc","feature-ldap-tls","feature-totp-local","feature-encryption-rotation"]') }}
     env:
       PROFILE: ${{ matrix.profile }}
     steps:
@@ -40,16 +42,26 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Install Playwright Chromium
+        if: matrix.profile == 'feature-oidc-local' || matrix.profile == 'feature-proxy-oidc' || matrix.profile == 'feature-totp-local'
+        run: ./gradlew --no-daemon playwrightInstallChromium
+
       - name: Show Docker versions
         run: |
           docker version
           docker compose version
 
       - name: Start profile
+        if: matrix.profile != 'feature-encryption-rotation'
         run: test-environment/profile up "$PROFILE"
 
-      - name: Run core API suite
+      - name: Run profile suite
+        if: matrix.profile != 'feature-encryption-rotation'
         run: test-environment/profile test "$PROFILE" --no-daemon
+
+      - name: Run encryption rotation lifecycle
+        if: matrix.profile == 'feature-encryption-rotation'
+        run: test-environment/profile encryption-rotation-test "$PROFILE"
 
       - name: Capture failure diagnostics
         if: failure()
@@ -66,6 +78,12 @@ jobs:
           path: |
             build/reports/tests/apiTest/
             build/test-results/apiTest/
+            build/reports/tests/uiTest/
+            build/test-results/uiTest/
+            build/reports/tests/totpTest/
+            build/test-results/totpTest/
+            build/reports/tests/encryptionRotationTest/
+            build/test-results/encryptionRotationTest/
             build/ci-diagnostics/
           if-no-files-found: ignore
           retention-days: 14

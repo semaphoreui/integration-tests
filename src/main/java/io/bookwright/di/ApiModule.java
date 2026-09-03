@@ -9,6 +9,8 @@ import io.bookwright.api.local.users.UsersApi;
 import io.bookwright.api.restfulbooker.health.HealthApi;
 import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.api.semaphore.auth.SemaphoreAuthApi;
+import io.bookwright.api.semaphore.backups.SemaphoreBackupsApi;
+import io.bookwright.api.semaphore.integrations.SemaphoreIntegrationsApi;
 import io.bookwright.api.semaphore.inventories.SemaphoreInventoriesApi;
 import io.bookwright.api.semaphore.projects.SemaphoreProjectsApi;
 import io.bookwright.api.semaphore.repositories.SemaphoreRepositoriesApi;
@@ -17,7 +19,10 @@ import io.bookwright.api.semaphore.schedules.SemaphoreSchedulesApi;
 import io.bookwright.api.semaphore.system.SemaphoreSystemApi;
 import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
 import io.bookwright.api.semaphore.templates.SemaphoreTemplatesApi;
+import io.bookwright.api.semaphore.tokens.SemaphoreTokensApi;
 import io.bookwright.api.semaphore.users.SemaphoreUsersApi;
+import io.bookwright.api.semaphore.variablegroups.SemaphoreVariableGroupsApi;
+import io.bookwright.api.testenvironment.runners.DynamicRunnerLauncherApi;
 import io.bookwright.config.Configs;
 import io.bookwright.config.MainConfig;
 import io.bookwright.teardown.TeardownStorage;
@@ -57,6 +62,13 @@ public class ApiModule extends AbstractModule {
   @Named("semaphore")
   Retrofit semaphoreRetrofit(MainConfig config) {
     return RetrofitFactory.create(config.apiBaseUrl());
+  }
+
+  @Provides
+  @Singleton
+  @Named("runnerFixture")
+  Retrofit runnerFixtureRetrofit(MainConfig config) {
+    return RetrofitFactory.create(config.runnerFixtureBaseUrl());
   }
 
   @Provides
@@ -111,6 +123,12 @@ public class ApiModule extends AbstractModule {
 
   @Provides
   @Singleton
+  SemaphoreBackupsApi semaphoreBackupsApi(@Named("semaphore") Retrofit retrofit) {
+    return retrofit.create(SemaphoreBackupsApi.class);
+  }
+
+  @Provides
+  @Singleton
   SemaphoreProjectsApi semaphoreProjectsApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreProjectsApi.class);
   }
@@ -141,6 +159,12 @@ public class ApiModule extends AbstractModule {
 
   @Provides
   @Singleton
+  SemaphoreIntegrationsApi semaphoreIntegrationsApi(@Named("semaphore") Retrofit retrofit) {
+    return retrofit.create(SemaphoreIntegrationsApi.class);
+  }
+
+  @Provides
+  @Singleton
   SemaphoreTemplatesApi semaphoreTemplatesApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreTemplatesApi.class);
   }
@@ -161,5 +185,23 @@ public class ApiModule extends AbstractModule {
   @Singleton
   SemaphoreUsersApi semaphoreUsersApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreUsersApi.class);
+  }
+
+  @Provides
+  @Singleton
+  SemaphoreTokensApi semaphoreTokensApi(@Named("semaphore") Retrofit retrofit) {
+    return retrofit.create(SemaphoreTokensApi.class);
+  }
+
+  @Provides
+  @Singleton
+  SemaphoreVariableGroupsApi semaphoreVariableGroupsApi(@Named("semaphore") Retrofit retrofit) {
+    return retrofit.create(SemaphoreVariableGroupsApi.class);
+  }
+
+  @Provides
+  @Singleton
+  DynamicRunnerLauncherApi dynamicRunnerLauncherApi(@Named("runnerFixture") Retrofit retrofit) {
+    return retrofit.create(DynamicRunnerLauncherApi.class);
   }
 }

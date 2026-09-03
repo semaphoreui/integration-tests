@@ -89,7 +89,17 @@ public final class SafeHttpReportingInterceptor implements Interceptor {
             elapsedMillis,
             SecretSanitizer.url(response.request().url()),
             SecretSanitizer.headers(response.headers()),
-            SecretSanitizer.body(body.string(), body.contentType()));
+            responseBody(response, body));
+  }
+
+  private static String responseBody(Response response, ResponseBody body) throws IOException {
+    // Semaphore returns the newly generated bearer secret in a generic `id` field. Generic JSON
+    // key redaction cannot recognize it safely, so omit this one sensitive response body.
+    if (response.request().method().equals("POST")
+        && response.request().url().encodedPath().endsWith("/user/tokens")) {
+      return SecretSanitizer.OMITTED_BODY;
+    }
+    return SecretSanitizer.body(body.string(), body.contentType());
   }
 
   private static String requestBody(RequestBody body) throws IOException {

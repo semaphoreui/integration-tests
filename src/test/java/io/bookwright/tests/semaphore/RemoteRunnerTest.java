@@ -15,7 +15,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 @Api
 @OwnerDanil
 @Feature("Semaphore remote runners")
-@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = ".*runner.*")
+@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "prod-postgres-runner")
 class RemoteRunnerTest {
 
   @Test

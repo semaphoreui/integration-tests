@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.bookwright.annotations.Api;
 import io.bookwright.annotations.OwnerDanil;
 import io.bookwright.api.model.semaphore.Template;
-import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreShellOutputFixtures;
 import io.bookwright.junit.Precondition;
 import io.bookwright.junit.Preconditions;
 import io.bookwright.steps.ApiSteps;
@@ -22,8 +22,9 @@ class ShellOutputTest {
   @Test
   @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
   @DisplayName("Short-lived Bash task preserves stdout and stderr")
-  void shortLivedBashTaskPreservesStdoutAndStderr(ApiSteps api, SemaphoreFixtures fixtures) {
-    var template = createShellTemplate(api, fixtures, fixtures.templates().shellOutput());
+  void shortLivedBashTaskPreservesStdoutAndStderr(
+      ApiSteps api, SemaphoreShellOutputFixtures fixtures) {
+    var template = createShellTemplate(api, fixtures, fixtures.templates().normal());
     var completedTask = api.semaphore().tasks().startAndWait(template.projectId(), template.id());
     var output =
         api.semaphore().tasks().getTaskOutputText(template.projectId(), completedTask.id());
@@ -35,21 +36,23 @@ class ShellOutputTest {
   @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
   @DisplayName("Bash task with a background child completes promptly and preserves output")
   void backgroundBashChildCompletesPromptlyAndPreservesOutput(
-      ApiSteps api, SemaphoreFixtures fixtures) {
-    var template = createShellTemplate(api, fixtures, fixtures.templates().backgroundShellOutput());
+      ApiSteps api, SemaphoreShellOutputFixtures fixtures) {
+    var template = createShellTemplate(api, fixtures, fixtures.templates().backgroundChild());
     long startedAt = System.nanoTime();
     var completedTask = api.semaphore().tasks().startAndWait(template.projectId(), template.id());
     var elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
     var output =
         api.semaphore().tasks().getTaskOutputText(template.projectId(), completedTask.id());
 
-    assertThat(elapsed).isLessThan(Duration.ofSeconds(8));
+    assertThat(elapsed).isLessThan(fixtures.expectations().maximumBackgroundCompletionTime());
     assertOutputMarkers(output, fixtures);
   }
 
   private Template createShellTemplate(
-      ApiSteps api, SemaphoreFixtures fixtures, SemaphoreFixtures.Template templateFixture) {
-    var project = api.semaphore().projects().createProject(fixtures.projects().primary());
+      ApiSteps api,
+      SemaphoreShellOutputFixtures fixtures,
+      SemaphoreShellOutputFixtures.Template templateFixture) {
+    var project = api.semaphore().projects().createProject(fixtures.project());
     var key =
         api.semaphore()
             .accessKeys()
@@ -57,8 +60,7 @@ class ShellOutputTest {
     var repository =
         api.semaphore()
             .repositories()
-            .create(
-                project.id(), fixtures.repositories().primary().request(project.id(), key.id()));
+            .create(project.id(), fixtures.repository().request(project.id(), key.id()));
     var inventory =
         api.semaphore()
             .inventories()
@@ -69,9 +71,9 @@ class ShellOutputTest {
             project.id(), templateFixture.request(project.id(), repository.id(), inventory.id()));
   }
 
-  private void assertOutputMarkers(String output, SemaphoreFixtures fixtures) {
+  private void assertOutputMarkers(String output, SemaphoreShellOutputFixtures fixtures) {
     assertThat(output)
-        .contains(fixtures.expectations().shellStdoutMarker())
-        .contains(fixtures.expectations().shellStderrMarker());
+        .contains(fixtures.expectations().stdoutMarker())
+        .contains(fixtures.expectations().stderrMarker());
   }
 }
