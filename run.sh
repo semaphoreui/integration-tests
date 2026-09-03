@@ -234,6 +234,7 @@ publish_s3() {
         -e AWS_S3_BUCKET="$AWS_S3_BUCKET" \
         -e AWS_S3_REGION="$AWS_S3_REGION" \
         -e AWS_S3_ENDPOINT="$AWS_S3_ENDPOINT" \
+        -e REPORT_PUBLIC_URL="$REPORT_PUBLIC_URL" \
         test-runner ./scripts/publish-to-s3.sh $cmd_args
 }
 

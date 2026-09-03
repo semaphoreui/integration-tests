@@ -49,6 +49,7 @@ s3_region="${AWS_S3_REGION:-us-east-1}"
 aws_access_key="${AWS_ACCESS_KEY_ID:-}"
 aws_secret_key="${AWS_SECRET_ACCESS_KEY:-}"
 s3_endpoint="${AWS_S3_ENDPOINT:-}"
+report_public_url="${REPORT_PUBLIC_URL:-}"
 skip_validate=false
 report_title="Test Results"
 
@@ -382,7 +383,14 @@ echo "✅ Results published to S3!"
 echo ""
 
 # Print access information
-if [ -n "$s3_endpoint" ]; then
+if [ -n "$report_public_url" ]; then
+    # Custom endpoint
+    echo "📊 Report URL:"
+    echo "   ${report_public_url}/${s3_path}"
+    echo ""
+    echo "📋 Main page:"
+    echo "   ${report_public_url}"
+elif [ -n "$s3_endpoint" ]; then
     # Custom endpoint
     echo "📊 Report URL:"
     echo "   ${protocol}://${s3_host}/${s3_path}/index.html"
