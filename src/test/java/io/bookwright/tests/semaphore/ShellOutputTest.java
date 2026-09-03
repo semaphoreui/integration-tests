@@ -60,8 +60,7 @@ class ShellOutputTest {
     var repository =
         api.semaphore()
             .repositories()
-            .create(
-                project.id(), fixtures.repositories().primary().request(project.id(), key.id()));
+            .create(project.id(), fixtures.repository().request(project.id(), key.id()));
     var inventory =
         api.semaphore()
             .inventories()
