@@ -105,7 +105,7 @@ Ansible code is taken only from trusted fixtures, `test-environment/fixtures/ans
 The complete set of Bookwright infrastructure self-tests and Semaphore product tests:
 
 ```bash
-JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
+JAVA_HOME=/path/to/openjdk@21 \
 ./gradlew spotlessCheck test -DSTAND=semaphore
 ```
 

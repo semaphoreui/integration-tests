@@ -156,7 +156,7 @@ fi
 # Download Allure CLI if needed
 if [ ! -x "$repo_dir/build/allure/commandline/bin/allure" ]; then
     echo "⬇️  Downloading Allure CLI..."
-    download_log=$(JAVA_HOME=/opt/homebrew/opt/openjdk@21 "$repo_dir/gradlew" --no-daemon downloadAllure 2>&1) || {
+    download_log=$("$repo_dir/gradlew" --no-daemon downloadAllure 2>&1) || {
         echo "❌ Failed to download Allure CLI" >&2
         echo "$download_log" >&2
         exit 1
