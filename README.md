@@ -267,6 +267,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `test-environment/legacy-qa-review.md` — разбор старых UI-тестов и ручных сценариев;
 - `test-environment/configuration-testing-overview.md` — матрица клиентских конфигураций и опорные профили;
 - `test-environment/smoke-report.md` — результаты проверки стенда.
+- `test-environment/known-defects.md` — сводка актуальных дефектов с приоритетами и шагами воспроизведения.
 - `test-environment/schedule-execution-defect.md` — воспроизводимый дефект cron/run-at execution.
 - `test-environment/dynamic-runner-one-off-exit-defect.md` — воспроизводимый дефект завершения one-off runner.
 - `test-environment/runner-unavailable-routing-defect.md` — fail-fast вместо recoverable queue при отсутствии matching runner.
