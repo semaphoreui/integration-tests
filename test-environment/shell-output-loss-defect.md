@@ -94,3 +94,8 @@ Upstream исправил обе части после выпуска `v2.19.12`
 `feature-shell-output`, не маскируется retry и не входит в зелёный PR/nightly gate. В ручном
 `Configuration matrix` его можно включить input-параметром
 `include_shell_output_investigation=true` и получить стандартные CI artifacts.
+
+Остальные business-сценарии проверяют собственный результат, а не timing контракта логгера:
+fixture-playbooks печатают доказательный marker до короткого финального drain window, после чего
+polling-step ждёт именно этот marker. Workaround не используется в `ShellOutputTest`, поэтому
+регрессионный сигнал продукта не маскируется.

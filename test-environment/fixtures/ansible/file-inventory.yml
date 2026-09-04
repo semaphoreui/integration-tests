@@ -12,3 +12,7 @@
     - name: Emit safe file inventory proof
       ansible.builtin.debug:
         msg: semaphore-bookwright-file-inventory-ok
+
+    - name: Keep the process alive while Semaphore drains task output
+      ansible.builtin.pause:
+        seconds: 1

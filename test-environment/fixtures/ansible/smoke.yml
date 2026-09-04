@@ -6,3 +6,7 @@
     - name: Emit deterministic smoke marker
       ansible.builtin.debug:
         msg: semaphore-bookwright-smoke-ok
+
+    - name: Keep the process alive while Semaphore drains task output
+      ansible.builtin.pause:
+        seconds: 1
