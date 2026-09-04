@@ -252,12 +252,11 @@ test-environment/profile upgrade-test upgrade-postgres-local
 
 Команда удаляет только volumes выбранного upgrade-профиля, поднимает N-1, создаёт связанный persisted fixture и выполняет задачу. Затем она пересоздаёт только server на текущем image, проверяет сохранённые project/access key/repository/inventory/template/schedule/task output, повторно выполняет старый template и запускает обычную core suite. Оба image references и digests записываются в Allure environment.
 
-Пара `v2.19.8` → `v2.19.12` является текущим upgrade gate. Предыдущая пара
-`v2.19.7` → `v2.19.8` успешно читала сохранённые
+Пара `v2.19.8` → `v2.19.12` является текущим upgrade gate и успешно прошла на SQLite и
+PostgreSQL в Linux CI 2026-09-04. Предыдущая пара `v2.19.7` → `v2.19.8` также читала сохранённые
 project/access key/repository/inventory/template/schedule/task и повторно выполняла template на
-SQLite и PostgreSQL в Linux CI 2026-08-19. На локальном Docker ранее воспроизводилась гонка:
-terminal `success` появлялся раньше полного task output, а после test cleanup server получал FK
-violation при поздней записи stage. Поэтому upgrade workflow остаётся отдельным наблюдаемым gate.
+обеих СУБД 2026-08-19. Upgrade workflow остаётся отдельным наблюдаемым gate, потому что проверяет
+миграцию сохранённого состояния между release images.
 Подробности — в `v2.19.8-regression-report.md`; исторический schema-дефект
 `v2.19.6` → `v2.19.7` сохранён в `upgrade-report.md`.
 

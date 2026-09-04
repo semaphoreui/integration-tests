@@ -108,11 +108,9 @@ Issues группируются по функциональным зонам:
 
 **Текущий статус:** release-профили переведены на `v2.19.12`
 (`012ed06d3eccadaed594c73b93b3d8a2459b576f`), upgrade-путь — на
-`v2.19.8 → v2.19.12`. Последний полностью подтверждённый Linux baseline остаётся `v2.19.8`:
-core suite прошла на SQLite, PostgreSQL, MySQL 8.4 и MariaDB 10.11, remote runner выполнял
-task-сценарии, а предыдущие upgrade-профили `v2.19.7 → v2.19.8` прошли. Следующая задача —
-подтвердить новую матрицу в CI и повторно классифицировать известные дефекты. Linux CI подтвердил,
-что `v2.19.12` теряет один из коротких потоков `stdout`/`stderr` уже после terminal `success`;
+`v2.19.8 → v2.19.12`. Новый Linux baseline полностью подтверждён 2026-09-04: зелёные все 11
+профилей configuration matrix, PR gate с SQLite/UI и upgrade-профили SQLite/PostgreSQL. При этом
+Linux CI подтвердил, что `v2.19.12` теряет один из коротких потоков `stdout`/`stderr` уже после terminal `success`;
 строгий `feature-shell-output` сохраняет воспроизведение отдельно от стабильного gate. `feature-schedule-timezone` воспроизводит
 отсутствие tasks у active cron/`run_at`, а `feature-dynamic-runner` — незавершающийся one-off
 runner после успешной задачи и `finish` webhook. Все три defect profiles исключены из стабильной CI
@@ -257,7 +255,7 @@ matrix. Отчёты находятся в `test-environment/v2.19.8-regression-
 
 **Результат:** работающий CI-пайплайн и понятный процесс разбора падений.
 
-**Текущий статус:** этап реализован. Pull-request workflow выполняет framework quality gate, API baseline и короткий Chromium UI smoke на `core-sqlite-local`; browser-набор проверяет password login, запуск API-подготовленного executable template и client-side project-name validation без отправки create request. Ежедневная matrix job запускает PostgreSQL, MySQL, MariaDB, persistent runner, SSH, приватный HTTPS Git, прямой OIDC, HTTPS/subpath OIDC, LDAPS, TOTP и encryption-rotation feature-профили; еженедельный и ручной release workflow проверяет upgrade SQLite/PostgreSQL. Jobs имеют таймауты, `fail-fast: false` для матриц, сохраняют JUnit/HTML/Allure и Compose diagnostics, а cleanup выполняется всегда. Полная ручная configuration matrix на commit `97fbb5c` успешно прошла 2026-08-24: зелёные все 10 существовавших тогда профилей, включая `feature-proxy-oidc` после изоляции локального TLS truststore от Gradle dependency resolution. Новый `feature-git-https` локально прошёл positive и negative paths и добавлен в следующую nightly matrix. Ручной investigation run отдельно подтвердил schedule defect на Linux. После каждого запуска отдельные Allure-отчёты профилей собираются reusable workflow в автономный single-file HTML artifact. GitHub Pages deployment приостановлен из-за тарифного ограничения private-репозитория.
+**Текущий статус:** этап реализован. Pull-request workflow выполняет framework quality gate, API baseline и короткий Chromium UI smoke на `core-sqlite-local`; browser-набор проверяет password login, запуск API-подготовленного executable template и client-side project-name validation без отправки create request. Ежедневная matrix job запускает PostgreSQL, MySQL, MariaDB, persistent runner, SSH, приватный HTTPS Git, прямой OIDC, HTTPS/subpath OIDC, LDAPS, TOTP и encryption-rotation feature-профили; еженедельный и ручной release workflow проверяет upgrade SQLite/PostgreSQL. Jobs имеют таймауты, `fail-fast: false` для матриц, сохраняют JUnit/HTML/Allure и Compose diagnostics, а cleanup выполняется всегда. Полная ручная configuration matrix на Semaphore `v2.19.12` успешно прошла 2026-09-04: зелёные все 11 профилей. В тот же день отдельно прошли PR gate с SQLite/UI и оба upgrade-профиля `v2.19.8 → v2.19.12`. Ручные investigation runs подтверждают известные schedule, dynamic-runner и shell-output дефекты и не входят в стабильный gate. После каждого запуска отдельные Allure-отчёты профилей собираются reusable workflow в автономный single-file HTML artifact. GitHub Pages deployment приостановлен из-за тарифного ограничения private-репозитория.
 
 ---
 

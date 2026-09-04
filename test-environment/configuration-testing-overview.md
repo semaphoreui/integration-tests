@@ -248,9 +248,9 @@ Manifest должен попадать в Allure environment/labels вместе
 
 ## Обнаруженный риск воспроизводимости
 
-Текущий тестовый Compose закреплён на release image `v2.19.12` (tag commit
-`012ed06d3eccadaed594c73b93b3d8a2459b576f`). Предыдущий полностью проверенный baseline —
-`v2.19.8` (`3449a04f3bfa2522ec7fd60803f71b578c39f6b4`).
+Текущий тестовый Compose закреплён на полностью проверенном release image `v2.19.12` (tag commit
+`012ed06d3eccadaed594c73b93b3d8a2459b576f`). Предыдущий baseline — `v2.19.8`
+(`3449a04f3bfa2522ec7fd60803f71b578c39f6b4`).
 
 Значит, API schema и детали конфигурации нельзя автоматически считать соответствующими запущенному image. До расширения матрицы нужно выбрать одно из двух правил:
 
@@ -267,8 +267,8 @@ Manifest должен попадать в Allure environment/labels вместе
 4. Добавить короткую DB-матрицу MySQL/MariaDB. Выполнено: профили `core-mysql-local` на MySQL 8.4 и `core-mariadb-local` на MariaDB 10.11 проходят ту же core suite после миграции чистой схемы; фактические image digests попадают в Allure.
 5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL. Выполнено и обновлено:
    `upgrade-sqlite-local` и `upgrade-postgres-local` создают данные на `v2.19.8`, переключают
-   server image на `v2.19.12` с сохранением БД и запускают verify/core suite. Предыдущая пара
-   `v2.19.7 → v2.19.8` прошла в Linux CI; новая пара ожидает подтверждения CI.
+   server image на `v2.19.12` с сохранением БД и запускают verify/core suite. Текущая пара прошла
+   на SQLite и PostgreSQL в Linux CI 2026-09-04; предыдущая `v2.19.7 → v2.19.8` также была зелёной.
 6. Добавить SSH feature-профиль. Выполнено: Git clone, Ansible SSH target, неверный ключ, замена secret у существующего key ID и защита key material проверяются на двух изолированных SSH fixtures. `known_hosts` откладывается до релиза с соответствующей upstream-конфигурацией.
 7. Добавить реальное schedule execution. Reproducer реализован для cron и `run_at`; отсутствие task на `v2.19.8` подтверждено локально и в Linux CI. Следующий шаг — upstream issue/fix verification.
 8. Добавить OIDC feature-профиль. Выполнено: pinned Dex, discovery, browser login, callback, session/logout, return path, provisioning, repeat login, local-email conflict и provider failure проходят локально на `v2.19.8`.

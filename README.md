@@ -2,9 +2,9 @@
 
 Тестовый проект для [Semaphore UI](https://github.com/semaphoreui/semaphore), построенный на основе [Bookwright v1.4.0](https://github.com/dantro86/bookwright/releases/tag/v1.4.0) (`b30d7e6`).
 
-Текущая release-матрица настроена на Semaphore `v2.19.12`; предыдущая полностью подтверждённая
-матрица работала на `v2.19.8`. Переход между ними проверяется отдельными SQLite/PostgreSQL
-upgrade-профилями.
+Текущая release-матрица Semaphore `v2.19.12` полностью подтверждена в Linux CI: 11 профилей
+конфигураций прошли 2026-09-04. Переход `v2.19.8 → v2.19.12` отдельно прошёл на SQLite и
+PostgreSQL.
 
 ## Стек
 
@@ -198,10 +198,10 @@ test-environment/profile down upgrade-sqlite-local
 test-environment/profile upgrade-test upgrade-postgres-local
 ```
 
-Текущий upgrade-путь — `v2.19.8 → v2.19.12`. Предыдущая пара `v2.19.7 → v2.19.8`
-успешно прошла на SQLite и PostgreSQL в Linux CI 2026-08-19. Новая пара должна подтвердить
-сохранность тех же ресурсов, access keys и task output. Локальные прогоны ранее ловили неполный
-task output после terminal status, поэтому сценарий остаётся отдельным наблюдаемым gate.
+Текущий upgrade-путь — `v2.19.8 → v2.19.12`. Он успешно подтвердил сохранность ресурсов,
+access keys и task output на SQLite и PostgreSQL в Linux CI 2026-09-04. Предыдущая пара
+`v2.19.7 → v2.19.8` прошла на обеих СУБД 2026-08-19. Upgrade остаётся отдельным наблюдаемым
+gate: он проверяет миграцию сохранённого состояния, а не только чистую установку.
 Диагностика зафиксирована в `test-environment/v2.19.8-regression-report.md`; исторический
 schema-дефект пары `v2.19.6 → v2.19.7` — в `test-environment/upgrade-report.md`.
 
