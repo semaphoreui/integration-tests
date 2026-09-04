@@ -34,6 +34,9 @@ jobs:
       - name: Run quality gate
         run: ./gradlew --no-daemon qualityGate
 
+      - name: Test Pages archive generator
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+
       - name: Upload quality reports
         if: always()
         uses: actions/upload-artifact@v7

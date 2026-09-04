@@ -83,4 +83,11 @@ printf '%s\n' \
   '</body>' \
   '</html>' >> "$index_file"
 
+python3 scripts/allure_pages.py metadata \
+  --results-dir "$downloads_dir" \
+  --profiles-dir test-environment/profiles \
+  --output "$site_dir/report-metadata.json" \
+  --title "$report_title" \
+  --run-url "$run_url"
+
 printf 'Prepared %s Allure report(s) in %s\n' "$report_count" "$site_dir"

@@ -1,0 +1,112 @@
+name: Publish Allure Pages
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - Configuration matrix
+      - Release upgrade
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: allure-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Archive and deploy report
+    if: >-
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout tested revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Download generated Allure site
+        uses: actions/download-artifact@v7
+        with:
+          name: allure-html-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          path: current-report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Checkout Pages history storage
+        uses: actions/checkout@v7
+        with:
+          path: pages-history
+          fetch-depth: 0
+
+      - name: Prepare generated history branch
+        run: |
+          if git -C pages-history fetch origin gh-pages:refs/remotes/origin/gh-pages; then
+            git -C pages-history checkout --force -B gh-pages refs/remotes/origin/gh-pages
+          else
+            git -C pages-history switch --orphan gh-pages
+          fi
+
+      - name: Add report to bounded history
+        env:
+          SOURCE_WORKFLOW: ${{ github.event.workflow_run.name }}
+          SOURCE_TITLE: ${{ github.event.workflow_run.display_title }}
+          SOURCE_EVENT: ${{ github.event.workflow_run.event }}
+          SOURCE_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          SOURCE_RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+          SOURCE_CREATED_AT: ${{ github.event.workflow_run.created_at }}
+          SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: >-
+          python3 scripts/allure_pages.py archive
+          --source-dir current-report
+          --site-dir pages-history
+          --workflow "$SOURCE_WORKFLOW"
+          --display-title "$SOURCE_TITLE"
+          --event "$SOURCE_EVENT"
+          --conclusion "$SOURCE_CONCLUSION"
+          --run-id "$SOURCE_RUN_ID"
+          --run-attempt "$SOURCE_RUN_ATTEMPT"
+          --run-number "$SOURCE_RUN_NUMBER"
+          --created-at "$SOURCE_CREATED_AT"
+          --head-sha "$SOURCE_HEAD_SHA"
+          --repository "${{ github.repository }}"
+          --run-url "$SOURCE_RUN_URL"
+          --retention-days 30
+          --max-runs 60
+
+      - name: Persist generated history
+        env:
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          git -C pages-history config user.name github-actions[bot]
+          git -C pages-history config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git -C pages-history add --all
+          git -C pages-history commit -m "Publish Allure run $SOURCE_RUN_ID"
+          git -C pages-history push origin gh-pages
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: pages-history
+          include-hidden-files: true
+
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
