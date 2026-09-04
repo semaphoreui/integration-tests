@@ -98,3 +98,4 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
 # Default entry point
 # ENTRYPOINT ["/bin/bash"]
 # CMD ["-c", "echo 'Semaphore test runner ready. Run: ./run-external-tests.sh or ./gradlew externalTest'"]
+CMD []
