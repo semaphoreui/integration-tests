@@ -1,6 +1,6 @@
 # Локальное тестовое окружение
 
-Профиль `core-sqlite-local`: минимальный стенд Semaphore UI `v2.19.8` с SQLite, локальным выполнением задач и доверенным Git fixture.
+Профиль `core-sqlite-local`: минимальный стенд Semaphore UI `v2.19.12` с SQLite, локальным выполнением задач и доверенным Git fixture.
 
 Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
 
@@ -108,7 +108,7 @@ test-environment/profile test core-mariadb-local
 
 ## Remote runner
 
-Production-like профиль использует тот же PostgreSQL overlay, включает `SEMAPHORE_USE_REMOTE_RUNNER` и запускает `semaphoreui/runner:v2.19.8` отдельным сервисом:
+Production-like профиль использует тот же PostgreSQL overlay, включает `SEMAPHORE_USE_REMOTE_RUNNER` и запускает `semaphoreui/runner:v2.19.12` отдельным сервисом:
 
 ```bash
 test-environment/profile down core-postgres-local
@@ -228,7 +228,7 @@ test-environment/profile encryption-rotation-test feature-encryption-rotation
 
 ## Обновление N-1 → current
 
-Два изолированных профиля проверяют обновление release image `v2.19.7` → `v2.19.8` с сохранением одной и той же БД:
+Два изолированных профиля проверяют обновление release image `v2.19.8` → `v2.19.12` с сохранением одной и той же БД:
 
 ```bash
 test-environment/profile upgrade-test upgrade-sqlite-local
@@ -238,7 +238,14 @@ test-environment/profile upgrade-test upgrade-postgres-local
 
 Команда удаляет только volumes выбранного upgrade-профиля, поднимает N-1, создаёт связанный persisted fixture и выполняет задачу. Затем она пересоздаёт только server на текущем image, проверяет сохранённые project/access key/repository/inventory/template/schedule/task output, повторно выполняет старый template и запускает обычную core suite. Оба image references и digests записываются в Allure environment.
 
-На паре `v2.19.7` → `v2.19.8` оба профиля успешно читают сохранённые project/access key/repository/inventory/template/schedule/task и повторно выполняют template. Оба профиля прошли в Linux CI 2026-08-19. На локальном Docker ранее воспроизводилась гонка: terminal `success` появлялся раньше полного task output, а после test cleanup server получал FK violation при поздней записи stage. Поэтому upgrade workflow остаётся отдельным наблюдаемым gate. Подробности — в `v2.19.8-regression-report.md`; исторический schema-дефект `v2.19.6` → `v2.19.7` сохранён в `upgrade-report.md`.
+Пара `v2.19.8` → `v2.19.12` является текущим upgrade gate. Предыдущая пара
+`v2.19.7` → `v2.19.8` успешно читала сохранённые
+project/access key/repository/inventory/template/schedule/task и повторно выполняла template на
+SQLite и PostgreSQL в Linux CI 2026-08-19. На локальном Docker ранее воспроизводилась гонка:
+terminal `success` появлялся раньше полного task output, а после test cleanup server получал FK
+violation при поздней записи stage. Поэтому upgrade workflow остаётся отдельным наблюдаемым gate.
+Подробности — в `v2.19.8-regression-report.md`; исторический schema-дефект
+`v2.19.6` → `v2.19.7` сохранён в `upgrade-report.md`.
 
 ## CI-профили
 

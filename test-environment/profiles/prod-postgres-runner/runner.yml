@@ -5,7 +5,7 @@ services:
       SEMAPHORE_RUNNER_REGISTRATION_TOKEN: bookwright-local-runner-registration-token
 
   runner:
-    image: semaphoreui/runner:v2.19.8
+    image: semaphoreui/runner:v2.19.12
     restart: unless-stopped
     environment:
       SEMAPHORE_WEB_ROOT: http://semaphore:3000
@@ -27,7 +27,7 @@ services:
       - fixture-repository:/fixtures/ansible:ro
 
   runner-configure:
-    image: semaphoreui/runner:v2.19.8
+    image: semaphoreui/runner:v2.19.12
     entrypoint: ["python3", "/configure-runner.py"]
     environment:
       SEMAPHORE_API_URL: http://semaphore:3000/api

@@ -5,7 +5,7 @@ services:
       SEMAPHORE_RUNNER_REGISTRATION_TOKEN: bookwright-dynamic-runner-registration-token
 
   dynamic-runner:
-    image: semaphoreui/runner:v2.19.8
+    image: semaphoreui/runner:v2.19.12
     entrypoint: ["python3", "/dynamic-runner-launcher.py"]
     restart: unless-stopped
     ports:
@@ -38,7 +38,7 @@ services:
       - ./profiles/feature-dynamic-runner/dynamic-runner-launcher.py:/dynamic-runner-launcher.py:ro
 
   dynamic-runner-configure:
-    image: semaphoreui/runner:v2.19.8
+    image: semaphoreui/runner:v2.19.12
     entrypoint: ["python3", "/configure-runner.py"]
     environment:
       SEMAPHORE_API_URL: http://semaphore:3000/api

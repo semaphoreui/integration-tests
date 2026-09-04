@@ -9,9 +9,9 @@ api_base_url: https://localhost:3443/semaphore/api/
 ui_base_url: https://localhost:3443/semaphore
 ui_ignore_https_errors: true
 tls_fixture: generated
-semaphore_version: v2.19.8
-semaphore_image: semaphoreui/semaphore:v2.19.8
-source_commit: 3449a04f3bfa2522ec7fd60803f71b578c39f6b4
+semaphore_version: v2.19.12
+semaphore_image: semaphoreui/semaphore:v2.19.12
+source_commit: 012ed06d3eccadaed594c73b93b3d8a2459b576f
 edition: community
 installation: docker-compose
 architecture: native

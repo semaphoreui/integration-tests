@@ -2,6 +2,10 @@
 
 Тестовый проект для [Semaphore UI](https://github.com/semaphoreui/semaphore), построенный на основе [Bookwright v1.4.0](https://github.com/dantro86/bookwright/releases/tag/v1.4.0) (`b30d7e6`).
 
+Текущая release-матрица настроена на Semaphore `v2.19.12`; предыдущая полностью подтверждённая
+матрица работала на `v2.19.8`. Переход между ними проверяется отдельными SQLite/PostgreSQL
+upgrade-профилями.
+
 ## Стек
 
 - Java 21;
@@ -181,7 +185,12 @@ test-environment/profile down upgrade-sqlite-local
 test-environment/profile upgrade-test upgrade-postgres-local
 ```
 
-Текущий N−1 путь — `v2.19.7 → v2.19.8`. Сохранённые данные и access keys читаются на SQLite и PostgreSQL; оба upgrade-профиля прошли в Linux CI 2026-08-19. Локальные прогоны ранее ловили неполный task output после terminal status, поэтому сценарий остаётся отдельным наблюдаемым gate. Диагностика зафиксирована в `test-environment/v2.19.8-regression-report.md`; исторический schema-дефект пары `v2.19.6 → v2.19.7` — в `test-environment/upgrade-report.md`.
+Текущий upgrade-путь — `v2.19.8 → v2.19.12`. Предыдущая пара `v2.19.7 → v2.19.8`
+успешно прошла на SQLite и PostgreSQL в Linux CI 2026-08-19. Новая пара должна подтвердить
+сохранность тех же ресурсов, access keys и task output. Локальные прогоны ранее ловили неполный
+task output после terminal status, поэтому сценарий остаётся отдельным наблюдаемым gate.
+Диагностика зафиксирована в `test-environment/v2.19.8-regression-report.md`; исторический
+schema-дефект пары `v2.19.6 → v2.19.7` — в `test-environment/upgrade-report.md`.
 
 ## CI
 
@@ -189,7 +198,7 @@ GitHub Actions разделены по стоимости и назначени�
 
 - `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite и короткий Chromium UI smoke на `core-sqlite-local`;
 - `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH, приватный HTTPS Git, прямой и HTTPS/subpath OIDC, LDAPS, TOTP и ротацию database encryption keyring;
-- `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.7 → v2.19.8` на SQLite и PostgreSQL.
+- `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.8 → v2.19.12` на SQLite и PostgreSQL.
 
 Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
 

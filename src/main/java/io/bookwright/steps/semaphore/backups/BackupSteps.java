@@ -66,7 +66,7 @@ public class BackupSteps {
     expectRejectedRestore(invalid);
   }
 
-  @Step("Restore backup with duplicate repositories accepted by Semaphore v2.19.8")
+  @Step("Restore backup while duplicate repositories are still accepted")
   public Project restoreWithDuplicateRepositoriesCurrentlyAccepted(
       JsonNode backup, String projectName) {
     ObjectNode invalid = withProjectName(backup, projectName);

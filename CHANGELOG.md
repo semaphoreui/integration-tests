@@ -4,6 +4,10 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ## [Unreleased]
 
+### Changed
+
+- Updated release profiles from Semaphore `v2.19.8` to `v2.19.12` and the SQLite/PostgreSQL upgrade path from `v2.19.7 → v2.19.8` to `v2.19.8 → v2.19.12`.
+
 ### Added
 
 - Read-only `externalTest` suite with explicit target credentials and no dependency on local task fixtures.
