@@ -48,10 +48,10 @@ class SurveyAndTaskOverridesApiTest {
     var template = api.semaphore().templates().get(project.id(), created.id());
     var task =
         api.semaphore().tasks().startAndWait(project.id(), fixture.taskRequest(template.id()));
-    api.semaphore()
-        .tasks()
-        .waitUntilTaskOutputContains(project.id(), task.id(), fixture.outputMarker());
-    var structuredOutput = api.semaphore().tasks().getTaskOutputText(project.id(), task.id());
+    var structuredOutput =
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(project.id(), task.id(), fixture.outputMarker());
     var rawOutput = api.semaphore().tasks().getTaskRawOutput(project.id(), task.id());
 
     assertThat(template.surveyVariables()).containsExactlyElementsOf(fixture.surveyVariables());

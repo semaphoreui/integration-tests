@@ -57,7 +57,10 @@ class VariableGroupApiTest {
                 fixture.templateRequest(
                     project.id(), repository.id(), inventory.id(), renamed.id()));
     var task = api.semaphore().tasks().startAndWait(project.id(), template.id());
-    var structuredOutput = api.semaphore().tasks().getTaskOutputText(project.id(), task.id());
+    var structuredOutput =
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(project.id(), task.id(), fixture.outputMarker());
     var rawOutput = api.semaphore().tasks().getTaskRawOutput(project.id(), task.id());
 
     assertThat(renamed.json()).isEqualTo(fixture.json());
