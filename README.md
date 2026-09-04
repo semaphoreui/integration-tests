@@ -167,6 +167,19 @@ test-environment/profile test feature-dynamic-runner
 
 На `v2.19.8` задача завершается успешно, но one-off runner не выходит после terminal progress. Профиль оставлен ручным красным reproducer и не входит в стабильную CI matrix. Анализ и вероятная причина находятся в `test-environment/dynamic-runner-one-off-exit-defect.md`.
 
+Короткие Bash-команды и background child проверяются отдельным shell-output профилем:
+
+```bash
+test-environment/profile down feature-dynamic-runner
+test-environment/profile up feature-shell-output
+test-environment/profile test feature-shell-output
+```
+
+На `v2.19.12` task получает `success`, но сохранённый output может потерять целиком `stdout` или
+`stderr`. Строгий тест обоих потоков оставлен ручным красным reproducer и не входит в стабильный
+PR/nightly gate. Причина, CI-доказательства и два upstream-исправления описаны в
+`test-environment/shell-output-loss-defect.md`.
+
 Экспериментальный schedule-профиль воспроизводит реальное cron/`run_at` исполнение в non-UTC timezone:
 
 ```bash
@@ -202,7 +215,10 @@ GitHub Actions разделены по стоимости и назначени�
 
 Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
 
-При ручном запуске `Configuration matrix` можно включить input `include_schedule_investigation`. Тогда к матрице только для этого run добавится известный красный `feature-schedule-timezone`, чтобы подтвердить schedule defect на Linux и собрать стандартные артефакты; ежедневный запуск остаётся зелёным gate без expected failures.
+При ручном запуске `Configuration matrix` можно включить inputs `include_schedule_investigation`
+и/или `include_shell_output_investigation`. Тогда к матрице только для этого run добавятся
+соответствующие известные красные defect-профили, чтобы подтвердить проблему на Linux и собрать
+стандартные артефакты; ежедневный запуск остаётся зелёным gate без expected failures.
 
 После каждого CI, nightly matrix или release-upgrade запуска Allure автоматически собирается в готовый HTML-сайт и загружается как artifact `allure-html-<run>-<attempt>`. Каждый Allure-отчёт собирается в single-file mode: после скачивания достаточно распаковать архив и открыть `index.html` двойным кликом — локальный HTTP-сервер не нужен. Для matrix run стартовая страница содержит отдельный отчёт каждого профиля, поэтому результаты разных СУБД не смешиваются в retries. Публикация через GitHub Pages подготовлена, но приостановлена: текущий тариф не поддерживает Pages для private-репозитория.
 

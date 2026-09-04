@@ -13,10 +13,12 @@ import io.qameta.allure.Feature;
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 @Api
 @OwnerDanil
 @Feature("Semaphore shell output")
+@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "feature-shell-output")
 class ShellOutputTest {
 
   @Test

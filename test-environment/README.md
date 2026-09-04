@@ -4,7 +4,7 @@
 
 Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
 
-Доступны пять опорных профилей и девять feature-профилей:
+Доступны пять опорных профилей и десять feature-профилей:
 
 | Профиль | СУБД | Назначение |
 |---|---|---|
@@ -22,6 +22,7 @@ Manifest профиля находится в `profiles/<profile>/profile.yaml`.
 | `feature-encryption-rotation` | PostgreSQL 14.3 | hot reload keyring, mixed-key reads, vault rekey и удаление retired key |
 | `feature-schedule-timezone` | SQLite | cron/run-at execution в `Pacific/Kiritimati`; локальный defect reproducer |
 | `feature-dynamic-runner` | SQLite | webhook-launched one-off runner; defect reproducer для незавершающегося процесса |
+| `feature-shell-output` | SQLite | строгий defect reproducer потери `stdout`/`stderr` короткой task |
 
 Общая конфигурация Semaphore и Git fixture находится в `compose.base.yml`, а профили добавляют только DB/execution-specific overlay. Все публикуют Semaphore на порту `3000`, поэтому одновременно должен быть запущен только один профиль.
 
@@ -158,6 +159,19 @@ test-environment/profile test feature-schedule-timezone
 
 На release `v2.19.8` профиль сейчас является defect reproducer: API сохраняет активные cron и one-shot schedules, но task не появляется. Он сознательно не включён в CI matrix до Linux-подтверждения и решения по upstream issue. Полный отчёт — `schedule-execution-defect.md`.
 
+## Shell output feature-профиль
+
+```bash
+test-environment/profile down feature-schedule-timezone
+test-environment/profile up feature-shell-output
+test-environment/profile test feature-shell-output
+```
+
+На release `v2.19.12` короткая успешно завершённая Bash-задача может сохранить только один из
+потоков процесса: `stdout` или `stderr`. Профиль запускает только строгий `ShellOutputTest`,
+включая background-child сценарий, и остаётся ручным красным reproducer до появления уже
+существующих upstream-исправлений в stable. Полный отчёт — `shell-output-loss-defect.md`.
+
 ## OIDC feature-профиль
 
 ```bash
@@ -259,7 +273,10 @@ violation при поздней записи stage. Поэтому upgrade workf
 
 Каждый matrix profile работает на отдельном runner, поэтому общий порт `3000` не создаёт конфликтов. После выполнения workflow сохраняет JUnit/HTML/Allure artifacts, при ошибке добавляет `profile ps` и конечный снимок Compose logs, а затем удаляет только контейнеры и volumes выбранного профиля.
 
-В ручном `Configuration matrix` input `include_schedule_investigation=true` добавляет `feature-schedule-timezone` только к выбранному run. Его ожидаемое до исправления падение не загрязняет ежедневный gate, но сохраняет Linux diagnostics для подтверждения дефекта.
+В ручном `Configuration matrix` inputs `include_schedule_investigation=true` и
+`include_shell_output_investigation=true` добавляют соответствующие defect-профили только к
+выбранному run. Их ожидаемое до исправления падение не загрязняет ежедневный gate, но сохраняет
+Linux diagnostics для подтверждения дефектов.
 
 Raw Allure results каждого job загружаются отдельным artifact. Финальный reusable workflow скачивает их, генерирует независимый HTML-отчёт для каждого профиля и загружает общий сайт как downloadable artifact. Сборка выполняется и после тестового падения, включая pull request, поэтому диагностику красного run можно открыть без GitHub Pages. Pages deployment приостановлен, пока private-репозиторий остаётся на тарифе без private Pages.
 

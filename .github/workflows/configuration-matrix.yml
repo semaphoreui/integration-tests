@@ -10,6 +10,11 @@ on:
         required: false
         type: boolean
         default: false
+      include_shell_output_investigation:
+        description: Include the known-failing shell output reproducer
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,7 +31,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: ${{ fromJSON(inputs.include_schedule_investigation && '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-git-https","feature-oidc-local","feature-proxy-oidc","feature-ldap-tls","feature-totp-local","feature-encryption-rotation","feature-schedule-timezone"]' || '["core-postgres-local","core-mysql-local","core-mariadb-local","prod-postgres-runner","feature-ssh-local","feature-git-https","feature-oidc-local","feature-proxy-oidc","feature-ldap-tls","feature-totp-local","feature-encryption-rotation"]') }}
+        profile:
+          - core-postgres-local
+          - core-mysql-local
+          - core-mariadb-local
+          - prod-postgres-runner
+          - feature-ssh-local
+          - feature-git-https
+          - feature-oidc-local
+          - feature-proxy-oidc
+          - feature-ldap-tls
+          - feature-totp-local
+          - feature-encryption-rotation
+        include: ${{ fromJSON(inputs.include_schedule_investigation && inputs.include_shell_output_investigation && '[{"profile":"feature-schedule-timezone"},{"profile":"feature-shell-output"}]' || inputs.include_schedule_investigation && '[{"profile":"feature-schedule-timezone"}]' || inputs.include_shell_output_investigation && '[{"profile":"feature-shell-output"}]' || '[]') }}
     env:
       PROFILE: ${{ matrix.profile }}
     steps:

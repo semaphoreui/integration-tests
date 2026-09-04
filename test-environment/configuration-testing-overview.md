@@ -146,6 +146,7 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 | `feature-ldap-tls` | SQLite и pinned OpenLDAP с TLS | LDAPS service/user bind, search/mapping, provisioning/reuse, logout, invalid password и local-email conflict | nightly |
 | `feature-totp-local` | SQLite, password auth и TOTP recovery | API lifecycle; browser Security/QR, challenge, invalid/valid passcode и recovery form | nightly |
 | `feature-schedule-timezone` | SQLite, `Pacific/Kiritimati`, local execution | Реальное cron/run-at исполнение и связь schedule → task | вручную; defect reproducer |
+| `feature-shell-output` | SQLite, local execution | Полнота коротких `stdout`/`stderr` и завершение inherited pipes | вручную; defect reproducer |
 | `feature-proxy-oidc` | PostgreSQL, NGINX TLS, non-root web path, Dex | Callback URL, Secure cookie, redirects, account mapping и negative paths | nightly |
 | `feature-encryption-rotation` | PostgreSQL, file keyring с двумя test-only AES keys | Hot reload primary, mixed-key reads, `vault check`, backup/rekey, удаление retired key и post-rekey execution | nightly |
 | `enterprise-ha-two-node` | два Enterprise server nodes, PostgreSQL, Redis, remote runner | Очередь, session/state consistency и отказ одного node | после получения test subscription |
@@ -153,7 +154,7 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 | `pro-docker-executor` | Pro runner с Docker executor | Изоляция task container, лимиты, cleanup, secret hydration | при наличии Pro, nightly |
 | `pro-k8s-executor` | Helm/Pro runner с Kubernetes executor | pod lifecycle, service account, pull secret и cleanup | при наличии Pro/K8s, release |
 
-Базовые пять профилей и девять feature-профилей реализованы. `feature-git-https` проверяет отдельную клиентскую границу private Git с реальным trusted TLS и Basic Auth. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls` и `feature-totp-local` дают зелёные positive и negative auth paths без размножения по всей DB-матрице; proxy-вариант дополнительно фиксирует HTTPS/subpath/cookie contract, а TOTP — passcode/recovery lifecycle. `feature-encryption-rotation` проверяет zero-downtime смену primary, rekey и безопасное удаление retired key. `feature-schedule-timezone` воспроизводит отсутствие cron/run-at tasks, а `feature-dynamic-runner` — незавершающийся one-off runner после успешной task. Оба профиля остаются ручными красными reproducer. HA исследован и корректно отложен как Enterprise-only вместо небезопасной community-имитации.
+Базовые пять профилей и десять feature-профилей реализованы. `feature-git-https` проверяет отдельную клиентскую границу private Git с реальным trusted TLS и Basic Auth. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls` и `feature-totp-local` дают зелёные positive и negative auth paths без размножения по всей DB-матрице; proxy-вариант дополнительно фиксирует HTTPS/subpath/cookie contract, а TOTP — passcode/recovery lifecycle. `feature-encryption-rotation` проверяет zero-downtime смену primary, rekey и безопасное удаление retired key. `feature-schedule-timezone` воспроизводит отсутствие cron/run-at tasks, `feature-dynamic-runner` — незавершающийся one-off runner после успешной task, а `feature-shell-output` — потерю одного из коротких process streams после `success`. Все три профиля остаются ручными красными reproducer. HA исследован и корректно отложен как Enterprise-only вместо небезопасной community-имитации.
 
 CI-распределение также реализовано: API baseline и короткий Chromium UI smoke на `core-sqlite-local` входят в pull-request gate после framework quality checks; остальные четыре базовых профиля, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local` и `feature-encryption-rotation` запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate.
 
@@ -180,6 +181,7 @@ CI-распределение также реализовано: API baseline и
 | Git over SSH, SSH inventory и key rotation | — | — | — | — | — | `feature-ssh-local` |
 | Private Git over HTTPS и Basic Auth | — | — | — | — | — | `feature-git-https` |
 | реальное cron/run-at execution | — | — | — | — | — | `feature-schedule-timezone`, defect |
+| полнота коротких stdout/stderr | defect | planned | planned | planned | planned | `feature-shell-output` |
 | constraints, schedules, cleanup, clean migration | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | secrets и отсутствие утечек | ✓ | ✓ | ✓ | ✓ | ✓ | encryption/storage расширяют набор |
 | database encryption key rotation | — | — | — | — | — | `feature-encryption-rotation` |
@@ -242,7 +244,7 @@ Manifest должен попадать в Allure environment/labels вместе
 ./test-environment/profile down core-sqlite-local
 ```
 
-Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-schedule-timezone`, `feature-dynamic-runner` и upgrade-профилей: она управляет Compose lifecycle, генерирует локальные SSH/TLS/HTTPS-Git/encryption fixtures при необходимости, ждёт readiness/setup services, запускает выбранный test lifecycle и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
+Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-schedule-timezone`, `feature-dynamic-runner`, `feature-shell-output` и upgrade-профилей: она управляет Compose lifecycle, генерирует локальные SSH/TLS/HTTPS-Git/encryption fixtures при необходимости, ждёт readiness/setup services, запускает выбранный test lifecycle и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
 
 ## Обнаруженный риск воспроизводимости
 

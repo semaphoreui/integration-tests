@@ -10,6 +10,7 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- Manual shell-output defect profile proving that `v2.19.12` can lose either short `stdout` or `stderr` after task success, with Linux CI evidence and upstream fix trace.
 - Read-only `externalTest` suite with explicit target credentials and no dependency on local task fixtures.
 - API-token lifecycle coverage for creation, prefix-only listing, bearer authentication, project access, revocation, expiry validation, and secret-safe HTTP diagnostics.
 - Supported local-user lifecycle coverage for create, update, delete, absence verification, and recreation; unsupported deactivate/reactivate semantics are documented explicitly.
