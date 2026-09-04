@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "runs": [
+    {
+      "schemaVersion": 1,
+      "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/33876966009",
+      "versions": [
+        "v2.19.12"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "v2.19.12",
+          "previousVersion": "",
+          "versionLabel": "v2.19.12",
+          "tests": 62,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 34,
+            "skipped": 28,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 73,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 73,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "Merge pull request #5 from semaphoreui/codex/allure-pages",
+      "event": "push",
+      "conclusion": "success",
+      "runId": 33876966009,
+      "runAttempt": 1,
+      "runNumber": 29,
+      "createdAt": "2026-09-04T13:14:30Z",
+      "date": "2026-09-04",
+      "headSha": "974470e892fec2a76786c4248d71f282cd6976e9",
+      "shortSha": "974470e",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/974470e892fec2a76786c4248d71f282cd6976e9",
+      "path": "reports/2026-09-04/ci/33876966009-1"
+    }
+  ]
+}
