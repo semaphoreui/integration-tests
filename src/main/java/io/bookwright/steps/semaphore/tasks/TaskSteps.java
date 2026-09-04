@@ -158,8 +158,8 @@ public class TaskSteps {
   }
 
   @Step("Wait for Semaphore task {taskId} output marker")
-  public void waitUntilTaskOutputContains(long projectId, long taskId, String marker) {
-    Waits.awaitSlow("Semaphore task %d emits expected output".formatted(taskId))
+  public String waitUntilTaskOutputContains(long projectId, long taskId, String marker) {
+    return Waits.awaitSlow("Semaphore task %d emits expected output".formatted(taskId))
         .until(() -> getTaskOutputText(projectId, taskId), output -> output.contains(marker));
   }
 

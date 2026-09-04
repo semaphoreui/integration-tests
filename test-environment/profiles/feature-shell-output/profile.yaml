@@ -1,9 +1,10 @@
-id: feature-ssh-local
-description: SQLite with Git-over-SSH and Ansible SSH target fixture
-compose_file: compose.yml
-compose_project: semaphore-test-feature-ssh-local
+id: feature-shell-output
+description: Manual reproducer for lost short stdout/stderr and inherited output pipes
+compose_file: ../../compose.yml
+compose_project: semaphore-test-feature-shell-output
 readiness_url: http://localhost:3000/api/ping
 stand: semaphore
+test_class: io.bookwright.tests.semaphore.ShellOutputTest
 semaphore_version: v2.19.12
 semaphore_image: semaphoreui/semaphore:v2.19.12
 source_commit: 012ed06d3eccadaed594c73b93b3d8a2459b576f
@@ -16,6 +17,4 @@ execution_mode: local
 execution_executor: local
 auth: password
 git_client: cmd_git
-ssh_fixture_image: semaphore-test/ssh-fixture:alpine-3.22.1
-ssh_fixture_key: generated
-capabilities: core-api,task-execution,git-ssh,inventory-ssh,ssh-key-rotation,ssh-key-security
+capabilities: task-execution,git-local,shell-output

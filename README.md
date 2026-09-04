@@ -2,6 +2,10 @@
 
 Тестовый проект для [Semaphore UI](https://github.com/semaphoreui/semaphore), построенный на основе [Bookwright v1.4.0](https://github.com/dantro86/bookwright/releases/tag/v1.4.0) (`b30d7e6`).
 
+Текущая release-матрица Semaphore `v2.19.12` полностью подтверждена в Linux CI: 11 профилей
+конфигураций прошли 2026-09-04. Переход `v2.19.8 → v2.19.12` отдельно прошёл на SQLite и
+PostgreSQL.
+
 ## Стек
 
 - Java 21;
@@ -163,6 +167,19 @@ test-environment/profile test feature-dynamic-runner
 
 На `v2.19.8` задача завершается успешно, но one-off runner не выходит после terminal progress. Профиль оставлен ручным красным reproducer и не входит в стабильную CI matrix. Анализ и вероятная причина находятся в `test-environment/dynamic-runner-one-off-exit-defect.md`.
 
+Короткие Bash-команды и background child проверяются отдельным shell-output профилем:
+
+```bash
+test-environment/profile down feature-dynamic-runner
+test-environment/profile up feature-shell-output
+test-environment/profile test feature-shell-output
+```
+
+На `v2.19.12` task получает `success`, но сохранённый output может потерять целиком `stdout` или
+`stderr`. Строгий тест обоих потоков оставлен ручным красным reproducer и не входит в стабильный
+PR/nightly gate. Причина, CI-доказательства и два upstream-исправления описаны в
+`test-environment/shell-output-loss-defect.md`.
+
 Экспериментальный schedule-профиль воспроизводит реальное cron/`run_at` исполнение в non-UTC timezone:
 
 ```bash
@@ -181,7 +198,12 @@ test-environment/profile down upgrade-sqlite-local
 test-environment/profile upgrade-test upgrade-postgres-local
 ```
 
-Текущий N−1 путь — `v2.19.7 → v2.19.8`. Сохранённые данные и access keys читаются на SQLite и PostgreSQL; оба upgrade-профиля прошли в Linux CI 2026-08-19. Локальные прогоны ранее ловили неполный task output после terminal status, поэтому сценарий остаётся отдельным наблюдаемым gate. Диагностика зафиксирована в `test-environment/v2.19.8-regression-report.md`; исторический schema-дефект пары `v2.19.6 → v2.19.7` — в `test-environment/upgrade-report.md`.
+Текущий upgrade-путь — `v2.19.8 → v2.19.12`. Он успешно подтвердил сохранность ресурсов,
+access keys и task output на SQLite и PostgreSQL в Linux CI 2026-09-04. Предыдущая пара
+`v2.19.7 → v2.19.8` прошла на обеих СУБД 2026-08-19. Upgrade остаётся отдельным наблюдаемым
+gate: он проверяет миграцию сохранённого состояния, а не только чистую установку.
+Диагностика зафиксирована в `test-environment/v2.19.8-regression-report.md`; исторический
+schema-дефект пары `v2.19.6 → v2.19.7` — в `test-environment/upgrade-report.md`.
 
 ## CI
 
@@ -189,11 +211,14 @@ GitHub Actions разделены по стоимости и назначени�
 
 - `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite и короткий Chromium UI smoke на `core-sqlite-local`;
 - `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH, приватный HTTPS Git, прямой и HTTPS/subpath OIDC, LDAPS, TOTP и ротацию database encryption keyring;
-- `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.7 → v2.19.8` на SQLite и PostgreSQL.
+- `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.8 → v2.19.12` на SQLite и PostgreSQL.
 
 Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
 
-При ручном запуске `Configuration matrix` можно включить input `include_schedule_investigation`. Тогда к матрице только для этого run добавится известный красный `feature-schedule-timezone`, чтобы подтвердить schedule defect на Linux и собрать стандартные артефакты; ежедневный запуск остаётся зелёным gate без expected failures.
+При ручном запуске `Configuration matrix` можно включить inputs `include_schedule_investigation`
+и/или `include_shell_output_investigation`. Тогда к матрице только для этого run добавятся
+соответствующие известные красные defect-профили, чтобы подтвердить проблему на Linux и собрать
+стандартные артефакты; ежедневный запуск остаётся зелёным gate без expected failures.
 
 После каждого CI, nightly matrix или release-upgrade запуска Allure автоматически собирается в готовый HTML-сайт и загружается как artifact `allure-html-<run>-<attempt>`. Каждый Allure-отчёт собирается в single-file mode: после скачивания достаточно распаковать архив и открыть `index.html` двойным кликом — локальный HTTP-сервер не нужен. Для matrix run стартовая страница содержит отдельный отчёт каждого профиля, поэтому результаты разных СУБД не смешиваются в retries. Публикация через GitHub Pages подготовлена, но приостановлена: текущий тариф не поддерживает Pages для private-репозитория.
 
@@ -267,6 +292,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `test-environment/legacy-qa-review.md` — разбор старых UI-тестов и ручных сценариев;
 - `test-environment/configuration-testing-overview.md` — матрица клиентских конфигураций и опорные профили;
 - `test-environment/smoke-report.md` — результаты проверки стенда.
+- `test-environment/known-defects.md` — сводка актуальных дефектов с приоритетами и шагами воспроизведения.
 - `test-environment/schedule-execution-defect.md` — воспроизводимый дефект cron/run-at execution.
 - `test-environment/dynamic-runner-one-off-exit-defect.md` — воспроизводимый дефект завершения one-off runner.
 - `test-environment/runner-unavailable-routing-defect.md` — fail-fast вместо recoverable queue при отсутствии matching runner.

@@ -4,9 +4,9 @@ compose_file: ../../compose.yml
 compose_project: semaphore-test
 readiness_url: http://localhost:3000/api/ping
 stand: semaphore
-semaphore_version: v2.19.8
-semaphore_image: semaphoreui/semaphore:v2.19.8
-source_commit: 3449a04f3bfa2522ec7fd60803f71b578c39f6b4
+semaphore_version: v2.19.12
+semaphore_image: semaphoreui/semaphore:v2.19.12
+source_commit: 012ed06d3eccadaed594c73b93b3d8a2459b576f
 edition: community
 installation: docker-compose
 architecture: native

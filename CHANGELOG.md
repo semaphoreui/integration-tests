@@ -4,8 +4,14 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ## [Unreleased]
 
+### Changed
+
+- Updated release profiles from Semaphore `v2.19.8` to `v2.19.12` and the SQLite/PostgreSQL upgrade path from `v2.19.7 → v2.19.8` to `v2.19.8 → v2.19.12`.
+- Profile suites run test classes sequentially while `v2.19.12` has a concurrent task-output collector race; task concurrency remains covered inside its dedicated scenario.
+
 ### Added
 
+- Manual shell-output defect profile proving that `v2.19.12` can lose either short `stdout` or `stderr` after task success, with Linux CI evidence and upstream fix trace.
 - Read-only `externalTest` suite with explicit target credentials and no dependency on local task fixtures.
 - API-token lifecycle coverage for creation, prefix-only listing, bearer authentication, project access, revocation, expiry validation, and secret-safe HTTP diagnostics.
 - Supported local-user lifecycle coverage for create, update, delete, absence verification, and recreation; unsupported deactivate/reactivate semantics are documented explicitly.
@@ -46,6 +52,11 @@ All notable changes to the Semaphore UI test automation project are documented i
 - Weekly and manually triggered SQLite/PostgreSQL release-upgrade verification.
 - CI artifacts containing JUnit, HTML, Allure, and failure diagnostics.
 - Downloadable HTML site with a separate Allure report for every executed profile.
+
+### Changed
+
+- Revalidated schedule, persistent-runner, and dynamic one-off runner defects against Semaphore
+  `v2.19.12` and updated their current-stable evidence and next actions.
 
 ## [0.1.0]
 

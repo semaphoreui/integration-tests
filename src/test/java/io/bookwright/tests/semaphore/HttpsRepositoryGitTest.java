@@ -42,10 +42,10 @@ class HttpsRepositoryGitTest {
                 project.id(),
                 fixtures.template().request(project.id(), repository.id(), inventory.id()));
     var completedTask = api.semaphore().tasks().startAndWait(project.id(), template.id());
-    api.semaphore()
-        .tasks()
-        .waitUntilTaskOutputContains(project.id(), completedTask.id(), fixtures.outputMarker());
-    var output = api.semaphore().tasks().getTaskOutputText(project.id(), completedTask.id());
+    var output =
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(project.id(), completedTask.id(), fixtures.outputMarker());
 
     assertThat(completedTask.status()).isEqualTo(fixtures.successfulTaskStatus());
     assertThat(completedTask.commitHash()).isNotBlank();

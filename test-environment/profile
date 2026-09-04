@@ -482,6 +482,7 @@ case "$action" in
         "-DSTAND=$stand" \
         "-DSEMAPHORE_PROFILE=$profile_id" \
         "-DSEMAPHORE_SCHEDULE_TIMEZONE=$selected_schedule_timezone" \
+        "-Djunit.jupiter.execution.parallel.enabled=false" \
         "-Dui.ignore.https.errors=$selected_ui_ignore_https_errors" \
         "$@"
       if [ -n "$selected_api_base_url" ]; then

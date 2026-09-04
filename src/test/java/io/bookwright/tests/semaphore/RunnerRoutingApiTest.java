@@ -77,7 +77,11 @@ class RunnerRoutingApiTest {
     api.semaphore().runners().updateRunner(runner.id(), fixture.runnerRequest(runner, false));
     var unavailable = api.semaphore().tasks().startAndWaitForFailure(project.id(), template.id());
     assertThat(unavailable.status()).isEqualTo(fixture.errorStatus());
-    assertThat(api.semaphore().tasks().getTaskOutputText(project.id(), unavailable.id()))
+    assertThat(
+            api.semaphore()
+                .tasks()
+                .waitUntilTaskOutputContains(
+                    project.id(), unavailable.id(), fixture.unavailableDiagnostic()))
         .contains(fixture.unavailableDiagnostic());
     api.semaphore().runners().updateRunner(runner.id(), fixture.runnerRequest(runner, true));
     api.semaphore().runners().waitUntilRunnerIsOnline(runner.id());
@@ -102,7 +106,11 @@ class RunnerRoutingApiTest {
     var unmatched =
         api.semaphore().tasks().startAndWaitForFailure(project.id(), unmatchedTemplate.id());
     assertThat(unmatched.status()).isEqualTo(fixture.errorStatus());
-    assertThat(api.semaphore().tasks().getTaskOutputText(project.id(), unmatched.id()))
+    assertThat(
+            api.semaphore()
+                .tasks()
+                .waitUntilTaskOutputContains(
+                    project.id(), unmatched.id(), fixture.unavailableDiagnostic()))
         .contains(fixture.unavailableDiagnostic());
   }
 }

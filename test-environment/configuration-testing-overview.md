@@ -146,6 +146,7 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 | `feature-ldap-tls` | SQLite и pinned OpenLDAP с TLS | LDAPS service/user bind, search/mapping, provisioning/reuse, logout, invalid password и local-email conflict | nightly |
 | `feature-totp-local` | SQLite, password auth и TOTP recovery | API lifecycle; browser Security/QR, challenge, invalid/valid passcode и recovery form | nightly |
 | `feature-schedule-timezone` | SQLite, `Pacific/Kiritimati`, local execution | Реальное cron/run-at исполнение и связь schedule → task | вручную; defect reproducer |
+| `feature-shell-output` | SQLite, local execution | Полнота коротких `stdout`/`stderr` и завершение inherited pipes | вручную; defect reproducer |
 | `feature-proxy-oidc` | PostgreSQL, NGINX TLS, non-root web path, Dex | Callback URL, Secure cookie, redirects, account mapping и negative paths | nightly |
 | `feature-encryption-rotation` | PostgreSQL, file keyring с двумя test-only AES keys | Hot reload primary, mixed-key reads, `vault check`, backup/rekey, удаление retired key и post-rekey execution | nightly |
 | `enterprise-ha-two-node` | два Enterprise server nodes, PostgreSQL, Redis, remote runner | Очередь, session/state consistency и отказ одного node | после получения test subscription |
@@ -153,7 +154,7 @@ Ansible остаётся базовым сквозным fixture. Для ост�
 | `pro-docker-executor` | Pro runner с Docker executor | Изоляция task container, лимиты, cleanup, secret hydration | при наличии Pro, nightly |
 | `pro-k8s-executor` | Helm/Pro runner с Kubernetes executor | pod lifecycle, service account, pull secret и cleanup | при наличии Pro/K8s, release |
 
-Базовые пять профилей и девять feature-профилей реализованы. `feature-git-https` проверяет отдельную клиентскую границу private Git с реальным trusted TLS и Basic Auth. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls` и `feature-totp-local` дают зелёные positive и negative auth paths без размножения по всей DB-матрице; proxy-вариант дополнительно фиксирует HTTPS/subpath/cookie contract, а TOTP — passcode/recovery lifecycle. `feature-encryption-rotation` проверяет zero-downtime смену primary, rekey и безопасное удаление retired key. `feature-schedule-timezone` воспроизводит отсутствие cron/run-at tasks, а `feature-dynamic-runner` — незавершающийся one-off runner после успешной task. Оба профиля остаются ручными красными reproducer. HA исследован и корректно отложен как Enterprise-only вместо небезопасной community-имитации.
+Базовые пять профилей и десять feature-профилей реализованы. `feature-git-https` проверяет отдельную клиентскую границу private Git с реальным trusted TLS и Basic Auth. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls` и `feature-totp-local` дают зелёные positive и negative auth paths без размножения по всей DB-матрице; proxy-вариант дополнительно фиксирует HTTPS/subpath/cookie contract, а TOTP — passcode/recovery lifecycle. `feature-encryption-rotation` проверяет zero-downtime смену primary, rekey и безопасное удаление retired key. `feature-schedule-timezone` воспроизводит отсутствие cron/run-at tasks, `feature-dynamic-runner` — незавершающийся one-off runner после успешной task, а `feature-shell-output` — потерю одного из коротких process streams после `success`. Все три профиля остаются ручными красными reproducer. HA исследован и корректно отложен как Enterprise-only вместо небезопасной community-имитации.
 
 CI-распределение также реализовано: API baseline и короткий Chromium UI smoke на `core-sqlite-local` входят в pull-request gate после framework quality checks; остальные четыре базовых профиля, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local` и `feature-encryption-rotation` запускаются ежедневной matrix job; два release-upgrade профиля запускаются отдельной еженедельной и ручной проверкой. Upgrade workflow сознательно не входит в PR gate.
 
@@ -180,6 +181,7 @@ CI-распределение также реализовано: API baseline и
 | Git over SSH, SSH inventory и key rotation | — | — | — | — | — | `feature-ssh-local` |
 | Private Git over HTTPS и Basic Auth | — | — | — | — | — | `feature-git-https` |
 | реальное cron/run-at execution | — | — | — | — | — | `feature-schedule-timezone`, defect |
+| полнота коротких stdout/stderr | defect | planned | planned | planned | planned | `feature-shell-output` |
 | constraints, schedules, cleanup, clean migration | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | secrets и отсутствие утечек | ✓ | ✓ | ✓ | ✓ | ✓ | encryption/storage расширяют набор |
 | database encryption key rotation | — | — | — | — | — | `feature-encryption-rotation` |
@@ -242,11 +244,13 @@ Manifest должен попадать в Allure environment/labels вместе
 ./test-environment/profile down core-sqlite-local
 ```
 
-Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-schedule-timezone`, `feature-dynamic-runner` и upgrade-профилей: она управляет Compose lifecycle, генерирует локальные SSH/TLS/HTTPS-Git/encryption fixtures при необходимости, ждёт readiness/setup services, запускает выбранный test lifecycle и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
+Команда `profile` реализована для `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-schedule-timezone`, `feature-dynamic-runner`, `feature-shell-output` и upgrade-профилей: она управляет Compose lifecycle, генерирует локальные SSH/TLS/HTTPS-Git/encryption fixtures при необходимости, ждёт readiness/setup services, запускает выбранный test lifecycle и записывает manifest/runtime metadata и image digests в Allure. Следующие профили подключаются через тот же интерфейс.
 
 ## Обнаруженный риск воспроизводимости
 
-Текущий тестовый Compose закреплён на release image `v2.19.8` (tag commit `3449a04f3bfa2522ec7fd60803f71b578c39f6b4`), а локальная копия upstream `develop` находится на commit `ae12f3acac626f78673b95cc57acd62ed873b089`.
+Текущий тестовый Compose закреплён на полностью проверенном release image `v2.19.12` (tag commit
+`012ed06d3eccadaed594c73b93b3d8a2459b576f`). Предыдущий baseline — `v2.19.8`
+(`3449a04f3bfa2522ec7fd60803f71b578c39f6b4`).
 
 Значит, API schema и детали конфигурации нельзя автоматически считать соответствующими запущенному image. До расширения матрицы нужно выбрать одно из двух правил:
 
@@ -261,7 +265,10 @@ Manifest должен попадать в Allure environment/labels вместе
 2. Перенести существующий стенд в `core-sqlite-local` без изменения тестов. Выполнено.
 3. Добавить PostgreSQL и remote runner. Выполнено: `core-postgres-local` и `prod-postgres-runner` проходят существующую core suite; runner API дополнительно подтверждает default/online/heartbeat contract.
 4. Добавить короткую DB-матрицу MySQL/MariaDB. Выполнено: профили `core-mysql-local` на MySQL 8.4 и `core-mariadb-local` на MariaDB 10.11 проходят ту же core suite после миграции чистой схемы; фактические image digests попадают в Allure.
-5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL. Выполнено: `upgrade-sqlite-local` и `upgrade-postgres-local` создают данные на `v2.19.7`, переключают server image на `v2.19.8` с сохранением БД и запускают verify/core suite. Оба профиля прошли в Linux CI; локально сохраняется наблюдение за гонкой финализации task output.
+5. Реализовать N-1 → current upgrade для SQLite и PostgreSQL. Выполнено и обновлено:
+   `upgrade-sqlite-local` и `upgrade-postgres-local` создают данные на `v2.19.8`, переключают
+   server image на `v2.19.12` с сохранением БД и запускают verify/core suite. Текущая пара прошла
+   на SQLite и PostgreSQL в Linux CI 2026-09-04; предыдущая `v2.19.7 → v2.19.8` также была зелёной.
 6. Добавить SSH feature-профиль. Выполнено: Git clone, Ansible SSH target, неверный ключ, замена secret у существующего key ID и защита key material проверяются на двух изолированных SSH fixtures. `known_hosts` откладывается до релиза с соответствующей upstream-конфигурацией.
 7. Добавить реальное schedule execution. Reproducer реализован для cron и `run_at`; отсутствие task на `v2.19.8` подтверждено локально и в Linux CI. Следующий шаг — upstream issue/fix verification.
 8. Добавить OIDC feature-профиль. Выполнено: pinned Dex, discovery, browser login, callback, session/logout, return path, provisioning, repeat login, local-email conflict и provider failure проходят локально на `v2.19.8`.
