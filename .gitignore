@@ -11,6 +11,8 @@
 # Java / Gradle test framework
 .gradle/
 build/
+__pycache__/
+*.py[cod]
 .idea/
 *.iml
 allure-results/
