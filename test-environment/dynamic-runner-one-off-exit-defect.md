@@ -2,19 +2,20 @@
 
 ## Summary
 
-Semaphore UI `v2.19.8` successfully launches a dynamic runner through the configured webhook. The runner receives and completes exactly one task, reports the terminal `success` status, and the server sends the `finish` webhook. Despite `SEMAPHORE_RUNNER_ONE_OFF=true`, the runner process remains alive.
+Semaphore UI `v2.19.12` successfully launches a dynamic runner through the configured webhook. The runner receives and completes exactly one task, reports the terminal `success` status, and the server sends the `finish` webhook. Despite `SEMAPHORE_RUNNER_ONE_OFF=true`, the runner process remains alive.
 
 The behavior is reproduced by the isolated `feature-dynamic-runner` profile. This profile is intentionally excluded from the normal CI matrix until the product defect is fixed.
 
 ## Environment
 
-- Semaphore server: `semaphoreui/semaphore:v2.19.8`
-- Semaphore runner: `semaphoreui/runner:v2.19.8`
-- release source commit: `3449a04f3bfa2522ec7fd60803f71b578c39f6b4`
+- Semaphore server: `semaphoreui/semaphore:v2.19.12`
+- Semaphore runner: `semaphoreui/runner:v2.19.12`
+- release source commit: `012ed06d3eccadaed594c73b93b3d8a2459b576f`
 - database: SQLite
 - runner executor: local
 - runner mode: webhook-launched, one-off
-- reproduced: 2026-08-19
+- initially reproduced: 2026-08-19 on `v2.19.8`
+- reconfirmed: 2026-09-04 on `v2.19.12`
 
 ## Preconditions
 
@@ -76,7 +77,7 @@ The container reports `SEMAPHORE_RUNNER_ONE_OFF=true`.
 
 ## Probable cause
 
-The defect is present in the `v2.19.8` implementation of `services/runners/job_pool.go` and is still visible on upstream `develop` commit `ae12f3acac626f78673b95cc57acd62ed873b089`.
+The defect is present in the `v2.19.12` implementation of `services/runners/job_pool.go` and is still visible on upstream `develop` commit `e5ad68daa3748be3555500150a428d3a34313b21`.
 
 The polling loop calls `sendProgress()` before evaluating the one-off exit condition:
 

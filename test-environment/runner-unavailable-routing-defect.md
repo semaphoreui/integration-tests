@@ -2,7 +2,7 @@
 
 ## Summary
 
-Semaphore UI `v2.19.8` treats two remote-runner conditions differently:
+Semaphore UI `v2.19.12` treats two remote-runner conditions differently:
 
 - a matching online runner at capacity re-queues the task in `waiting`;
 - no active runner with the required tag immediately moves the task to terminal `error` with
@@ -14,12 +14,14 @@ manual cases TC-027 and TC-028, where the task should remain waiting and later b
 
 ## Environment
 
-- Semaphore server: `semaphoreui/semaphore:v2.19.8`;
-- Semaphore runner: `semaphoreui/runner:v2.19.8`;
+- Semaphore server: `semaphoreui/semaphore:v2.19.12`;
+- Semaphore runner: `semaphoreui/runner:v2.19.12`;
 - database: PostgreSQL 14.3;
 - execution: persistent remote runner;
 - profile: `prod-postgres-runner`;
-- reproduced: 2026-08-21.
+- initially reproduced: 2026-08-21 on `v2.19.8`;
+- reconfirmed: 2026-09-04 in Linux CI on `v2.19.12`,
+  [run 33871024329](https://github.com/semaphoreui/integration-tests/actions/runs/33871024329).
 
 ## Automated reproduction
 

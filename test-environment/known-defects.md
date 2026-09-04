@@ -3,14 +3,14 @@
 **Last reviewed:** 2026-09-04  
 **Core runtime baseline:** `semaphoreui/semaphore:v2.19.12`
 
-**Runner and scheduler defect baseline:** `semaphoreui/semaphore:v2.19.8`
+**Runner and scheduler defect baseline:** `semaphoreui/semaphore:v2.19.12`
 
 **Current stable release checked:** [`v2.19.12`](https://github.com/semaphoreui/semaphore/releases/tag/v2.19.12)
 
 This document consolidates product defects found by the integration test suite. Runtime behaviour was
-initially reproduced on `v2.19.8`. The core suite was rerun on `v2.19.12` in Linux CI on 2026-09-04;
-runner- and scheduler-specific defects still require an equivalent current-stable run unless stated
-otherwise. Affected source paths were also compared with the `v2.19.12` tag and current `develop`.
+initially reproduced on `v2.19.8`. The core and persistent-runner suites were rerun on `v2.19.12` in
+Linux CI on 2026-09-04; the schedule and dynamic one-off runner reproducers were rerun locally on the
+same release. Affected source paths were also compared with the `v2.19.12` tag and current `develop`.
 
 The defects are API, scheduler and runner failures rather than rendering problems. Screenshots would
 not add useful evidence; request/response contracts, process state and server log excerpts are included
@@ -22,10 +22,10 @@ instead. All reproducers use generated fixtures and do not expose credentials or
 |---|---|---:|---|---|
 | BUG-001 | Project deletion succeeds while a task is still running | High | Projects / task execution | Confirmed in Linux CI on `v2.19.12` |
 | BUG-002 | File inventory creation accepts a path outside its repository | High | Inventory API / path validation | Confirmed in Linux CI on `v2.19.12` |
-| BUG-003 | Active schedules do not create tasks | High | Scheduler | Confirmed locally and in Linux CI on `v2.19.8`; rerun on current stable required |
-| BUG-004 | Remote runner loses secret survey variables | High | Remote runner dispatch / secrets | Confirmed on `v2.19.8`; fixed on `develop`, not in `v2.19.12` |
-| BUG-005 | Tasks fail when no matching runner is temporarily available | High | Runner routing / task queue | Reproduced on `v2.19.8`; product-contract decision required |
-| BUG-006 | One-off runner does not exit after a completed task | Medium | Runner lifecycle | Confirmed on `v2.19.8`; defective condition remains in `v2.19.12` and `develop` |
+| BUG-003 | Active schedules do not create tasks | High | Scheduler | Confirmed locally on `v2.19.12`; both `run_at` and cron fail |
+| BUG-004 | Remote runner loses secret survey variables | High | Remote runner dispatch / secrets | Confirmed in Linux CI on `v2.19.12`; fixed on `develop` |
+| BUG-005 | Tasks fail when no matching runner is temporarily available | High | Runner routing / task queue | Confirmed in Linux CI on `v2.19.12`; product-contract decision required |
+| BUG-006 | One-off runner does not exit after a completed task | Medium | Runner lifecycle | Confirmed locally on `v2.19.12`; defective condition remains on `develop` |
 | BUG-007 | Project restore accepts duplicate resource names | Medium | Project backup / restore | Confirmed in Linux CI on `v2.19.12`; off-by-one remains on `develop` |
 | BUG-008 | Survey enum accepts a default outside its allowed values | Medium | Template survey validation | Confirmed on `v2.19.8`; fixed on `develop`, not in `v2.19.12` |
 | BUG-009 | Successful short task loses `stdout` or `stderr` | High | Task execution / output collection | Confirmed in Linux CI on `v2.19.12`; fixed on `develop` |
@@ -147,6 +147,9 @@ test-environment/profile up feature-schedule-timezone
 test-environment/profile test feature-schedule-timezone
 ```
 
+**Current-stable evidence:** both the one-shot and cron scenarios timed out locally on
+`v2.19.12` on 2026-09-04; no task linked to either active schedule was created.
+
 **Detailed evidence:** [schedule-execution-defect.md](schedule-execution-defect.md)
 
 ## BUG-004 — Remote runner loses secret survey variables
@@ -183,6 +186,10 @@ test-environment/profile up prod-postgres-runner
 test-environment/profile test prod-postgres-runner \
   --tests io.bookwright.tests.semaphore.SurveyAndTaskOverridesApiTest.remoteRunnerLosesSurveySecret
 ```
+
+**Current-stable evidence:** the expected-defect canary passed in the complete
+[`v2.19.12` configuration matrix](https://github.com/semaphoreui/integration-tests/actions/runs/33871024329)
+on 2026-09-04 by observing the undefined survey variable without exposing its value.
 
 **Upstream status:** fixed by [PR #4086](https://github.com/semaphoreui/semaphore/pull/4086), commit
 [`081425d2`](https://github.com/semaphoreui/semaphore/commit/081425d2bc20d5fe41def47ec6a429e2e43cf715),
@@ -227,6 +234,12 @@ test-environment/profile up prod-postgres-runner
 test-environment/profile test prod-postgres-runner \
   --tests io.bookwright.tests.semaphore.RunnerRoutingApiTest
 ```
+
+**Current-stable evidence:** the complete
+[`v2.19.12` configuration matrix](https://github.com/semaphoreui/integration-tests/actions/runs/33871024329)
+passed the capacity, disabled-runner and missing-tag scenarios on 2026-09-04. The latter two still
+produce terminal `error`; this remains a defect candidate until the intended queue contract is
+confirmed.
 
 **Status note:** the behaviour is reproducible and the relevant code is unchanged in `v2.19.12` and
 `develop`, but the product team should confirm that recoverable waiting is the intended contract for
@@ -273,6 +286,10 @@ PID  COMMAND
 test-environment/profile up feature-dynamic-runner
 test-environment/profile test feature-dynamic-runner
 ```
+
+**Current-stable evidence:** the strict lifecycle scenario timed out locally on `v2.19.12` on
+2026-09-04 after task success and the `finish` webhook because `runner_exited` never appeared. The
+runner container remained healthy until profile cleanup.
 
 **Source evidence:** `sendProgress()` deletes the finished job before the one-off exit condition checks
 `runningJobsCount() > 0`. The same condition remains in `v2.19.12` and current `develop`.
@@ -422,10 +439,12 @@ reach a stable release. It is intentionally excluded from the green PR and night
   product defect because no explicit product contract was identified. See
   [password-login-brute-force-protection-gap.md](password-login-brute-force-protection-gap.md).
 
-## Recommended revalidation order
+## Recommended next actions
 
-1. Rerun BUG-003 on the current stable schedule profile.
-2. Rerun the production-like remote runner profile for BUG-004 and BUG-005.
-3. Run BUG-006 manually because its expected failure intentionally leaves the one-off process alive.
-4. Test `develop` for BUG-004, BUG-008 and BUG-009 and convert their canaries to positive regression checks.
-5. Preserve Allure results and sanitized server logs as attachments when upstream issues are created.
+1. Test `develop` for BUG-004, BUG-008 and BUG-009 and prepare positive regression checks for the
+   release that first contains their fixes.
+2. Confirm the intended unavailable-runner queue contract with the product team before filing
+   BUG-005 as an unconditional product defect.
+3. Create or link upstream issues for BUG-001, BUG-002, BUG-003, BUG-006 and BUG-007, preserving
+   Allure results and sanitized server logs as evidence.
+4. Rerun every open canary when the next stable image replaces `v2.19.12`.

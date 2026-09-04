@@ -7,15 +7,16 @@ created when either its cron occurrence or one-shot `run_at` time is reached.
 
 ## Environment
 
-- Semaphore UI `v2.19.8` (`3449a04f3bfa2522ec7fd60803f71b578c39f6b4`);
-- image `semaphoreui/semaphore:v2.19.8`;
+- Semaphore UI `v2.19.12` (`012ed06d3eccadaed594c73b93b3d8a2459b576f`);
+- image `semaphoreui/semaphore:v2.19.12`;
 - Community Edition, SQLite, local task execution;
 - `SEMAPHORE_SCHEDULE_TIMEZONE=Pacific/Kiritimati`;
 - Docker Desktop on macOS arm64;
 - profile `feature-schedule-timezone`.
 
-This is currently a locally confirmed defect candidate. A Linux CI run is still required before
-classifying it as platform-independent.
+Both variants were reconfirmed locally on the current stable release on 2026-09-04. Earlier Linux CI
+evidence exists for `v2.19.8`; a current-stable Linux investigation run is still useful as an
+additional platform check but is no longer needed to establish that the release is affected.
 
 For Linux confirmation, run the `Configuration matrix` workflow manually with
 `include_schedule_investigation=true`. The schedule profile is opt-in and is not part of the daily
@@ -58,7 +59,9 @@ test-environment/profile test feature-schedule-timezone
 - Schedule is persisted and returned active immediately after creation.
 - Project task collection remains empty: no task with the schedule ID is created.
 - The server log contains no task creation attempt or scheduler error.
-- Reproduced twice for cron and once for `run_at` on 2026-08-19.
+- Reproduced twice for cron and once for `run_at` on `v2.19.8` on 2026-08-19.
+- Reproduced once for cron and once for `run_at` on `v2.19.12` on 2026-09-04; both automated
+  scenarios reached their task-creation timeout.
 
 ## Expected result
 
@@ -68,8 +71,7 @@ task parameters. The task executes the selected template and reaches `success`.
 ## Impact
 
 Schedules appear correctly configured in the API/UI but do not run automation. This affects a
-core unattended-execution use case and should be treated as high severity after Linux
-confirmation.
+core unattended-execution use case and is treated as high severity.
 
 ## Suspected component
 
