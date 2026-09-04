@@ -12,7 +12,3 @@
     - name: Publish safe build-version marker
       ansible.builtin.debug:
         msg: "semaphore-bookwright-build-version={{ lookup('ansible.builtin.env', 'SEMAPHORE_TASK_TARGET_VERSION') }}"
-
-    - name: Keep the process alive while Semaphore drains task output
-      ansible.builtin.pause:
-        seconds: 1

@@ -11,7 +11,3 @@
     - name: Report remote SSH proof
       ansible.builtin.debug:
         msg: "{{ ssh_probe.stdout }}"
-
-    - name: Keep the process alive while Semaphore drains task output
-      ansible.builtin.pause:
-        seconds: 1

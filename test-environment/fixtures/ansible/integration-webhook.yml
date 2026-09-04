@@ -12,7 +12,3 @@
     - name: Emit safe webhook proof
       ansible.builtin.debug:
         msg: semaphore-bookwright-webhook-ok
-
-    - name: Keep the process alive while Semaphore drains task output
-      ansible.builtin.pause:
-        seconds: 1

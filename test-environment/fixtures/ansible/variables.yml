@@ -15,7 +15,3 @@
     - name: Emit safe Variable Group proof
       ansible.builtin.debug:
         msg: semaphore-bookwright-variable-group-ok
-
-    - name: Keep the process alive while Semaphore drains task output
-      ansible.builtin.pause:
-        seconds: 1

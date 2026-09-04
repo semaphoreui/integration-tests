@@ -95,7 +95,8 @@ Upstream исправил обе части после выпуска `v2.19.12`
 `Configuration matrix` его можно включить input-параметром
 `include_shell_output_investigation=true` и получить стандартные CI artifacts.
 
-Остальные business-сценарии проверяют собственный результат, а не timing контракта логгера:
-fixture-playbooks печатают доказательный marker до короткого финального drain window, после чего
-polling-step ждёт именно этот marker. Workaround не используется в `ShellOutputTest`, поэтому
-регрессионный сигнал продукта не маскируется.
+Остальные profile suites выполняют JUnit-классы последовательно и ждут собственный доказательный
+marker. Это снижает давление на дефектный конкурентный output collector `v2.19.12`, не добавляя
+случайные sleeps или retries всего теста. Реальная конкуренция Semaphore tasks по-прежнему
+проверяется внутри `ProjectConcurrencyApiTest`. Workaround не используется в `ShellOutputTest`,
+поэтому регрессионный сигнал продукта не маскируется.

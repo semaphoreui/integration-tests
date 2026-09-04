@@ -119,6 +119,7 @@ fun Test.configureBookwrightTestRuntime() {
         "SEMAPHORE_SCHEDULE_TIMEZONE",
         "SEMAPHORE_ENCRYPTION_ROTATION_PHASE",
         "SEMAPHORE_UPGRADE_PHASE",
+        "junit.jupiter.execution.parallel.enabled",
         "DB_PASSWORD",
         "SSH_PASSWORD",
         "test.seed",

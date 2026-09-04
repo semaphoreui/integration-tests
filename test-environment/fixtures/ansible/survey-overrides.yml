@@ -29,12 +29,6 @@
       tags:
         - survey
 
-    - name: Keep the process alive while Semaphore drains task output
-      ansible.builtin.pause:
-        seconds: 1
-      tags:
-        - survey
-
     - name: Fail if launch skip-tags override is ignored
       ansible.builtin.fail:
         msg: suppressed task unexpectedly executed

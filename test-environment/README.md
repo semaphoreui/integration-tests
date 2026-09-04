@@ -273,6 +273,11 @@ violation при поздней записи stage. Поэтому upgrade workf
 
 Каждый matrix profile работает на отдельном runner, поэтому общий порт `3000` не создаёт конфликтов. После выполнения workflow сохраняет JUnit/HTML/Allure artifacts, при ошибке добавляет `profile ps` и конечный снимок Compose logs, а затем удаляет только контейнеры и volumes выбранного профиля.
 
+На stable `v2.19.12` команда `profile test` выполняет JUnit-классы последовательно из-за
+подтверждённой гонки product output collector. Это не отключает проверку конкурентного выполнения:
+`ProjectConcurrencyApiTest` сам запускает несколько Semaphore tasks и проверяет queue admission.
+Строгий конкурентный/short-output контракт изолирован в `feature-shell-output`.
+
 В ручном `Configuration matrix` inputs `include_schedule_investigation=true` и
 `include_shell_output_investigation=true` добавляют соответствующие defect-профили только к
 выбранному run. Их ожидаемое до исправления падение не загрязняет ежедневный gate, но сохраняет
