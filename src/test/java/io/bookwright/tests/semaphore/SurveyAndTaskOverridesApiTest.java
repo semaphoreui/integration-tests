@@ -95,7 +95,10 @@ class SurveyAndTaskOverridesApiTest {
         api.semaphore()
             .tasks()
             .startAndWaitForFailure(project.id(), fixture.taskRequest(template.id()));
-    var output = api.semaphore().tasks().getTaskOutputText(project.id(), failed.id());
+    var output =
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(project.id(), failed.id(), fixture.taskSecret().name());
 
     assertThat(output).contains(fixture.taskSecret().name(), "is undefined");
     SecretAssertions.absent(

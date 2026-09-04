@@ -87,11 +87,11 @@ class RepositoryGitTest {
     assertThat(repository.gitBranch())
         .isEqualTo(fixtures.repositories().missingBranch().gitBranch());
     assertThat(failedTask.status()).isEqualTo(fixtures.expectations().failedTaskStatus());
-    api.semaphore()
-        .tasks()
-        .waitUntilTaskOutputContains(
-            project.id(), failedTask.id(), fixtures.expectations().cloneFailureMarker());
-    assertThat(api.semaphore().tasks().getTaskOutputText(project.id(), failedTask.id()))
+    assertThat(
+            api.semaphore()
+                .tasks()
+                .waitUntilTaskOutputContains(
+                    project.id(), failedTask.id(), fixtures.expectations().cloneFailureMarker()))
         .containsIgnoringCase(fixtures.expectations().cloneFailureMarker());
   }
 
@@ -124,7 +124,11 @@ class RepositoryGitTest {
                     .primary()
                     .request(project.id(), repository.id(), inventory.id()));
     var failedTask = api.semaphore().tasks().startAndWaitForFailure(project.id(), template.id());
-    var output = api.semaphore().tasks().getTaskOutputText(project.id(), failedTask.id());
+    var output =
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(
+                project.id(), failedTask.id(), fixtures.expectations().cloneFailureMarker());
 
     assertThat(failedTask.status()).isEqualTo(fixtures.expectations().failedTaskStatus());
     assertThat(output).containsIgnoringCase(fixtures.expectations().cloneFailureMarker());

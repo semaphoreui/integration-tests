@@ -79,7 +79,11 @@ class SshConnectivityTest {
                 project.id(),
                 fixtures.template().request(project.id(), repository.id(), inventory.id()));
     var failedTask = api.semaphore().tasks().startAndWaitForFailure(project.id(), template.id());
-    var structuredOutput = api.semaphore().tasks().getTaskOutputText(project.id(), failedTask.id());
+    var structuredOutput =
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(
+                project.id(), failedTask.id(), fixtures.cloneFailureMarker());
     var rawOutput = api.semaphore().tasks().getTaskRawOutput(project.id(), failedTask.id());
 
     assertThat(failedTask.status()).isEqualTo(fixtures.failedTaskStatus());
@@ -111,7 +115,11 @@ class SshConnectivityTest {
                 fixtures.template().request(project.id(), repository.id(), inventory.id()));
 
     var failedTask = api.semaphore().tasks().startAndWaitForFailure(project.id(), template.id());
-    var failedOutput = api.semaphore().tasks().getTaskOutputText(project.id(), failedTask.id());
+    var failedOutput =
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(
+                project.id(), failedTask.id(), fixtures.cloneFailureMarker());
     assertThat(failedOutput).containsIgnoringCase(fixtures.cloneFailureMarker());
     SecretAssertions.absent("pre-rotation task output", failedOutput, fixtures.validKey());
 
