@@ -4,6 +4,60 @@
     {
       "schemaVersion": 1,
       "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/33878022377",
+      "versions": [
+        "v2.19.12"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "v2.19.12",
+          "previousVersion": "",
+          "versionLabel": "v2.19.12",
+          "tests": 62,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 34,
+            "skipped": 28,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 73,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 73,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "Merge pull request #9 from semaphoreui/feat/docker-runner",
+      "event": "push",
+      "conclusion": "success",
+      "runId": 33878022377,
+      "runAttempt": 1,
+      "runNumber": 31,
+      "createdAt": "2026-09-04T13:25:56Z",
+      "date": "2026-09-04",
+      "headSha": "436efc8555df39b9b5232ff87cc9697602df8198",
+      "shortSha": "436efc8",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/436efc8555df39b9b5232ff87cc9697602df8198",
+      "path": "reports/2026-09-04/ci/33878022377-1"
+    },
+    {
+      "schemaVersion": 1,
+      "title": "Semaphore CI",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/33876966009",
       "versions": [
         "v2.19.12"
