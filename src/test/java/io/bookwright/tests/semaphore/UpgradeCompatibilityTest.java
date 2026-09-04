@@ -48,7 +48,11 @@ class UpgradeCompatibilityTest {
             .create(project.id(), fixture.schedule().request(project.id(), template.id()));
 
     assertThat(completedTask.status()).isEqualTo("success");
-    assertThat(api.semaphore().tasks().getTaskOutputText(project.id(), completedTask.id()))
+    assertThat(
+            api.semaphore()
+                .tasks()
+                .waitUntilTaskOutputContains(
+                    project.id(), completedTask.id(), fixture.outputMarker()))
         .contains(fixture.outputMarker());
     assertThat(schedule.templateId()).isEqualTo(template.id());
 
@@ -77,7 +81,11 @@ class UpgradeCompatibilityTest {
     assertThat(template.repositoryId()).isEqualTo(repository.id());
     assertThat(template.inventoryId()).isEqualTo(inventory.id());
     assertThat(schedule.templateId()).isEqualTo(template.id());
-    assertThat(api.semaphore().tasks().getTaskOutputText(project.id(), persistedTask.id()))
+    assertThat(
+            api.semaphore()
+                .tasks()
+                .waitUntilTaskOutputContains(
+                    project.id(), persistedTask.id(), fixture.outputMarker()))
         .contains(fixture.outputMarker());
 
     var key = api.semaphore().accessKeys().requireByName(project.id(), fixture.accessKey().name());
@@ -86,7 +94,10 @@ class UpgradeCompatibilityTest {
     assertThat(inventory.sshKeyId()).isEqualTo(key.id());
 
     var rerunTask = api.semaphore().tasks().startAndWait(project.id(), template.id());
-    assertThat(api.semaphore().tasks().getTaskOutputText(project.id(), rerunTask.id()))
+    assertThat(
+            api.semaphore()
+                .tasks()
+                .waitUntilTaskOutputContains(project.id(), rerunTask.id(), fixture.outputMarker()))
         .contains(fixture.outputMarker());
   }
 }

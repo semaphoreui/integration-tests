@@ -42,7 +42,9 @@ class SshConnectivityTest {
                 fixtures.template().request(project.id(), repository.id(), inventory.id()));
     var completedTask = api.semaphore().tasks().startAndWait(project.id(), template.id());
     var structuredOutput =
-        api.semaphore().tasks().getTaskOutputText(project.id(), completedTask.id());
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(project.id(), completedTask.id(), fixtures.outputMarker());
     var rawOutput = api.semaphore().tasks().getTaskRawOutput(project.id(), completedTask.id());
 
     assertThat(key.type()).isEqualTo(fixtures.validKey().type());
@@ -119,7 +121,9 @@ class SshConnectivityTest {
 
     var completedTask = api.semaphore().tasks().startAndWait(project.id(), template.id());
     var structuredOutput =
-        api.semaphore().tasks().getTaskOutputText(project.id(), completedTask.id());
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(project.id(), completedTask.id(), fixtures.outputMarker());
     var rawOutput = api.semaphore().tasks().getTaskRawOutput(project.id(), completedTask.id());
 
     assertThat(completedTask.status()).isEqualTo(fixtures.successfulTaskStatus());

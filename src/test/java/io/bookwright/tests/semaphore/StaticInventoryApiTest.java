@@ -53,11 +53,19 @@ class StaticInventoryApiTest {
                 project.id(),
                 fixtures.yamlTemplate().request(project.id(), repository.id(), yamlInventory.id()));
     var yamlTask = api.semaphore().tasks().startAndWait(project.id(), yamlTemplate.id());
+    var iniOutput =
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(project.id(), iniTask.id(), fixtures.outputMarker());
+    var yamlOutput =
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(project.id(), yamlTask.id(), fixtures.outputMarker());
 
-    assertThat(api.semaphore().tasks().getTaskOutputText(project.id(), iniTask.id()))
+    assertThat(iniOutput)
         .contains(fixtures.outputMarker(), fixtures.iniInventory().selectedHost())
         .doesNotContain(fixtures.iniInventory().excludedHost());
-    assertThat(api.semaphore().tasks().getTaskOutputText(project.id(), yamlTask.id()))
+    assertThat(yamlOutput)
         .contains(fixtures.outputMarker(), fixtures.yamlInventory().selectedHost())
         .doesNotContain(fixtures.yamlInventory().excludedHost());
     assertThat(iniInventory.inventory()).isEqualTo(fixtures.iniInventory().content());

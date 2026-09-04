@@ -79,8 +79,15 @@ class TerraformWorkspaceInventoryApiTest {
             .startAndWait(project.id(), fixtures.tofu().template().planRequest(tofuTemplate.id()));
 
     var terraformOutput =
-        api.semaphore().tasks().getTaskOutputText(project.id(), terraformTask.id());
-    var tofuOutput = api.semaphore().tasks().getTaskOutputText(project.id(), tofuTask.id());
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(
+                project.id(), terraformTask.id(), fixtures.variableGroup().outputMarker());
+    var tofuOutput =
+        api.semaphore()
+            .tasks()
+            .waitUntilTaskOutputContains(
+                project.id(), tofuTask.id(), fixtures.variableGroup().outputMarker());
     var terraformRawOutput =
         api.semaphore().tasks().getTaskRawOutput(project.id(), terraformTask.id());
     var tofuRawOutput = api.semaphore().tasks().getTaskRawOutput(project.id(), tofuTask.id());

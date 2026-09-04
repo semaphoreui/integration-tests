@@ -54,6 +54,10 @@ class AccessKeySecretsTest {
                     .primary()
                     .request(project.id(), repository.id(), inventory.id()));
     var completedTask = api.semaphore().tasks().startAndWait(project.id(), template.id());
+    api.semaphore()
+        .tasks()
+        .waitUntilTaskOutputContains(
+            project.id(), completedTask.id(), fixtures.expectations().outputMarker());
 
     assertThat(secretKey.type()).isEqualTo(fixtures.secretAccessKey().type());
     assertThat(inventory.sshKeyId()).isEqualTo(secretKey.id());
