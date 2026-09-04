@@ -2,14 +2,15 @@
 
 ## Summary
 
-Semaphore `v2.19.8` accepts a task launch containing a survey variable of type
+Semaphore `v2.19.12` accepts a task launch containing a survey variable of type
 `secret`, but a persistent remote runner receives no value for that variable.
 The same template and launch payload succeed with local execution.
 
 ## Environment
 
-- observed: 2026-08-21;
-- Semaphore server and runner: `v2.19.8`;
+- initially observed: 2026-08-21 on `v2.19.8`;
+- reconfirmed: 2026-09-04 in Linux CI on `v2.19.12`;
+- Semaphore server and runner: `v2.19.12`;
 - profile: `prod-postgres-runner`;
 - database: PostgreSQL 14.3;
 - executor: persistent remote runner, `local` executor.
@@ -54,7 +55,12 @@ The root cause and HA-safe persistence design are implemented by upstream PR
 [`081425d2`](https://github.com/semaphoreui/semaphore/commit/081425d2bc20d5fe41def47ec6a429e2e43cf715).
 The change stores task-bound survey secrets encrypted as access keys and fills
 them during runner dispatch. It is present in `v2.20.0-alpha1`, but not in the
-tested `v2.19.8` release line.
+tested stable `v2.19.12` release.
+
+The current-stable evidence is the `prod-postgres-runner` job in
+[configuration matrix run 33871024329](https://github.com/semaphoreui/integration-tests/actions/runs/33871024329).
+The canary is expected to pass only when it observes the undefined variable and confirms that the
+secret value was not leaked.
 
 ## Regression criterion
 

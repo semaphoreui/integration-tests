@@ -53,6 +53,11 @@ All notable changes to the Semaphore UI test automation project are documented i
 - CI artifacts containing JUnit, HTML, Allure, and failure diagnostics.
 - Downloadable HTML site with a separate Allure report for every executed profile.
 
+### Changed
+
+- Revalidated schedule, persistent-runner, and dynamic one-off runner defects against Semaphore
+  `v2.19.12` and updated their current-stable evidence and next actions.
+
 ## [0.1.0]
 
 ### Added
