@@ -29,7 +29,7 @@ public record SemaphoreIntegrationFixtures(
         "bookwright-webhook-project-" + suffix,
         "bookwright-webhook-" + suffix,
         "bookwright-webhook-template-" + suffix,
-        "integration-webhook.yml",
+        "test-environment/fixtures/ansible/integration-webhook.yml",
         new SemaphoreFixtures.SecretAccessKey(
             "bookwright-webhook-token-" + suffix,
             "login_password",

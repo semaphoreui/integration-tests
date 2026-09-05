@@ -44,14 +44,16 @@ public record SemaphoreFixtures(
             "Bw-secret-" + suffix + "-42!"),
         new Repositories(
             new Repository(
-                "bookwright-demo-repository-" + suffix, "file:///fixtures/ansible", "main"),
+                "bookwright-demo-repository-" + suffix,
+                config.fixturesRepository(),
+                config.fixturesDefaultBranch()),
             new Repository(
                 "bookwright-ref-repository-" + suffix,
-                "file:///fixtures/ansible",
+                config.fixturesRepository(),
                 "bookwright-fixture-ref"),
             new Repository(
                 "bookwright-missing-ref-repository-" + suffix,
-                "file:///fixtures/ansible",
+                config.fixturesRepository(),
                 "bookwright-missing-ref"),
             new Repository(
                 "bookwright-unavailable-repository-" + suffix,
@@ -62,9 +64,16 @@ public record SemaphoreFixtures(
             "[local]\nlocalhost ansible_connection=local",
             "static"),
         new Templates(
-            new Template("bookwright-build-template-" + suffix, "smoke.yml", "ansible", ""),
             new Template(
-                "bookwright-stoppable-template-" + suffix, "long-running.yml", "ansible", "")),
+                "bookwright-build-template-" + suffix,
+                "test-environment/fixtures/ansible/smoke.yml",
+                "ansible",
+                ""),
+            new Template(
+                "bookwright-stoppable-template-" + suffix,
+                "test-environment/fixtures/ansible/long-running.yml",
+                "ansible",
+                "")),
         new Schedule("bookwright-nightly-schedule-" + suffix, "0 0 * * *", false, ""),
         Rbac.standard(),
         new Expectations(
