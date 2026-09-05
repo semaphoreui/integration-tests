@@ -1,12 +1,12 @@
 name: Application PR trigger
 
-# Runs the integration tests of every test pull request that is explicitly linked to the
-# application pull request named in the event payload.
+# Runs the integration tests of every test pull request whose description declares an
+# "Application-PR:" trailer pointing at the application pull request named in the event payload.
 #
 # The application repository sends the event; see docs/application-pr-testing.md for the
-# workflow snippet it needs. Only test pull requests whose application-under-test.yml declares
-# this exact application pull request are started: a change of an arbitrary branch of the
-# application repository starts nothing, and the link is never inferred from branch names.
+# workflow snippet it needs. Only test pull requests whose description declares this exact
+# application pull request are started: a change of an arbitrary branch of the application
+# repository starts nothing, and the link is never inferred from branch names.
 
 on:
   repository_dispatch:
@@ -76,6 +76,8 @@ jobs:
           started=0
           inspected=0
 
+          # Every open test pull request is listed with its description, which is where the
+          # Application-PR trailer lives.
           gh pr list --state open --limit 100 \
             --json number,headRefName,isCrossRepository \
             --jq '.[] | [.number, .headRefName, (.isCrossRepository | tostring)] | @tsv' \
@@ -92,17 +94,12 @@ jobs:
               continue
             fi
 
-            declaration="$work_dir/aut-$pr_number.yml"
-            if ! gh api "repos/$GITHUB_REPOSITORY/contents/application-under-test.yml?ref=$head_ref" \
-              --jq '.content' > "$work_dir/aut-$pr_number.b64" 2>/dev/null; then
-              printf 'Test PR #%s: skipped, no application-under-test.yml on %s\n' "$pr_number" "$head_ref"
-              continue
-            fi
-            base64 -d < "$work_dir/aut-$pr_number.b64" > "$declaration"
+            body_file="$work_dir/body-$pr_number.md"
+            gh pr view "$pr_number" --json body --jq '.body // ""' > "$body_file"
 
-            if ! link=$(APP_REPOSITORY= APP_PR= APP_SOURCE_FILE="$declaration" \
+            if ! link=$(APP_REPOSITORY= APP_PR= APP_LINK_BODY_FILE="$body_file" \
               scripts/app-source.sh link 2>"$work_dir/link-error"); then
-              printf 'Test PR #%s: skipped, application-under-test.yml is invalid\n' "$pr_number"
+              printf 'Test PR #%s: skipped, the Application-PR declaration is invalid\n' "$pr_number"
               sed 's/^/  /' "$work_dir/link-error" || true
               continue
             fi

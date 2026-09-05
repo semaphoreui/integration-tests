@@ -2,6 +2,10 @@ name: Prepare application image
 
 # Resolves which version of the application the test jobs must run against.
 #
+# The link is declared as an "Application-PR:" trailer in the description of the test pull
+# request. It lives outside the repository content on purpose, so merging a test pull request can
+# never leave an active link behind on the default branch.
+#
 # Normal mode (no explicit link to an application pull request) does nothing at all: the
 # application repository is not read, no image is built and no temporary image is created. The
 # test jobs then keep using the image declared by the profile manifest.
@@ -14,23 +18,23 @@ on:
   workflow_call:
     inputs:
       application_repository:
-        description: Application repository as owner/name; overrides application-under-test.yml
+        description: Application repository as owner/name; overrides the pull request description
         required: false
         type: string
         default: ""
       application_pull_request:
-        description: Application pull request number; overrides application-under-test.yml
+        description: Application pull request number; overrides the pull request description
         required: false
         type: string
         default: ""
-      use_declaration_file:
+      pull_request_body:
         description: >-
-          Honour application-under-test.yml. Only a test pull request may do so: the file travels
-          with it and reaches the default branch on merge, where a leftover declaration must not
-          resurrect a build of an old application pull request.
+          Description of the test pull request. It is scanned for the "Application-PR:" trailer
+          that declares which application pull request to test. Empty outside a pull request,
+          which is exactly why a link can never leak into the default branch.
         required: false
-        type: boolean
-        default: false
+        type: string
+        default: ""
     outputs:
       app_source:
         description: docker-image or pull-request
@@ -73,7 +77,9 @@ jobs:
     env:
       APP_REPOSITORY: ${{ inputs.application_repository }}
       APP_PR: ${{ inputs.application_pull_request }}
-      APP_LINK_FROM_FILE: ${{ inputs.use_declaration_file }}
+      # Untrusted text: only ever bound to an environment variable, never interpolated into a
+      # shell command.
+      APP_LINK_BODY: ${{ inputs.pull_request_body }}
       APP_IMAGE_REPOSITORY: ghcr.io/${{ github.repository }}/semaphore-ci
     steps:
       - name: Checkout tests
@@ -132,14 +138,12 @@ jobs:
               else
                 printf -- '- build: skipped, the image for this commit already existed\n'
               fi
-              if [ "$APP_LINK_SOURCE" = "declaration-file" ]; then
-                printf -- '- **before merging this test pull request, comment the `application` block out in `application-under-test.yml`**\n'
-              fi
             else
               printf '### Application source: Docker image\n\n'
               if [ -n "$APP_PR_STATE" ] && [ "$APP_PR_STATE" != "open" ]; then
                 printf -- '- application pull request #%s is **%s**, so there is no version left to test\n' "$APP_PR" "$APP_PR_STATE"
                 printf -- '- the run fell back to normal mode\n'
+                printf -- '- remove the `Application-PR:` line from this pull request description to silence this\n'
               fi
               printf -- '- the application repository was not cloned and no image was built\n'
               printf -- '- the profile manifest image is used, as before\n'

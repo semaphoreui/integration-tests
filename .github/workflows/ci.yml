@@ -8,12 +8,12 @@ on:
   workflow_dispatch:
     inputs:
       application_repository:
-        description: Application repository as owner/name; overrides application-under-test.yml
+        description: Application repository as owner/name; overrides the pull request description
         required: false
         type: string
         default: ""
       application_pull_request:
-        description: Application pull request number; overrides application-under-test.yml
+        description: Application pull request number; overrides the pull request description
         required: false
         type: string
         default: ""
@@ -35,9 +35,9 @@ jobs:
     with:
       application_repository: ${{ inputs.application_repository || '' }}
       application_pull_request: ${{ inputs.application_pull_request || '' }}
-      # A push to main and a manual run without inputs must behave exactly as before, even if a
-      # merged test pull request left an active declaration behind.
-      use_declaration_file: ${{ github.event_name == 'pull_request' }}
+      # Empty for a push to main, a scheduled run or a manual run, so those keep behaving
+      # exactly as before.
+      pull_request_body: ${{ github.event.pull_request.body }}
     secrets:
       application_repository_token: ${{ secrets.APPLICATION_REPOSITORY_TOKEN }}
 

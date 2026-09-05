@@ -19,21 +19,27 @@
 #   scripts/app-source.sh ensure    Resolve, then build and push the application image when it
 #                                   does not exist yet. Prints the same report.
 #
-# The explicit link between a test run and an application pull request is taken from, in order
-# of precedence:
+# The link is declared in the description of the test pull request, as a single trailer line:
 #
-#   1. the APP_PR / APP_REPOSITORY environment variables (CI inputs);
-#   2. the declarative application-under-test.yml file of this repository.
+#   Application-PR: semaphoreui/semaphore#123
 #
-# When neither defines a pull request the script stays in normal mode. It never infers the
-# application pull request from branch names.
+# Accepted equally: "#123", "123" and the full pull request URL. The repository defaults to
+# semaphoreui/semaphore. The key is case insensitive and also accepts "Application PR:" and
+# "Application_PR:". Text inside HTML comments is ignored, so a pull request template may carry
+# a commented-out example.
 #
-# Two rules keep a declaration that was merged into the default branch harmless:
+# The description is deliberately the only place a developer declares the link: unlike a file in
+# the repository it never reaches the default branch when the test pull request is merged, so a
+# forgotten link cannot turn the normal pipeline into a build of some old application pull
+# request. The description reaches this script through APP_LINK_BODY or APP_LINK_BODY_FILE.
 #
-#   * APP_LINK_FROM_FILE=false ignores the file entirely. Every context that is not a test pull
-#     request sets it, so the default branch always runs in normal mode.
-#   * a closed or merged application pull request falls back to normal mode, because such a
-#     pull request has no version left to test.
+# APP_PR / APP_REPOSITORY stay available as CI plumbing: the application pull request trigger
+# uses them to start a run for a branch, where no pull request description is in context. They
+# take precedence over the description.
+#
+# Without a declared pull request the script stays in normal mode. It never infers the
+# application pull request from branch names. A closed or merged application pull request also
+# falls back to normal mode, because it has no version left to test.
 
 set -eu
 
@@ -50,7 +56,7 @@ fail() {
 }
 
 usage() {
-  sed -n '3,40p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+  sed -n '3,42p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
 
 # semaphoreui/semaphore, https://github.com/semaphoreui/semaphore.git and
@@ -78,35 +84,94 @@ normalise_repository() {
   printf '%s' "$value"
 }
 
-# Minimal reader for the fixed two-level shape of application-under-test.yml:
-#
-#   application:
-#     repository: semaphoreui/semaphore
-#     pull_request: 123
-#
-# Comments and blank lines are ignored; anything else is reported as an error rather than
-# silently skipped, so a malformed link never degrades into a normal-mode run.
-read_declaration() {
-  key=$1
-  file=$2
-  awk -v wanted="$key" '
-    { line = $0; sub(/[[:space:]]+$/, "", line) }
-    line ~ /^[[:space:]]*#/ { next }
-    line == "" { next }
-    line == "application:" { inside = 1; next }
-    line ~ /^[^[:space:]]/ { inside = 0; next }
-    inside && line ~ /^  [A-Za-z_]+:/ {
-      key = line
-      sub(/^  /, "", key)
-      sub(/:.*$/, "", key)
-      value = line
-      sub(/^  [A-Za-z_]+:[[:space:]]*/, "", value)
-      gsub(/^["'"'"']|["'"'"']$/, "", value)
-      if (key == wanted) { print value }
-      next
+# Extracts every "Application-PR:" trailer from the pull request description. Text inside HTML
+# comments is stripped first, so the commented-out example of a pull request template is not
+# mistaken for a real declaration.
+BODY_LINK_AWK='
+{
+  line = $0
+  sub(/\r$/, "", line)
+  visible = ""
+  rest = line
+  while (rest != "") {
+    if (in_comment) {
+      position = index(rest, "-->")
+      if (position == 0) { rest = ""; break }
+      rest = substr(rest, position + 3)
+      in_comment = 0
+    } else {
+      position = index(rest, "<!--")
+      if (position == 0) { visible = visible rest; rest = "" }
+      else {
+        visible = visible substr(rest, 1, position - 1)
+        rest = substr(rest, position + 4)
+        in_comment = 1
+      }
     }
-    inside { printf "app-source: unexpected line in %s: %s\n", FILENAME, $0 > "/dev/stderr"; exit 3 }
-  ' "$file"
+  }
+  if (tolower(visible) ~ /^[ \t]*application[ _-]?pr[ \t]*:/) {
+    value = substr(visible, index(visible, ":") + 1)
+    gsub(/^[ \t]+|[ \t]+$/, "", value)
+    gsub(/^[`"'"'"']+|[`"'"'"']+$/, "", value)
+    if (value != "") print value
+  }
+}'
+
+read_body_links() {
+  if [ -n "${APP_LINK_BODY_FILE:-}" ]; then
+    [ -f "$APP_LINK_BODY_FILE" ] \
+      || fail "APP_LINK_BODY_FILE does not exist: $APP_LINK_BODY_FILE"
+    awk "$BODY_LINK_AWK" "$APP_LINK_BODY_FILE"
+  elif [ -n "${APP_LINK_BODY:-}" ]; then
+    printf '%s\n' "$APP_LINK_BODY" | awk "$BODY_LINK_AWK"
+  fi
+}
+
+# Accepts owner/name#123, #123, 123 and https://github.com/owner/name/pull/123.
+parse_pr_reference() {
+  reference=$1
+  body_repository=
+  body_pr=
+
+  case "$reference" in
+    http://*|https://*)
+      reference=${reference%/}
+      case "$reference" in
+        */pull/*) ;;
+        *) fail "Application-PR in the pull request description is not a pull request URL: $1" ;;
+      esac
+      number=${reference##*/pull/}
+      number=${number%%/*}
+      body_repository=$(normalise_repository "${reference%/pull/*}")
+      ;;
+    */*"#"*)
+      body_repository=$(normalise_repository "${reference%%#*}")
+      number=${reference##*#}
+      ;;
+    *)
+      number=${reference#"#"}
+      ;;
+  esac
+
+  number=${number%%[!0-9]*}
+  case "$number" in
+    ''|0) fail "Application-PR in the pull request description is not a pull request reference: $1" ;;
+  esac
+  body_pr=$number
+}
+
+resolve_body_link() {
+  body_repository=
+  body_pr=
+
+  references=$(read_body_links)
+  [ -n "$references" ] || return 0
+
+  reference_count=$(printf '%s\n' "$references" | wc -l | tr -d ' ')
+  [ "$reference_count" -eq 1 ] \
+    || fail "the pull request description declares Application-PR $reference_count times; keep exactly one"
+
+  parse_pr_reference "$references"
 }
 
 resolve_link() {
@@ -115,19 +180,12 @@ resolve_link() {
   app_link_source=none
   [ -z "$app_pr" ] || app_link_source=ci-input
 
-  declaration_file=${APP_SOURCE_FILE:-$repository_dir/application-under-test.yml}
-  # The declaration lives in the test pull request and therefore reaches the default branch once
-  # that pull request is merged. Contexts that are not a test pull request - a push to the
-  # default branch, a scheduled run, a release verification - set APP_LINK_FROM_FILE=false, so a
-  # declaration left behind by a merge can never turn the normal pipeline into a build of some
-  # old application pull request.
-  if [ "${APP_LINK_FROM_FILE:-true}" = "true" ] && [ -f "$declaration_file" ]; then
-    if [ -z "$app_pr" ]; then
-      app_pr=$(read_declaration pull_request "$declaration_file")
-      [ -z "$app_pr" ] || app_link_source=declaration-file
-    fi
-    if [ -z "$app_repository" ]; then
-      app_repository=$(read_declaration repository "$declaration_file")
+  if [ -z "$app_pr" ]; then
+    resolve_body_link
+    if [ -n "$body_pr" ]; then
+      app_pr=$body_pr
+      app_link_source=pull-request-body
+      [ -n "$app_repository" ] || app_repository=$body_repository
     fi
   fi
 
@@ -270,8 +328,8 @@ report() {
     if [ -n "$app_pr" ]; then
       printf 'Application PR: #%s in %s is %s\n' "$app_pr" "$app_repository" "$app_pr_state"
       printf 'A closed or merged pull request has no version left to test.\n'
-      if [ "$app_link_source" = "declaration-file" ]; then
-        printf 'Comment the application block out in application-under-test.yml to silence this.\n'
+      if [ "$app_link_source" = "pull-request-body" ]; then
+        printf 'Remove the Application-PR line from the pull request description to silence this.\n'
       fi
     fi
     printf 'Application source: Docker image\n'
@@ -291,9 +349,6 @@ report() {
   else
     printf 'Application image not found\n'
     printf 'Building application...\n'
-  fi
-  if [ "$app_link_source" = "declaration-file" ]; then
-    printf 'Reminder: comment the application block out in application-under-test.yml before merging this test pull request.\n'
   fi
 }
 
