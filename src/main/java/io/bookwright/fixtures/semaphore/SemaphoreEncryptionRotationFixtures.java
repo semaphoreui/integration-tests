@@ -41,7 +41,7 @@ public record SemaphoreEncryptionRotationFixtures(
             "bookwright-encryption-inventory",
             "[local]\nlocalhost ansible_connection=local",
             "static"),
-        new Template("bookwright-encryption-template", "smoke.yml", "ansible", ""),
+        new Template("bookwright-encryption-template", "test-environment/fixtures/ansible/smoke.yml", "ansible", ""),
         "semaphore-bookwright-smoke-ok");
   }
 }

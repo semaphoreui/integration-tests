@@ -28,13 +28,13 @@ public record SemaphoreFileInventoryFixtures(
         new Repository(
             "bookwright-file-inventory-repository-" + suffix, config.fixturesRepository(), config.fixturesDefaultBranch()),
         new FileInventory(
-            "bookwright-file-inventory-" + suffix, "inventories/localhost.ini", "file"),
+            "bookwright-file-inventory-" + suffix, "test-environment/fixtures/ansible/inventories/localhost.ini", "file"),
         new FileInventory(
             "bookwright-unsafe-file-inventory-" + suffix,
             "../bookwright-outside-repository.ini",
             "file"),
         new Template(
-            "bookwright-file-inventory-template-" + suffix, "file-inventory.yml", "ansible", ""),
+            "bookwright-file-inventory-template-" + suffix, "test-environment/fixtures/ansible/file-inventory.yml", "ansible", ""),
         "success",
         "semaphore-bookwright-file-inventory-ok");
   }

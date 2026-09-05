@@ -32,12 +32,12 @@ public record SemaphoreShellOutputFixtures(
         new Templates(
             new Template(
                 "bookwright-shell-output-template-" + suffix,
-                "bash/capture-output/normal.sh",
+                "test-environment/fixtures/ansible/bash/capture-output/normal.sh",
                 "bash",
                 ""),
             new Template(
                 "bookwright-background-shell-output-template-" + suffix,
-                "bash/capture-output/background.sh",
+                "test-environment/fixtures/ansible/bash/capture-output/background.sh",
                 "bash",
                 "")),
         new Expectations(

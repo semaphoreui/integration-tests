@@ -45,15 +45,15 @@ public record SemaphoreTerraformFixtures(
             new WorkspaceInventory(
                 "bookwright-terraform-workspace-" + suffix,
                 "bookwright-tf-" + suffix,
-                "terraform-workspace"),
+                "test-environment/fixtures/ansible/terraform-workspace"),
             new ToolTemplate(
-                "bookwright-terraform-template-" + suffix, "terraform-workspace", "terraform")),
+                "bookwright-terraform-template-" + suffix, "test-environment/fixtures/ansible/terraform-workspace", "terraform")),
         new Tool(
             new WorkspaceInventory(
                 "bookwright-tofu-workspace-" + suffix,
                 "bookwright-tofu-" + suffix,
                 "tofu-workspace"),
-            new ToolTemplate("bookwright-tofu-template-" + suffix, "terraform-workspace", "tofu")),
+            new ToolTemplate("bookwright-tofu-template-" + suffix, "test-environment/fixtures/ansible/terraform-workspace", "tofu")),
         "semaphore_bookwright_workspace");
   }
 

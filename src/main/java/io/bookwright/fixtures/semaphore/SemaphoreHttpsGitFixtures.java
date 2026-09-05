@@ -41,7 +41,7 @@ public record SemaphoreHttpsGitFixtures(
             "bookwright-https-git-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",
             "static"),
-        new Template("bookwright-https-git-template-" + suffix, "smoke.yml", "ansible", ""),
+        new Template("bookwright-https-git-template-" + suffix, "test-environment/fixtures/ansible/smoke.yml", "ansible", ""),
         "success",
         "error",
         "semaphore-bookwright-smoke-ok",

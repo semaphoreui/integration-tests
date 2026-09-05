@@ -32,14 +32,14 @@ public record SemaphoreBuildDeployFixtures(
             "static"),
         new BuildTemplate(
             "bookwright-build-template-" + suffix,
-            "/test-environment/fixtures/ansible/build-version.yml",
+            "test-environment/fixtures/ansible/build-version.yml",
             "ansible",
             "build",
             "1.2.3",
             "semaphore-bookwright-build-version"),
         new DeployTemplate(
             "bookwright-deploy-template-" + suffix,
-            "deploy-version.yml",
+            "test-environment/fixtures/ansible/deploy-version.yml",
             "ansible",
             "deploy",
             "semaphore-bookwright-deploy-version"));

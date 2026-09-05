@@ -31,7 +31,7 @@ public record SemaphoreUpgradeFixtures(
             "bookwright-upgrade-inventory",
             "[local]\nlocalhost ansible_connection=local",
             "static"),
-        new Template("bookwright-upgrade-template", "smoke.yml", "ansible", ""),
+        new Template("bookwright-upgrade-template", "test-environment/fixtures/ansible/smoke.yml", "ansible", ""),
         new Schedule("bookwright-upgrade-schedule", "0 0 * * *", false, ""),
         "semaphore-bookwright-smoke-ok");
   }

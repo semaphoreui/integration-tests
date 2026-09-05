@@ -39,7 +39,7 @@ public record SemaphoreStaticInventoryFixtures(
             "excluded-host"),
         new Template(
             "bookwright-ini-inventory-template-" + suffix,
-            "smoke.yml",
+            "test-environment/fixtures/ansible/smoke.yml",
             "ansible",
             "",
             "bookwright_selected"),
@@ -62,7 +62,7 @@ public record SemaphoreStaticInventoryFixtures(
             "yaml-excluded-host"),
         new Template(
             "bookwright-yaml-inventory-template-" + suffix,
-            "smoke.yml",
+            "test-environment/fixtures/ansible/smoke.yml",
             "ansible",
             "",
             "bookwright_yaml_selected"),
