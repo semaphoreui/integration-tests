@@ -6,9 +6,9 @@ import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TaskRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
+import io.bookwright.config.MainConfig;
 import io.bookwright.util.TestData;
 import java.util.List;
-import io.bookwright.config.MainConfig;
 
 /** Typed data for a manually selected Build to Deploy artifact-version chain. */
 public record SemaphoreBuildDeployFixtures(
@@ -25,7 +25,9 @@ public record SemaphoreBuildDeployFixtures(
         new ProjectRequest("bookwright-build-deploy-" + suffix, false, 0),
         new AccessKey("bookwright-build-deploy-key-" + suffix, "none"),
         new Repository(
-            "bookwright-build-deploy-repository-" + suffix, config.fixturesRepository(), config.fixturesDefaultBranch()),
+            "bookwright-build-deploy-repository-" + suffix,
+            config.fixturesRepository(),
+            config.fixturesDefaultBranch()),
         new Inventory(
             "bookwright-build-deploy-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",

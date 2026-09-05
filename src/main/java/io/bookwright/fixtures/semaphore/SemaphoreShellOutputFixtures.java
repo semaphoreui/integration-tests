@@ -5,9 +5,9 @@ import io.bookwright.api.model.semaphore.InventoryRequest;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
+import io.bookwright.config.MainConfig;
 import io.bookwright.util.TestData;
 import java.time.Duration;
-import io.bookwright.config.MainConfig;
 
 /** Typed data and expectations for Bash output capture regressions. */
 public record SemaphoreShellOutputFixtures(
@@ -24,7 +24,9 @@ public record SemaphoreShellOutputFixtures(
         new ProjectRequest("bookwright-shell-output-" + suffix, false, 0),
         new AccessKey("bookwright-shell-output-key-" + suffix, "none"),
         new Repository(
-            "bookwright-shell-output-repository-" + suffix, config.fixturesRepository(), config.fixturesDefaultBranch()),
+            "bookwright-shell-output-repository-" + suffix,
+            config.fixturesRepository(),
+            config.fixturesDefaultBranch()),
         new Inventory(
             "bookwright-shell-output-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",
