@@ -30,6 +30,10 @@ verifies the persisted data and task execution.
 encryption-rotation-test is available only for encryption rotation profiles. It
 creates data with the old primary key, hot-reloads a new primary, rekeys database
 secrets, removes the retired key and verifies the persisted task fixture.
+
+The application image comes from the profile manifest. Set APP_IMAGE to run the
+same profile against another image, for example one built from a pull request of
+the application repository by scripts/app-source.sh.
 EOF
 }
 
@@ -41,6 +45,28 @@ fail() {
 manifest_value() {
   key=$1
   sed -n "s/^${key}:[[:space:]]*//p" "$manifest_file" | sed -n '1p'
+}
+
+# The application under test normally comes from the profile manifest. APP_IMAGE overrides it
+# with a temporary image built from an application pull request; see scripts/app-source.sh.
+effective_semaphore_image() {
+  if [ -n "${APP_IMAGE:-}" ]; then
+    printf '%s' "$APP_IMAGE"
+  else
+    manifest_value semaphore_image
+  fi
+}
+
+report_application_source() {
+  if [ -n "${APP_IMAGE:-}" ]; then
+    printf 'Application source: Pull Request\n'
+    [ -z "${APP_REPOSITORY:-}" ] || printf 'Application repository: %s\n' "$APP_REPOSITORY"
+    [ -z "${APP_PR:-}" ] || printf 'Application PR: #%s\n' "$APP_PR"
+    [ -z "${APP_SHA:-}" ] || printf 'Application SHA: %s\n' "$APP_SHA"
+  else
+    printf 'Application source: Docker image\n'
+  fi
+  printf 'Application image: %s\n' "$selected_semaphore_image"
 }
 
 select_profile() {
@@ -58,7 +84,7 @@ select_profile() {
   readiness_url=$(manifest_value readiness_url)
   stand=$(manifest_value stand)
   setup_service=$(manifest_value setup_service)
-  selected_semaphore_image=$(manifest_value semaphore_image)
+  selected_semaphore_image=$(effective_semaphore_image)
   selected_schedule_timezone=$(manifest_value schedule_timezone)
   [ -n "$selected_schedule_timezone" ] || selected_schedule_timezone=UTC
   selected_test_task=$(manifest_value test_task)
@@ -295,7 +321,7 @@ write_allure_environment() {
   allure_dir="$repository_dir/build/allure-results"
   mkdir -p "$allure_dir"
 
-  image=$(manifest_value semaphore_image)
+  image=$selected_semaphore_image
   image_reference=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
   [ -n "$image_reference" ] || image_reference=$image
 
@@ -329,9 +355,19 @@ write_allure_environment() {
 
   {
     printf 'profile=%s\n' "$profile_id"
-    printf 'semaphore.version=%s\n' "$(manifest_value semaphore_version)"
-    printf 'semaphore.image=%s\n' "$image_reference"
-    printf 'semaphore.source.commit=%s\n' "$(manifest_value source_commit)"
+    if [ -n "${APP_IMAGE:-}" ]; then
+      printf 'application.source=pull-request\n'
+      printf 'application.repository=%s\n' "${APP_REPOSITORY:-}"
+      printf 'application.pull.request=%s\n' "${APP_PR:-}"
+      printf 'semaphore.version=%s\n' "pr-${APP_PR:-unknown}"
+      printf 'semaphore.image=%s\n' "$image_reference"
+      printf 'semaphore.source.commit=%s\n' "${APP_SHA:-}"
+    else
+      printf 'application.source=docker-image\n'
+      printf 'semaphore.version=%s\n' "$(manifest_value semaphore_version)"
+      printf 'semaphore.image=%s\n' "$image_reference"
+      printf 'semaphore.source.commit=%s\n' "$(manifest_value source_commit)"
+    fi
     printf 'semaphore.edition=%s\n' "$(manifest_value edition)"
     printf 'installation=%s\n' "$(manifest_value installation)"
     printf 'architecture=%s\n' "$(uname -m)"
@@ -452,6 +488,7 @@ case "$action" in
     ;;
   up)
     select_profile "${2:-}"
+    report_application_source
     prepare_ssh_fixture
     prepare_tls_fixture
     prepare_git_https_fixture
@@ -467,6 +504,7 @@ case "$action" in
     select_profile "${2:-}"
     [ "$selected_encryption_fixture" != "generated" ] \
       || fail "profile '$profile_id' requires: test-environment/profile encryption-rotation-test $profile_id"
+    report_application_source
     shift 2
     prepare_ssh_fixture
     prepare_tls_fixture
@@ -515,7 +553,7 @@ case "$action" in
     await_ready
     run_upgrade_phase seed
 
-    selected_semaphore_image=$(manifest_value semaphore_image)
+    selected_semaphore_image=$(effective_semaphore_image)
     compose up --detach --force-recreate semaphore
     await_ready
     write_allure_environment

@@ -6,6 +6,7 @@ import io.bookwright.api.model.semaphore.InventoryRequest;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
+import io.bookwright.config.MainConfig;
 import io.bookwright.util.TestData;
 import java.util.List;
 
@@ -20,13 +21,15 @@ public record SemaphoreStaticInventoryFixtures(
     Template yamlTemplate,
     String outputMarker) {
 
-  public static SemaphoreStaticInventoryFixtures from(TestData data) {
+  public static SemaphoreStaticInventoryFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreStaticInventoryFixtures(
         new ProjectRequest("bookwright-static-inventory-" + suffix, false, 0),
         new AccessKey("bookwright-static-inventory-key-" + suffix, "none"),
         new Repository(
-            "bookwright-static-inventory-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            "bookwright-static-inventory-repository-" + suffix,
+            config.fixturesRepository(),
+            config.fixturesDefaultBranch()),
         new StaticInventory(
             "bookwright-ini-inventory-" + suffix,
             "[bookwright_selected]\n"
@@ -38,7 +41,7 @@ public record SemaphoreStaticInventoryFixtures(
             "excluded-host"),
         new Template(
             "bookwright-ini-inventory-template-" + suffix,
-            "smoke.yml",
+            "test-environment/fixtures/ansible/smoke.yml",
             "ansible",
             "",
             "bookwright_selected"),
@@ -61,7 +64,7 @@ public record SemaphoreStaticInventoryFixtures(
             "yaml-excluded-host"),
         new Template(
             "bookwright-yaml-inventory-template-" + suffix,
-            "smoke.yml",
+            "test-environment/fixtures/ansible/smoke.yml",
             "ansible",
             "",
             "bookwright_yaml_selected"),

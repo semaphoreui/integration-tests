@@ -6,6 +6,7 @@ import io.bookwright.api.model.semaphore.InventoryUpdateRequest;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
+import io.bookwright.config.MainConfig;
 import io.bookwright.util.TestData;
 
 /** Typed data for Ansible inventories stored in a Git repository. */
@@ -19,21 +20,28 @@ public record SemaphoreFileInventoryFixtures(
     String successfulTaskStatus,
     String outputMarker) {
 
-  public static SemaphoreFileInventoryFixtures from(TestData data) {
+  public static SemaphoreFileInventoryFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreFileInventoryFixtures(
         new ProjectRequest("bookwright-file-inventory-" + suffix, false, 0),
         new AccessKey("bookwright-file-inventory-key-" + suffix, "none"),
         new Repository(
-            "bookwright-file-inventory-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            "bookwright-file-inventory-repository-" + suffix,
+            config.fixturesRepository(),
+            config.fixturesDefaultBranch()),
         new FileInventory(
-            "bookwright-file-inventory-" + suffix, "inventories/localhost.ini", "file"),
+            "bookwright-file-inventory-" + suffix,
+            "test-environment/fixtures/ansible/inventories/localhost.ini",
+            "file"),
         new FileInventory(
             "bookwright-unsafe-file-inventory-" + suffix,
             "../bookwright-outside-repository.ini",
             "file"),
         new Template(
-            "bookwright-file-inventory-template-" + suffix, "file-inventory.yml", "ansible", ""),
+            "bookwright-file-inventory-template-" + suffix,
+            "test-environment/fixtures/ansible/file-inventory.yml",
+            "ansible",
+            ""),
         "success",
         "semaphore-bookwright-file-inventory-ok");
   }

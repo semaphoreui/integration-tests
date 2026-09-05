@@ -1,0 +1,475 @@
+#!/bin/sh
+#
+# Resolves which version of the Semaphore application the tests must run against.
+#
+# Two independent settings exist in this repository:
+#
+#   * the test source   - git.fixtures.repository / git.fixtures.branch (TEST_REPOSITORY /
+#     TEST_BRANCH). It selects which fixtures and test cases are used and is untouched here.
+#   * the application source - resolved by this script. By default the profile manifest image
+#     is used and the application repository is never cloned or built. When a test run is
+#     explicitly linked to a pull request of the application repository, the image is built
+#     from that pull request HEAD commit and reused across runs.
+#
+# Usage:
+#   scripts/app-source.sh link      Resolve only the explicit link (no GitHub API, no registry).
+#   scripts/app-source.sh resolve   Resolve the application source and print a human readable
+#                                   report plus KEY=value lines on stdout.
+#   scripts/app-source.sh env       Print only the KEY=value lines.
+#   scripts/app-source.sh ensure    Resolve, then build and push the application image when it
+#                                   does not exist yet. Prints the same report.
+#
+# The link is declared in the description of the test pull request, as a single trailer line:
+#
+#   Application-PR: semaphoreui/semaphore#123
+#
+# Accepted equally: "#123", "123" and the full pull request URL. The repository defaults to
+# semaphoreui/semaphore. The key is case insensitive and also accepts "Application PR:" and
+# "Application_PR:". Text inside HTML comments is ignored, so a pull request template may carry
+# a commented-out example.
+#
+# The description is deliberately the only place a developer declares the link: unlike a file in
+# the repository it never reaches the default branch when the test pull request is merged, so a
+# forgotten link cannot turn the normal pipeline into a build of some old application pull
+# request. The description reaches this script through APP_LINK_BODY or APP_LINK_BODY_FILE.
+#
+# APP_PR / APP_REPOSITORY stay available as CI plumbing: the application pull request trigger
+# uses them to start a run for a branch, where no pull request description is in context. They
+# take precedence over the description.
+#
+# Without a declared pull request the script stays in normal mode. It never infers the
+# application pull request from branch names. A closed or merged application pull request also
+# falls back to normal mode, because it has no version left to test.
+
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repository_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+
+DEFAULT_APP_REPOSITORY=semaphoreui/semaphore
+DEFAULT_IMAGE_TAG_PREFIX=ci-pr
+DEFAULT_APP_DOCKERFILE=deployment/docker/server/Dockerfile
+
+fail() {
+  printf 'app-source: %s\n' "$1" >&2
+  exit 1
+}
+
+usage() {
+  sed -n '3,42p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+}
+
+# semaphoreui/semaphore, https://github.com/semaphoreui/semaphore.git and
+# git@github.com:semaphoreui/semaphore.git all normalise to semaphoreui/semaphore.
+normalise_repository() {
+  value=$1
+  value=${value%.git}
+  case "$value" in
+    http://*|https://*)
+      value=${value#*://}
+      value=${value#*/}
+      ;;
+    *@*:*)
+      value=${value#*:}
+      ;;
+  esac
+  value=${value#/}
+  value=${value%/}
+
+  case "$value" in
+    ''|*/*/*|*[!A-Za-z0-9._/-]*) fail "invalid application repository: $1" ;;
+    */*) ;;
+    *) fail "invalid application repository: $1 (expected owner/name)" ;;
+  esac
+  printf '%s' "$value"
+}
+
+# Extracts every "Application-PR:" trailer from the pull request description. Text inside HTML
+# comments is stripped first, so the commented-out example of a pull request template is not
+# mistaken for a real declaration.
+BODY_LINK_AWK='
+{
+  line = $0
+  sub(/\r$/, "", line)
+  visible = ""
+  rest = line
+  while (rest != "") {
+    if (in_comment) {
+      position = index(rest, "-->")
+      if (position == 0) { rest = ""; break }
+      rest = substr(rest, position + 3)
+      in_comment = 0
+    } else {
+      position = index(rest, "<!--")
+      if (position == 0) { visible = visible rest; rest = "" }
+      else {
+        visible = visible substr(rest, 1, position - 1)
+        rest = substr(rest, position + 4)
+        in_comment = 1
+      }
+    }
+  }
+  if (tolower(visible) ~ /^[ \t]*application[ _-]?pr[ \t]*:/) {
+    value = substr(visible, index(visible, ":") + 1)
+    gsub(/^[ \t]+|[ \t]+$/, "", value)
+    gsub(/^[`"'"'"']+|[`"'"'"']+$/, "", value)
+    if (value != "") print value
+  }
+}'
+
+read_body_links() {
+  if [ -n "${APP_LINK_BODY_FILE:-}" ]; then
+    [ -f "$APP_LINK_BODY_FILE" ] \
+      || fail "APP_LINK_BODY_FILE does not exist: $APP_LINK_BODY_FILE"
+    awk "$BODY_LINK_AWK" "$APP_LINK_BODY_FILE"
+  elif [ -n "${APP_LINK_BODY:-}" ]; then
+    printf '%s\n' "$APP_LINK_BODY" | awk "$BODY_LINK_AWK"
+  fi
+}
+
+# Accepts owner/name#123, #123, 123 and https://github.com/owner/name/pull/123.
+parse_pr_reference() {
+  reference=$1
+  body_repository=
+  body_pr=
+
+  case "$reference" in
+    http://*|https://*)
+      reference=${reference%/}
+      case "$reference" in
+        */pull/*) ;;
+        *) fail "Application-PR in the pull request description is not a pull request URL: $1" ;;
+      esac
+      number=${reference##*/pull/}
+      number=${number%%/*}
+      body_repository=$(normalise_repository "${reference%/pull/*}")
+      ;;
+    */*"#"*)
+      body_repository=$(normalise_repository "${reference%%#*}")
+      number=${reference##*#}
+      ;;
+    *)
+      number=${reference#"#"}
+      ;;
+  esac
+
+  number=${number%%[!0-9]*}
+  case "$number" in
+    ''|0) fail "Application-PR in the pull request description is not a pull request reference: $1" ;;
+  esac
+  body_pr=$number
+}
+
+resolve_body_link() {
+  body_repository=
+  body_pr=
+
+  references=$(read_body_links)
+  [ -n "$references" ] || return 0
+
+  reference_count=$(printf '%s\n' "$references" | wc -l | tr -d ' ')
+  [ "$reference_count" -eq 1 ] \
+    || fail "the pull request description declares Application-PR $reference_count times; keep exactly one"
+
+  parse_pr_reference "$references"
+}
+
+resolve_link() {
+  app_repository=${APP_REPOSITORY:-}
+  app_pr=${APP_PR:-}
+  app_link_source=none
+  [ -z "$app_pr" ] || app_link_source=ci-input
+
+  if [ -z "$app_pr" ]; then
+    resolve_body_link
+    if [ -n "$body_pr" ]; then
+      app_pr=$body_pr
+      app_link_source=pull-request-body
+      [ -n "$app_repository" ] || app_repository=$body_repository
+    fi
+  fi
+
+  case "$app_pr" in
+    '') app_source=docker-image ;;
+    *[!0-9]*|0) fail "invalid application pull request number: $app_pr" ;;
+    *) app_source=pull-request ;;
+  esac
+
+  if [ "$app_source" = "docker-image" ]; then
+    app_repository=
+    app_link_source=none
+    return 0
+  fi
+
+  [ -n "$app_repository" ] || app_repository=$DEFAULT_APP_REPOSITORY
+  app_repository=$(normalise_repository "$app_repository")
+}
+
+# Temporary images live in their own registry namespace so that release tags of
+# semaphoreui/semaphore are never read, written or overwritten by this pipeline.
+resolve_image_repository() {
+  if [ -n "${APP_IMAGE_REPOSITORY:-}" ]; then
+    printf '%s' "$APP_IMAGE_REPOSITORY"
+    return 0
+  fi
+  tests_repository=${GITHUB_REPOSITORY:-semaphoreui/integration-tests}
+  printf 'ghcr.io/%s/semaphore-ci' "$(printf '%s' "$tests_repository" | tr '[:upper:]' '[:lower:]')"
+}
+
+resolve_sha() {
+  command -v gh >/dev/null 2>&1 || fail "the GitHub CLI (gh) is required to resolve application PR #$app_pr"
+
+  if ! api_error=$(gh api "repos/$app_repository/pulls/$app_pr" \
+    --jq '[.head.sha, .state] | @tsv' 2>&1 >"$sha_file"); then
+    case "$api_error" in
+      *"Not Found"*|*"404"*)
+        # GitHub answers 404 both for a missing pull request and for a repository the token
+        # cannot see, so probe the repository itself to report the accurate reason.
+        if gh api "repos/$app_repository" >/dev/null 2>&1; then
+          fail "Application PR #$app_pr not found in $app_repository"
+        fi
+        fail "Unable to access application repository $app_repository"
+        ;;
+      *"Bad credentials"*|*"401"*|*"403"*|*"HTTP 403"*|*"gh auth login"*|*"authentication"*)
+        fail "Unable to access application repository $app_repository"
+        ;;
+      *)
+        printf '%s\n' "$api_error" >&2
+        fail "Unable to resolve the HEAD SHA of application PR #$app_pr"
+        ;;
+    esac
+  fi
+
+  app_pr_state=$(cut -f2 "$sha_file")
+  app_sha=$(cut -f1 "$sha_file")
+  case "$app_sha" in
+    ''|null) fail "Unable to resolve the HEAD SHA of application PR #$app_pr" ;;
+    *[!0-9a-f]*) fail "Unable to resolve the HEAD SHA of application PR #$app_pr (unexpected value: $app_sha)" ;;
+  esac
+  [ "${#app_sha}" -eq 40 ] \
+    || fail "Unable to resolve the HEAD SHA of application PR #$app_pr (unexpected value: $app_sha)"
+}
+
+image_exists() {
+  command -v docker >/dev/null 2>&1 || fail "docker is required to inspect $app_image"
+  if [ "${APP_BUILD_PUSH:-true}" = "true" ]; then
+    # The registry is the authority: build and test run on different CI machines, so a locally
+    # present image says nothing about what the test job will be able to pull.
+    docker manifest inspect "$app_image" >/dev/null 2>&1
+  else
+    # APP_BUILD_PUSH=false keeps the image on this machine, so the local store is the authority.
+    docker image inspect "$app_image" >/dev/null 2>&1
+  fi
+}
+
+checkout_pull_request() {
+  checkout_dir=$1
+  mkdir -p "$checkout_dir"
+
+  # The token is read from the environment by the credential helper instead of being passed on
+  # the command line or written into the repository.
+  git -C "$checkout_dir" init --quiet
+  git -C "$checkout_dir" remote add origin "https://github.com/$app_repository.git"
+  if ! git -C "$checkout_dir" \
+    -c "credential.helper=" \
+    -c "credential.helper=!f() { test \"\$1\" = get && printf 'username=x-access-token\npassword=%s\n' \"\${GH_TOKEN:-\${GITHUB_TOKEN:-}}\"; }; f" \
+    fetch --quiet --depth 1 origin "refs/pull/$app_pr/head"; then
+    fail "Unable to access application repository $app_repository (fetch of refs/pull/$app_pr/head failed)"
+  fi
+  git -C "$checkout_dir" checkout --quiet FETCH_HEAD
+
+  fetched_sha=$(git -C "$checkout_dir" rev-parse HEAD)
+  [ "$fetched_sha" = "$app_sha" ] \
+    || fail "application PR #$app_pr moved during the run: expected $app_sha, fetched $fetched_sha"
+}
+
+build_and_push() {
+  command -v docker >/dev/null 2>&1 || fail "docker is required to build $app_image"
+
+  build_root=$(mktemp -d "${TMPDIR:-/tmp}/app-source.XXXXXX")
+  # shellcheck disable=SC2064
+  trap "rm -rf '$build_root'" EXIT INT TERM
+  checkout_dir="$build_root/source"
+  checkout_pull_request "$checkout_dir"
+
+  dockerfile=${APP_DOCKERFILE:-$DEFAULT_APP_DOCKERFILE}
+  [ -f "$checkout_dir/$dockerfile" ] \
+    || fail "application Dockerfile $dockerfile does not exist in $app_repository@$app_sha"
+
+  set -- buildx build \
+    --file "$checkout_dir/$dockerfile" \
+    --platform "${APP_BUILD_PLATFORM:-linux/amd64}" \
+    --tag "$app_image" \
+    --provenance false
+  if [ "${APP_BUILD_CACHE:-}" = "gha" ]; then
+    set -- "$@" --cache-from type=gha --cache-to type=gha,mode=max
+  fi
+  if [ "${APP_BUILD_PUSH:-true}" = "true" ]; then
+    set -- "$@" --push
+  else
+    set -- "$@" --load
+  fi
+  set -- "$@" "$checkout_dir"
+
+  if ! docker "$@"; then
+    fail "Unable to build the application image $app_image; see the Docker build logs above"
+  fi
+
+  if [ "${APP_BUILD_PUSH:-true}" = "true" ] && ! image_exists; then
+    fail "Unable to push the application image $app_image"
+  fi
+
+  rm -rf "$build_root"
+  trap - EXIT INT TERM
+}
+
+report() {
+  if [ "$app_source" = "docker-image" ]; then
+    if [ -n "$app_pr" ]; then
+      printf 'Application PR: #%s in %s is %s\n' "$app_pr" "$app_repository" "$app_pr_state"
+      printf 'A closed or merged pull request has no version left to test.\n'
+      if [ "$app_link_source" = "pull-request-body" ]; then
+        printf 'Remove the Application-PR line from the pull request description to silence this.\n'
+      fi
+    fi
+    printf 'Application source: Docker image\n'
+    printf 'Application image: %s\n' "${app_image:-profile manifest default}"
+    printf 'Application build: skipped\n'
+    return 0
+  fi
+
+  printf 'Application source: Pull Request\n'
+  printf 'Application repository: %s\n' "$app_repository"
+  printf 'Application PR: #%s\n' "$app_pr"
+  printf 'Application SHA: %s\n' "$app_sha"
+  printf 'Application image: %s\n' "$app_image"
+  if [ "$app_image_exists" = "true" ]; then
+    printf 'Application image already exists\n'
+    printf 'Application build: skipped\n'
+  else
+    printf 'Application image not found\n'
+    printf 'Building application...\n'
+  fi
+}
+
+print_env() {
+  printf 'APP_SOURCE=%s\n' "$app_source"
+  printf 'APP_REPOSITORY=%s\n' "$app_repository"
+  printf 'APP_PR=%s\n' "$app_pr"
+  printf 'APP_PR_STATE=%s\n' "$app_pr_state"
+  printf 'APP_LINK_SOURCE=%s\n' "$app_link_source"
+  printf 'APP_SHA=%s\n' "$app_sha"
+  printf 'APP_IMAGE=%s\n' "$app_image"
+  printf 'APP_IMAGE_EXISTS=%s\n' "$app_image_exists"
+  printf 'APP_BUILD_REQUIRED=%s\n' "$app_build_required"
+  printf 'APP_BUILD_PERFORMED=%s\n' "$app_build_performed"
+}
+
+publish_github_outputs() {
+  [ -n "${GITHUB_OUTPUT:-}" ] || return 0
+  {
+    printf 'app_source=%s\n' "$app_source"
+    printf 'app_repository=%s\n' "$app_repository"
+    printf 'app_pr=%s\n' "$app_pr"
+    printf 'app_pr_state=%s\n' "$app_pr_state"
+    printf 'app_link_source=%s\n' "$app_link_source"
+    printf 'app_sha=%s\n' "$app_sha"
+    printf 'app_image=%s\n' "$app_image"
+    printf 'app_image_exists=%s\n' "$app_image_exists"
+    printf 'app_build_required=%s\n' "$app_build_required"
+    printf 'app_build_performed=%s\n' "$app_build_performed"
+  } >> "$GITHUB_OUTPUT"
+}
+
+resolve() {
+  app_sha=
+  app_pr_state=
+  # A manually provided APP_IMAGE stays untouched in normal mode; it is the documented escape
+  # hatch for running against an arbitrary already published image.
+  app_image=${APP_IMAGE:-}
+  app_image_exists=false
+  app_build_required=false
+  app_build_performed=false
+
+  resolve_link
+  [ "$app_source" = "pull-request" ] || return 0
+
+  work_dir=$(mktemp -d "${TMPDIR:-/tmp}/app-source.XXXXXX")
+  sha_file="$work_dir/sha"
+  resolve_sha
+  rm -rf "$work_dir"
+
+  # A closed or merged application pull request has no version left to test: its commits are
+  # either abandoned or already on the application default branch. Building it would pin the
+  # tests to a stale commit forever, so the run falls back to the normal mode it would have
+  # used without any link at all. This is what makes a declaration left behind by a merge
+  # harmless on any branch that inherits it.
+  if [ "$app_pr_state" != "open" ]; then
+    app_source=docker-image
+    app_sha=
+    app_image=${APP_IMAGE:-}
+    return 0
+  fi
+
+  app_image="$(resolve_image_repository):${APP_IMAGE_TAG_PREFIX:-$DEFAULT_IMAGE_TAG_PREFIX}-$app_pr-$app_sha"
+  if image_exists; then
+    app_image_exists=true
+  else
+    app_build_required=true
+  fi
+}
+
+action=${1:-}
+case "$action" in
+  link)
+    # Link resolution only: no GitHub API call, no registry access. Used by CI to decide
+    # whether any application-source work is needed at all.
+    app_sha=
+    app_pr_state=
+    app_image=${APP_IMAGE:-}
+    app_image_exists=false
+    app_build_required=false
+    app_build_performed=false
+    resolve_link
+    # The temporary image name is only known after the HEAD SHA has been resolved.
+    [ "$app_source" = "docker-image" ] || app_image=
+    print_env
+    publish_github_outputs
+    ;;
+  resolve)
+    resolve
+    report
+    print_env
+    publish_github_outputs
+    ;;
+  env)
+    resolve
+    print_env
+    publish_github_outputs
+    ;;
+  ensure)
+    resolve
+    report
+    if [ "$app_build_required" = "true" ]; then
+      build_and_push
+      app_image_exists=true
+      app_build_required=false
+      app_build_performed=true
+      printf 'Application build: completed\n'
+      printf 'Application image: %s\n' "$app_image"
+    fi
+    print_env
+    publish_github_outputs
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  '')
+    usage >&2
+    exit 2
+    ;;
+  *)
+    usage >&2
+    fail "unknown action: $action"
+    ;;
+esac
