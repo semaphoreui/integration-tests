@@ -2,6 +2,15 @@ name: CI
 
 on:
   pull_request:
+    # The application pull request is declared in the description, so editing the description
+    # must be able to start a run. A re-run would not do: it replays the original event payload,
+    # which still carries the description the pull request was opened with. The concurrency group
+    # below cancels the superseded run, so an edit costs at most one restart.
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
   push:
     branches:
       - main
