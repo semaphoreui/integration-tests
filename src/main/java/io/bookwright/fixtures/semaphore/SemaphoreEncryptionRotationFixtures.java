@@ -5,6 +5,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreFixtures.Inventory;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.Repository;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.SecretAccessKey;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.Template;
+import io.bookwright.config.MainConfig;
 
 /** Stable data shared by the phases of a database-encryption key rotation. */
 public record SemaphoreEncryptionRotationFixtures(
@@ -17,7 +18,7 @@ public record SemaphoreEncryptionRotationFixtures(
     Template template,
     String outputMarker) {
 
-  public static SemaphoreEncryptionRotationFixtures standard() {
+  public static SemaphoreEncryptionRotationFixtures from(MainConfig config) {
     return new SemaphoreEncryptionRotationFixtures(
         new ProjectRequest("bookwright-encryption-rotation", false, 0),
         new SecretAccessKey(
@@ -35,7 +36,7 @@ public record SemaphoreEncryptionRotationFixtures(
             "login_password",
             "bookwright-post-rekey-user",
             "Bookwright-post-rekey-password-42!"),
-        new Repository("bookwright-encryption-repository", fixturesRepository(), fixturesDefaultBranch()),
+        new Repository("bookwright-encryption-repository", config.fixturesRepository(), config.fixturesDefaultBranch()),
         new Inventory(
             "bookwright-encryption-inventory",
             "[local]\nlocalhost ansible_connection=local",

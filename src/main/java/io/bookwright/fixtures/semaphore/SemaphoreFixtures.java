@@ -44,14 +44,14 @@ public record SemaphoreFixtures(
             "Bw-secret-" + suffix + "-42!"),
         new Repositories(
             new Repository(
-                "bookwright-demo-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
+                "bookwright-demo-repository-" + suffix, config.fixturesRepository(), config.fixturesDefaultBranch()),
             new Repository(
                 "bookwright-ref-repository-" + suffix,
-                fixturesRepository(),
+                config.fixturesRepository(),
                 "bookwright-fixture-ref"),
             new Repository(
                 "bookwright-missing-ref-repository-" + suffix,
-                fixturesRepository(),
+                config.fixturesRepository(),
                 "bookwright-missing-ref"),
             new Repository(
                 "bookwright-unavailable-repository-" + suffix,

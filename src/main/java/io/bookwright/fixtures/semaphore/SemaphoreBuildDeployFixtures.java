@@ -8,6 +8,7 @@ import io.bookwright.api.model.semaphore.TaskRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
 import io.bookwright.util.TestData;
 import java.util.List;
+import io.bookwright.config.MainConfig;
 
 /** Typed data for a manually selected Build to Deploy artifact-version chain. */
 public record SemaphoreBuildDeployFixtures(
@@ -18,20 +19,20 @@ public record SemaphoreBuildDeployFixtures(
     BuildTemplate build,
     DeployTemplate deploy) {
 
-  public static SemaphoreBuildDeployFixtures from(TestData data) {
+  public static SemaphoreBuildDeployFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreBuildDeployFixtures(
         new ProjectRequest("bookwright-build-deploy-" + suffix, false, 0),
         new AccessKey("bookwright-build-deploy-key-" + suffix, "none"),
         new Repository(
-            "bookwright-build-deploy-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
+            "bookwright-build-deploy-repository-" + suffix, config.fixturesRepository(), config.fixturesDefaultBranch()),
         new Inventory(
             "bookwright-build-deploy-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",
             "static"),
         new BuildTemplate(
             "bookwright-build-template-" + suffix,
-            "build-version.yml",
+            "/test-environment/fixtures/ansible/build-version.yml",
             "ansible",
             "build",
             "1.2.3",

@@ -8,6 +8,7 @@ import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
 import io.bookwright.util.TestData;
 import java.util.List;
+import io.bookwright.config.MainConfig;
 
 /** Typed data for static inventory group selection during Ansible execution. */
 public record SemaphoreStaticInventoryFixtures(
@@ -20,13 +21,13 @@ public record SemaphoreStaticInventoryFixtures(
     Template yamlTemplate,
     String outputMarker) {
 
-  public static SemaphoreStaticInventoryFixtures from(TestData data) {
+  public static SemaphoreStaticInventoryFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreStaticInventoryFixtures(
         new ProjectRequest("bookwright-static-inventory-" + suffix, false, 0),
         new AccessKey("bookwright-static-inventory-key-" + suffix, "none"),
         new Repository(
-            "bookwright-static-inventory-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
+            "bookwright-static-inventory-repository-" + suffix, config.fixturesRepository(), config.fixturesDefaultBranch()),
         new StaticInventory(
             "bookwright-ini-inventory-" + suffix,
             "[bookwright_selected]\n"

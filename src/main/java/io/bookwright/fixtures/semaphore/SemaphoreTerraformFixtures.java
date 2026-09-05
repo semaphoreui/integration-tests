@@ -16,6 +16,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.List;
+import io.bookwright.config.MainConfig;
 
 /** Typed data for Terraform and OpenTofu workspace plan execution. */
 public record SemaphoreTerraformFixtures(
@@ -27,13 +28,13 @@ public record SemaphoreTerraformFixtures(
     Tool tofu,
     String workspaceOutputName) {
 
-  public static SemaphoreTerraformFixtures from(TestData data) {
+  public static SemaphoreTerraformFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreTerraformFixtures(
         new ProjectRequest("bookwright-terraform-" + suffix, false, 0),
         new AccessKey("bookwright-terraform-key-" + suffix, "none"),
         new Repository(
-            "bookwright-terraform-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
+            "bookwright-terraform-repository-" + suffix, config.fixturesRepository(), config.fixturesDefaultBranch()),
         new TerraformVariableGroup(
             "bookwright-terraform-variables-" + suffix,
             "TF_VAR_bookwright_secret",

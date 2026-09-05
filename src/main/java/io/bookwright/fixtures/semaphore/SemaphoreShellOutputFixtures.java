@@ -7,6 +7,7 @@ import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
 import io.bookwright.util.TestData;
 import java.time.Duration;
+import io.bookwright.config.MainConfig;
 
 /** Typed data and expectations for Bash output capture regressions. */
 public record SemaphoreShellOutputFixtures(
@@ -17,13 +18,13 @@ public record SemaphoreShellOutputFixtures(
     Templates templates,
     Expectations expectations) {
 
-  public static SemaphoreShellOutputFixtures from(TestData data) {
+  public static SemaphoreShellOutputFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreShellOutputFixtures(
         new ProjectRequest("bookwright-shell-output-" + suffix, false, 0),
         new AccessKey("bookwright-shell-output-key-" + suffix, "none"),
         new Repository(
-            "bookwright-shell-output-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
+            "bookwright-shell-output-repository-" + suffix, config.fixturesRepository(), config.fixturesDefaultBranch()),
         new Inventory(
             "bookwright-shell-output-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",

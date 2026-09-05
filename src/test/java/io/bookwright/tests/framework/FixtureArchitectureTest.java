@@ -118,13 +118,13 @@ class FixtureArchitectureTest {
     SemaphoreSshFixtures.SshAccessKey sshKey =
         new SemaphoreSshFixtures.SshAccessKey(
             "fixture-key", "ssh", "fixture", "ssh-passphrase-secret", "ssh-private-key-secret");
-    SemaphoreUpgradeFixtures upgrade = SemaphoreUpgradeFixtures.standard();
+    SemaphoreUpgradeFixtures upgrade = SemaphoreUpgradeFixtures.from(Configs.main());
     SemaphoreVariableGroupFixtures variableGroup =
         SemaphoreVariableGroupFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreSurveyFixtures survey =
         SemaphoreSurveyFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreTerraformFixtures terraform =
-        SemaphoreTerraformFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
+        SemaphoreTerraformFixtures.from(Configs.main(), new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreUserLifecycleFixtures userLifecycle =
         SemaphoreUserLifecycleFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
 

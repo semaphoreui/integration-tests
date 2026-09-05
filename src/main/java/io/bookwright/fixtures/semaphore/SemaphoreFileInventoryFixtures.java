@@ -7,6 +7,7 @@ import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
 import io.bookwright.util.TestData;
+import io.bookwright.config.MainConfig;
 
 /** Typed data for Ansible inventories stored in a Git repository. */
 public record SemaphoreFileInventoryFixtures(
@@ -19,13 +20,13 @@ public record SemaphoreFileInventoryFixtures(
     String successfulTaskStatus,
     String outputMarker) {
 
-  public static SemaphoreFileInventoryFixtures from(TestData data) {
+  public static SemaphoreFileInventoryFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreFileInventoryFixtures(
         new ProjectRequest("bookwright-file-inventory-" + suffix, false, 0),
         new AccessKey("bookwright-file-inventory-key-" + suffix, "none"),
         new Repository(
-            "bookwright-file-inventory-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
+            "bookwright-file-inventory-repository-" + suffix, config.fixturesRepository(), config.fixturesDefaultBranch()),
         new FileInventory(
             "bookwright-file-inventory-" + suffix, "inventories/localhost.ini", "file"),
         new FileInventory(

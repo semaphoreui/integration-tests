@@ -6,6 +6,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreFixtures.Repository;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.Schedule;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.SecretAccessKey;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.Template;
+import io.bookwright.config.MainConfig;
 
 /** Stable data shared by the seed and verify processes of an in-place release upgrade. */
 public record SemaphoreUpgradeFixtures(
@@ -17,7 +18,7 @@ public record SemaphoreUpgradeFixtures(
     Schedule schedule,
     String outputMarker) {
 
-  public static SemaphoreUpgradeFixtures standard() {
+  public static SemaphoreUpgradeFixtures from(MainConfig config) {
     return new SemaphoreUpgradeFixtures(
         new ProjectRequest("bookwright-release-upgrade", false, 0),
         new SecretAccessKey(
@@ -25,7 +26,7 @@ public record SemaphoreUpgradeFixtures(
             "login_password",
             "bookwright-upgrade-user",
             "Bookwright-upgrade-password-42!"),
-        new Repository("bookwright-upgrade-repository", fixturesRepository(), fixturesDefaultBranch()),
+        new Repository("bookwright-upgrade-repository", config.fixturesRepository(), config.fixturesDefaultBranch()),
         new Inventory(
             "bookwright-upgrade-inventory",
             "[local]\nlocalhost ansible_connection=local",

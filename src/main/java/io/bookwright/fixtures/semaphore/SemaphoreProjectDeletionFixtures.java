@@ -6,6 +6,7 @@ import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
 import io.bookwright.util.TestData;
+import io.bookwright.config.MainConfig;
 
 /** Typed data for project deletion with a running or stopped task. */
 public record SemaphoreProjectDeletionFixtures(
@@ -17,13 +18,13 @@ public record SemaphoreProjectDeletionFixtures(
     String readyMarker,
     String stoppedTaskStatus) {
 
-  public static SemaphoreProjectDeletionFixtures from(TestData data) {
+  public static SemaphoreProjectDeletionFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreProjectDeletionFixtures(
         new ProjectRequest("bookwright-project-delete-" + suffix, false, 0),
         new AccessKey("bookwright-project-delete-key-" + suffix, "none"),
         new Repository(
-            "bookwright-project-delete-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
+            "bookwright-project-delete-repository-" + suffix, config.fixturesRepository(), config.fixturesDefaultBranch()),
         new Inventory(
             "bookwright-project-delete-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",
