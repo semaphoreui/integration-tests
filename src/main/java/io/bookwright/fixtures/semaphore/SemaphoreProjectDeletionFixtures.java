@@ -23,7 +23,7 @@ public record SemaphoreProjectDeletionFixtures(
         new ProjectRequest("bookwright-project-delete-" + suffix, false, 0),
         new AccessKey("bookwright-project-delete-key-" + suffix, "none"),
         new Repository(
-            "bookwright-project-delete-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            "bookwright-project-delete-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
         new Inventory(
             "bookwright-project-delete-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",

@@ -26,7 +26,7 @@ public record SemaphoreStaticInventoryFixtures(
         new ProjectRequest("bookwright-static-inventory-" + suffix, false, 0),
         new AccessKey("bookwright-static-inventory-key-" + suffix, "none"),
         new Repository(
-            "bookwright-static-inventory-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            "bookwright-static-inventory-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
         new StaticInventory(
             "bookwright-ini-inventory-" + suffix,
             "[bookwright_selected]\n"

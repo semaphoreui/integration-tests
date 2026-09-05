@@ -25,7 +25,7 @@ public record SemaphoreFileInventoryFixtures(
         new ProjectRequest("bookwright-file-inventory-" + suffix, false, 0),
         new AccessKey("bookwright-file-inventory-key-" + suffix, "none"),
         new Repository(
-            "bookwright-file-inventory-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            "bookwright-file-inventory-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
         new FileInventory(
             "bookwright-file-inventory-" + suffix, "inventories/localhost.ini", "file"),
         new FileInventory(

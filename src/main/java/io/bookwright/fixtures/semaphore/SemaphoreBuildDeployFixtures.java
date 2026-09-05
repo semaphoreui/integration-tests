@@ -24,7 +24,7 @@ public record SemaphoreBuildDeployFixtures(
         new ProjectRequest("bookwright-build-deploy-" + suffix, false, 0),
         new AccessKey("bookwright-build-deploy-key-" + suffix, "none"),
         new Repository(
-            "bookwright-build-deploy-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            "bookwright-build-deploy-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
         new Inventory(
             "bookwright-build-deploy-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",

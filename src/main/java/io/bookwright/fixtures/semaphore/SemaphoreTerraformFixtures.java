@@ -33,7 +33,7 @@ public record SemaphoreTerraformFixtures(
         new ProjectRequest("bookwright-terraform-" + suffix, false, 0),
         new AccessKey("bookwright-terraform-key-" + suffix, "none"),
         new Repository(
-            "bookwright-terraform-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            "bookwright-terraform-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
         new TerraformVariableGroup(
             "bookwright-terraform-variables-" + suffix,
             "TF_VAR_bookwright_secret",

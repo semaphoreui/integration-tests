@@ -35,7 +35,7 @@ public record SemaphoreEncryptionRotationFixtures(
             "login_password",
             "bookwright-post-rekey-user",
             "Bookwright-post-rekey-password-42!"),
-        new Repository("bookwright-encryption-repository", "file:///fixtures/ansible", "main"),
+        new Repository("bookwright-encryption-repository", fixturesRepository(), fixturesDefaultBranch()),
         new Inventory(
             "bookwright-encryption-inventory",
             "[local]\nlocalhost ansible_connection=local",

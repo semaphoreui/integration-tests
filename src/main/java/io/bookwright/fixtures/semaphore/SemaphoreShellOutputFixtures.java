@@ -23,7 +23,7 @@ public record SemaphoreShellOutputFixtures(
         new ProjectRequest("bookwright-shell-output-" + suffix, false, 0),
         new AccessKey("bookwright-shell-output-key-" + suffix, "none"),
         new Repository(
-            "bookwright-shell-output-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            "bookwright-shell-output-repository-" + suffix, fixturesRepository(), fixturesDefaultBranch()),
         new Inventory(
             "bookwright-shell-output-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",
