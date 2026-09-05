@@ -17,15 +17,6 @@ case "$API_BASE_URL" in
     ;;
 esac
 
-if ! java -version >/dev/null 2>&1; then
-  macos_java_home=/opt/homebrew/opt/openjdk@21
-  if [ ! -x "$macos_java_home/bin/java" ]; then
-    printf '%s\n' 'run-external-tests: Java 21 is unavailable; set JAVA_HOME before running' >&2
-    exit 2
-  fi
-  JAVA_HOME=$macos_java_home
-  export JAVA_HOME
-fi
 
 cd "$repository_dir"
 exec ./gradlew externalTest "$@"
