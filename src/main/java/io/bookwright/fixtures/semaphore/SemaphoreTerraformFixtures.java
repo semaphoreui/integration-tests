@@ -47,7 +47,7 @@ public record SemaphoreTerraformFixtures(
             new WorkspaceInventory(
                 "bookwright-terraform-workspace-" + suffix,
                 "bookwright-tf-" + suffix,
-                "test-environment/fixtures/ansible/terraform-workspace"),
+                "terraform-workspace"),
             new ToolTemplate(
                 "bookwright-terraform-template-" + suffix,
                 "test-environment/fixtures/ansible/terraform-workspace",
