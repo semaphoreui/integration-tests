@@ -50,8 +50,17 @@ esac
 """,
         )
 
-    def stub_docker(self, manifest_status=1):
-        self.write_stub("docker", f"exit {manifest_status}\n")
+    def stub_docker(self, manifest_status=1, local_status=1):
+        self.write_stub(
+            "docker",
+            f"""
+case "$1" in
+  manifest) exit {manifest_status} ;;
+  image) exit {local_status} ;;
+  *) exit 0 ;;
+esac
+""",
+        )
 
     def declaration(self, content):
         path = self.root / "application-under-test.yml"
@@ -248,6 +257,26 @@ class ImageReuseTest(AppSourceTestCase):
         self.assertEqual("true", values["APP_BUILD_REQUIRED"])
         self.assertIn("Application image not found", result.stdout)
         self.assertIn("Building application...", result.stdout)
+
+    def test_the_registry_decides_when_the_image_is_pushed(self):
+        self.stub_gh()
+        self.stub_docker(manifest_status=1, local_status=0)
+
+        values = self.parse(self.run_script(environment={"APP_PR": "123"}).stdout)
+
+        self.assertEqual("false", values["APP_IMAGE_EXISTS"])
+        self.assertEqual("true", values["APP_BUILD_REQUIRED"])
+
+    def test_the_local_store_decides_when_the_image_is_not_pushed(self):
+        self.stub_gh()
+        self.stub_docker(manifest_status=1, local_status=0)
+
+        values = self.parse(
+            self.run_script(environment={"APP_PR": "123", "APP_BUILD_PUSH": "false"}).stdout
+        )
+
+        self.assertEqual("true", values["APP_IMAGE_EXISTS"])
+        self.assertEqual("false", values["APP_BUILD_REQUIRED"])
 
     def test_a_new_commit_of_the_same_pull_request_yields_a_new_image(self):
         other_sha = "abc123456789abc123456789abc123456789abcd"

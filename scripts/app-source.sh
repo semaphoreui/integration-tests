@@ -176,7 +176,14 @@ resolve_sha() {
 
 image_exists() {
   command -v docker >/dev/null 2>&1 || fail "docker is required to inspect $app_image"
-  docker manifest inspect "$app_image" >/dev/null 2>&1
+  if [ "${APP_BUILD_PUSH:-true}" = "true" ]; then
+    # The registry is the authority: build and test run on different CI machines, so a locally
+    # present image says nothing about what the test job will be able to pull.
+    docker manifest inspect "$app_image" >/dev/null 2>&1
+  else
+    # APP_BUILD_PUSH=false keeps the image on this machine, so the local store is the authority.
+    docker image inspect "$app_image" >/dev/null 2>&1
+  fi
 }
 
 checkout_pull_request() {
