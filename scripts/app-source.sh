@@ -27,6 +27,13 @@
 #
 # When neither defines a pull request the script stays in normal mode. It never infers the
 # application pull request from branch names.
+#
+# Two rules keep a declaration that was merged into the default branch harmless:
+#
+#   * APP_LINK_FROM_FILE=false ignores the file entirely. Every context that is not a test pull
+#     request sets it, so the default branch always runs in normal mode.
+#   * a closed or merged application pull request falls back to normal mode, because such a
+#     pull request has no version left to test.
 
 set -eu
 
@@ -43,7 +50,7 @@ fail() {
 }
 
 usage() {
-  sed -n '3,32p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+  sed -n '3,40p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
 
 # semaphoreui/semaphore, https://github.com/semaphoreui/semaphore.git and
@@ -105,11 +112,19 @@ read_declaration() {
 resolve_link() {
   app_repository=${APP_REPOSITORY:-}
   app_pr=${APP_PR:-}
+  app_link_source=none
+  [ -z "$app_pr" ] || app_link_source=ci-input
 
   declaration_file=${APP_SOURCE_FILE:-$repository_dir/application-under-test.yml}
-  if [ -f "$declaration_file" ]; then
+  # The declaration lives in the test pull request and therefore reaches the default branch once
+  # that pull request is merged. Contexts that are not a test pull request - a push to the
+  # default branch, a scheduled run, a release verification - set APP_LINK_FROM_FILE=false, so a
+  # declaration left behind by a merge can never turn the normal pipeline into a build of some
+  # old application pull request.
+  if [ "${APP_LINK_FROM_FILE:-true}" = "true" ] && [ -f "$declaration_file" ]; then
     if [ -z "$app_pr" ]; then
       app_pr=$(read_declaration pull_request "$declaration_file")
+      [ -z "$app_pr" ] || app_link_source=declaration-file
     fi
     if [ -z "$app_repository" ]; then
       app_repository=$(read_declaration repository "$declaration_file")
@@ -124,6 +139,7 @@ resolve_link() {
 
   if [ "$app_source" = "docker-image" ]; then
     app_repository=
+    app_link_source=none
     return 0
   fi
 
@@ -145,7 +161,8 @@ resolve_image_repository() {
 resolve_sha() {
   command -v gh >/dev/null 2>&1 || fail "the GitHub CLI (gh) is required to resolve application PR #$app_pr"
 
-  if ! api_error=$(gh api "repos/$app_repository/pulls/$app_pr" --jq '.head.sha' 2>&1 >"$sha_file"); then
+  if ! api_error=$(gh api "repos/$app_repository/pulls/$app_pr" \
+    --jq '[.head.sha, .state] | @tsv' 2>&1 >"$sha_file"); then
     case "$api_error" in
       *"Not Found"*|*"404"*)
         # GitHub answers 404 both for a missing pull request and for a repository the token
@@ -165,7 +182,8 @@ resolve_sha() {
     esac
   fi
 
-  app_sha=$(cat "$sha_file")
+  app_pr_state=$(cut -f2 "$sha_file")
+  app_sha=$(cut -f1 "$sha_file")
   case "$app_sha" in
     ''|null) fail "Unable to resolve the HEAD SHA of application PR #$app_pr" ;;
     *[!0-9a-f]*) fail "Unable to resolve the HEAD SHA of application PR #$app_pr (unexpected value: $app_sha)" ;;
@@ -249,6 +267,13 @@ build_and_push() {
 
 report() {
   if [ "$app_source" = "docker-image" ]; then
+    if [ -n "$app_pr" ]; then
+      printf 'Application PR: #%s in %s is %s\n' "$app_pr" "$app_repository" "$app_pr_state"
+      printf 'A closed or merged pull request has no version left to test.\n'
+      if [ "$app_link_source" = "declaration-file" ]; then
+        printf 'Comment the application block out in application-under-test.yml to silence this.\n'
+      fi
+    fi
     printf 'Application source: Docker image\n'
     printf 'Application image: %s\n' "${app_image:-profile manifest default}"
     printf 'Application build: skipped\n'
@@ -267,12 +292,17 @@ report() {
     printf 'Application image not found\n'
     printf 'Building application...\n'
   fi
+  if [ "$app_link_source" = "declaration-file" ]; then
+    printf 'Reminder: comment the application block out in application-under-test.yml before merging this test pull request.\n'
+  fi
 }
 
 print_env() {
   printf 'APP_SOURCE=%s\n' "$app_source"
   printf 'APP_REPOSITORY=%s\n' "$app_repository"
   printf 'APP_PR=%s\n' "$app_pr"
+  printf 'APP_PR_STATE=%s\n' "$app_pr_state"
+  printf 'APP_LINK_SOURCE=%s\n' "$app_link_source"
   printf 'APP_SHA=%s\n' "$app_sha"
   printf 'APP_IMAGE=%s\n' "$app_image"
   printf 'APP_IMAGE_EXISTS=%s\n' "$app_image_exists"
@@ -286,6 +316,8 @@ publish_github_outputs() {
     printf 'app_source=%s\n' "$app_source"
     printf 'app_repository=%s\n' "$app_repository"
     printf 'app_pr=%s\n' "$app_pr"
+    printf 'app_pr_state=%s\n' "$app_pr_state"
+    printf 'app_link_source=%s\n' "$app_link_source"
     printf 'app_sha=%s\n' "$app_sha"
     printf 'app_image=%s\n' "$app_image"
     printf 'app_image_exists=%s\n' "$app_image_exists"
@@ -296,6 +328,7 @@ publish_github_outputs() {
 
 resolve() {
   app_sha=
+  app_pr_state=
   # A manually provided APP_IMAGE stays untouched in normal mode; it is the documented escape
   # hatch for running against an arbitrary already published image.
   app_image=${APP_IMAGE:-}
@@ -311,6 +344,18 @@ resolve() {
   resolve_sha
   rm -rf "$work_dir"
 
+  # A closed or merged application pull request has no version left to test: its commits are
+  # either abandoned or already on the application default branch. Building it would pin the
+  # tests to a stale commit forever, so the run falls back to the normal mode it would have
+  # used without any link at all. This is what makes a declaration left behind by a merge
+  # harmless on any branch that inherits it.
+  if [ "$app_pr_state" != "open" ]; then
+    app_source=docker-image
+    app_sha=
+    app_image=${APP_IMAGE:-}
+    return 0
+  fi
+
   app_image="$(resolve_image_repository):${APP_IMAGE_TAG_PREFIX:-$DEFAULT_IMAGE_TAG_PREFIX}-$app_pr-$app_sha"
   if image_exists; then
     app_image_exists=true
@@ -325,6 +370,7 @@ case "$action" in
     # Link resolution only: no GitHub API call, no registry access. Used by CI to decide
     # whether any application-source work is needed at all.
     app_sha=
+    app_pr_state=
     app_image=${APP_IMAGE:-}
     app_image_exists=false
     app_build_required=false

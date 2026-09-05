@@ -35,6 +35,9 @@ jobs:
     with:
       application_repository: ${{ inputs.application_repository || '' }}
       application_pull_request: ${{ inputs.application_pull_request || '' }}
+      # A push to main and a manual run without inputs must behave exactly as before, even if a
+      # merged test pull request left an active declaration behind.
+      use_declaration_file: ${{ github.event_name == 'pull_request' }}
     secrets:
       application_repository_token: ${{ secrets.APPLICATION_REPOSITORY_TOKEN }}
 

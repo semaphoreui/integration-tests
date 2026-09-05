@@ -15,6 +15,11 @@
 #
 # repository is optional and defaults to semaphoreui/semaphore.
 #
+# Comment the block out again before merging the test pull request, so that the default branch
+# keeps this file in its neutral state. Forgetting to do so is not dangerous: a run that is not
+# a test pull request ignores this file completely, and a closed or merged application pull
+# request falls back to normal mode. CI reminds you about it in the run summary.
+#
 # The same link can be provided as CI inputs instead of this file (APP_REPOSITORY / APP_PR, or
 # the inputs of the "CI" workflow_dispatch). CI inputs take precedence over this file.
 #

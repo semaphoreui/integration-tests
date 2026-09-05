@@ -23,6 +23,14 @@ on:
         required: false
         type: string
         default: ""
+      use_declaration_file:
+        description: >-
+          Honour application-under-test.yml. Only a test pull request may do so: the file travels
+          with it and reaches the default branch on merge, where a leftover declaration must not
+          resurrect a build of an old application pull request.
+        required: false
+        type: boolean
+        default: false
     outputs:
       app_source:
         description: docker-image or pull-request
@@ -55,7 +63,9 @@ jobs:
       contents: read
       packages: write
     outputs:
-      app_source: ${{ steps.link.outputs.app_source }}
+      # The link step only reads the declaration; the image step is what knows whether the
+      # linked pull request is still open, so its resolution wins when it ran.
+      app_source: ${{ steps.image.outputs.app_source || steps.link.outputs.app_source }}
       app_repository: ${{ steps.link.outputs.app_repository }}
       app_pr: ${{ steps.link.outputs.app_pr }}
       app_sha: ${{ steps.image.outputs.app_sha }}
@@ -63,6 +73,7 @@ jobs:
     env:
       APP_REPOSITORY: ${{ inputs.application_repository }}
       APP_PR: ${{ inputs.application_pull_request }}
+      APP_LINK_FROM_FILE: ${{ inputs.use_declaration_file }}
       APP_IMAGE_REPOSITORY: ghcr.io/${{ github.repository }}/semaphore-ci
     steps:
       - name: Checkout tests
@@ -100,7 +111,9 @@ jobs:
 
       - name: Summary
         env:
-          APP_SOURCE: ${{ steps.link.outputs.app_source }}
+          APP_SOURCE: ${{ steps.image.outputs.app_source || steps.link.outputs.app_source }}
+          APP_PR_STATE: ${{ steps.image.outputs.app_pr_state }}
+          APP_LINK_SOURCE: ${{ steps.link.outputs.app_link_source }}
           APP_REPOSITORY: ${{ steps.link.outputs.app_repository }}
           APP_PR: ${{ steps.link.outputs.app_pr }}
           APP_SHA: ${{ steps.image.outputs.app_sha }}
@@ -119,8 +132,15 @@ jobs:
               else
                 printf -- '- build: skipped, the image for this commit already existed\n'
               fi
+              if [ "$APP_LINK_SOURCE" = "declaration-file" ]; then
+                printf -- '- **before merging this test pull request, comment the `application` block out in `application-under-test.yml`**\n'
+              fi
             else
               printf '### Application source: Docker image\n\n'
+              if [ -n "$APP_PR_STATE" ] && [ "$APP_PR_STATE" != "open" ]; then
+                printf -- '- application pull request #%s is **%s**, so there is no version left to test\n' "$APP_PR" "$APP_PR_STATE"
+                printf -- '- the run fell back to normal mode\n'
+              fi
               printf -- '- the application repository was not cloned and no image was built\n'
               printf -- '- the profile manifest image is used, as before\n'
             fi

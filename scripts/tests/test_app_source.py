@@ -31,7 +31,7 @@ class AppSourceTestCase(unittest.TestCase):
         path.write_text("#!/bin/sh\n" + body, encoding="utf-8")
         path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
-    def stub_gh(self, sha=HEAD_SHA, pull_status=0, repository_status=0):
+    def stub_gh(self, sha=HEAD_SHA, pull_status=0, repository_status=0, state="open"):
         self.write_stub(
             "gh",
             f"""
@@ -41,7 +41,7 @@ case "$2" in
       printf 'gh: Not Found (HTTP 404)\\n' >&2
       exit {pull_status}
     fi
-    printf '{sha}\\n'
+    printf '{sha}\\t{state}\\n'
     ;;
   *)
     exit {repository_status}
@@ -316,6 +316,86 @@ class ImageReuseTest(AppSourceTestCase):
             f"ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-pr-123-{HEAD_SHA}", image
         )
         self.assertNotIn("semaphoreui/semaphore:", image)
+
+
+class MergedDeclarationTest(AppSourceTestCase):
+    """A declaration reaches the default branch once the test pull request is merged."""
+
+    def test_a_context_that_is_not_a_test_pull_request_ignores_the_file(self):
+        self.stub_gh()
+        self.stub_docker()
+        declaration = self.declaration(
+            "application:\n  repository: semaphoreui/semaphore\n  pull_request: 123\n"
+        )
+
+        values = self.parse(
+            self.run_script(
+                environment={
+                    "APP_SOURCE_FILE": str(declaration),
+                    "APP_LINK_FROM_FILE": "false",
+                }
+            ).stdout
+        )
+
+        self.assertEqual("docker-image", values["APP_SOURCE"])
+        self.assertEqual("", values["APP_PR"])
+        self.assertEqual("", values["APP_IMAGE"])
+
+    def test_ci_inputs_still_apply_when_the_file_is_ignored(self):
+        self.stub_gh()
+        self.stub_docker()
+
+        values = self.parse(
+            self.run_script(
+                environment={"APP_LINK_FROM_FILE": "false", "APP_PR": "123"}
+            ).stdout
+        )
+
+        self.assertEqual("pull-request", values["APP_SOURCE"])
+        self.assertEqual("123", values["APP_PR"])
+
+    def test_a_merged_application_pull_request_falls_back_to_normal_mode(self):
+        self.stub_gh(state="closed")
+        self.stub_docker()
+
+        result = self.run_script("resolve", environment={"APP_PR": "123"})
+        values = self.parse(result.stdout)
+
+        self.assertEqual("docker-image", values["APP_SOURCE"])
+        self.assertEqual("closed", values["APP_PR_STATE"])
+        self.assertEqual("", values["APP_IMAGE"])
+        self.assertEqual("false", values["APP_BUILD_REQUIRED"])
+        self.assertIn("no version left to test", result.stdout)
+        self.assertIn("Application build: skipped", result.stdout)
+
+    def test_an_open_application_pull_request_still_builds(self):
+        self.stub_gh(state="open")
+        self.stub_docker()
+
+        values = self.parse(self.run_script(environment={"APP_PR": "123"}).stdout)
+
+        self.assertEqual("pull-request", values["APP_SOURCE"])
+        self.assertEqual("open", values["APP_PR_STATE"])
+        self.assertEqual("true", values["APP_BUILD_REQUIRED"])
+
+    def test_the_declarative_link_reminds_to_revert_before_merge(self):
+        self.stub_gh()
+        self.stub_docker()
+        declaration = self.declaration("application:\n  pull_request: 123\n")
+
+        result = self.run_script("resolve", environment={"APP_SOURCE_FILE": str(declaration)})
+
+        self.assertEqual("declaration-file", self.parse(result.stdout)["APP_LINK_SOURCE"])
+        self.assertIn("comment the application block out", result.stdout)
+
+    def test_a_ci_input_link_does_not_remind(self):
+        self.stub_gh()
+        self.stub_docker()
+
+        result = self.run_script("resolve", environment={"APP_PR": "123"})
+
+        self.assertEqual("ci-input", self.parse(result.stdout)["APP_LINK_SOURCE"])
+        self.assertNotIn("comment the application block out", result.stdout)
 
 
 class ErrorHandlingTest(AppSourceTestCase):
