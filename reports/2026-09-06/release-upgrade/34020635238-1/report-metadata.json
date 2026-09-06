@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore release upgrade",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/34020635238",
+  "versions": [
+    "v2.19.8 → v2.19.12"
+  ],
+  "reports": [
+    {
+      "name": "upgrade-postgres-local",
+      "profile": "upgrade-postgres-local",
+      "version": "v2.19.12",
+      "previousVersion": "v2.19.8",
+      "versionLabel": "v2.19.8 → v2.19.12",
+      "tests": 58,
+      "counts": {
+        "failed": 0,
+        "broken": 1,
+        "passed": 31,
+        "skipped": 26,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "upgrade-sqlite-local",
+      "profile": "upgrade-sqlite-local",
+      "version": "v2.19.12",
+      "previousVersion": "v2.19.8",
+      "versionLabel": "v2.19.8 → v2.19.12",
+      "tests": 58,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 32,
+        "skipped": 26,
+        "unknown": 0
+      }
+    }
+  ]
+}
