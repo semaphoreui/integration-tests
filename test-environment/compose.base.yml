@@ -17,7 +17,7 @@ services:
         chown -R 1001:0 /repository
     volumes:
       - fixture-repository:/repository
-      - ./fixtures/ansible:/source:ro
+      - ./fixtures/ansible:/source/test-environment/fixtures/ansible:ro
 
   semaphore:
     image: ${SEMAPHORE_IMAGE:-semaphoreui/semaphore:v2.19.12}
@@ -30,7 +30,7 @@ services:
       SEMAPHORE_ADMIN_EMAIL: admin@localhost
       SEMAPHORE_ACCESS_KEY_ENCRYPTION: IlRqgrrO5Gp27MlWakDX1xVrPv4jhoUx+ARY+qGyDxQ=
     volumes:
-      - fixture-repository:/fixtures/ansible:ro
+      - fixture-repository:/repository:ro
     restart: unless-stopped
     depends_on:
       fixture-init:
