@@ -1,0 +1,151 @@
+name: Prepare application image
+
+# Resolves which version of the application the test jobs must run against.
+#
+# The link is declared as an "Application-PR:" trailer in the description of the test pull
+# request. It lives outside the repository content on purpose, so merging a test pull request can
+# never leave an active link behind on the default branch.
+#
+# Normal mode (no explicit link to an application pull request) does nothing at all: the
+# application repository is not read, no image is built and no temporary image is created. The
+# test jobs then keep using the image declared by the profile manifest.
+#
+# Pull request mode resolves the HEAD commit of the linked application pull request, reuses the
+# already published temporary image for that commit when it exists, and otherwise builds and
+# pushes it.
+
+on:
+  workflow_call:
+    inputs:
+      application_repository:
+        description: Application repository as owner/name; overrides the pull request description
+        required: false
+        type: string
+        default: ""
+      application_pull_request:
+        description: Application pull request number; overrides the pull request description
+        required: false
+        type: string
+        default: ""
+      pull_request_body:
+        description: >-
+          Description of the test pull request. It is scanned for the "Application-PR:" trailer
+          that declares which application pull request to test. Empty outside a pull request,
+          which is exactly why a link can never leak into the default branch.
+        required: false
+        type: string
+        default: ""
+    outputs:
+      app_source:
+        description: docker-image or pull-request
+        value: ${{ jobs.prepare.outputs.app_source }}
+      app_repository:
+        description: Resolved application repository, empty in normal mode
+        value: ${{ jobs.prepare.outputs.app_repository }}
+      app_pr:
+        description: Resolved application pull request number, empty in normal mode
+        value: ${{ jobs.prepare.outputs.app_pr }}
+      app_sha:
+        description: HEAD commit of the application pull request, empty in normal mode
+        value: ${{ jobs.prepare.outputs.app_sha }}
+      app_image:
+        description: Temporary application image, empty in normal mode
+        value: ${{ jobs.prepare.outputs.app_image }}
+    secrets:
+      application_repository_token:
+        description: >-
+          Token able to read the application repository. Only required when that repository is
+          private; the built-in GITHUB_TOKEN is used otherwise.
+        required: false
+
+jobs:
+  prepare:
+    name: Resolve application source
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      # The link step only reads the declaration; the image step is what knows whether the
+      # linked pull request is still open, so its resolution wins when it ran.
+      app_source: ${{ steps.image.outputs.app_source || steps.link.outputs.app_source }}
+      app_repository: ${{ steps.link.outputs.app_repository }}
+      app_pr: ${{ steps.link.outputs.app_pr }}
+      app_sha: ${{ steps.image.outputs.app_sha }}
+      app_image: ${{ steps.image.outputs.app_image }}
+    env:
+      APP_REPOSITORY: ${{ inputs.application_repository }}
+      APP_PR: ${{ inputs.application_pull_request }}
+      # Untrusted text: only ever bound to an environment variable, never interpolated into a
+      # shell command.
+      APP_LINK_BODY: ${{ inputs.pull_request_body }}
+      APP_IMAGE_REPOSITORY: ghcr.io/${{ github.repository }}/semaphore-ci
+    steps:
+      - name: Checkout tests
+        uses: actions/checkout@v7
+
+      - name: Resolve application link
+        id: link
+        run: scripts/app-source.sh link
+
+      - name: Report normal mode
+        if: steps.link.outputs.app_source != 'pull-request'
+        run: |
+          printf 'Application source: Docker image\n'
+          printf 'Application image: profile manifest default\n'
+          printf 'Application build: skipped\n'
+
+      - name: Set up Buildx
+        if: steps.link.outputs.app_source == 'pull-request'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the temporary image registry
+        if: steps.link.outputs.app_source == 'pull-request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve, reuse or build the application image
+        id: image
+        if: steps.link.outputs.app_source == 'pull-request'
+        env:
+          GH_TOKEN: ${{ secrets.application_repository_token || secrets.GITHUB_TOKEN }}
+        run: scripts/app-source.sh ensure
+
+      - name: Summary
+        env:
+          APP_SOURCE: ${{ steps.image.outputs.app_source || steps.link.outputs.app_source }}
+          APP_PR_STATE: ${{ steps.image.outputs.app_pr_state }}
+          APP_LINK_SOURCE: ${{ steps.link.outputs.app_link_source }}
+          APP_REPOSITORY: ${{ steps.link.outputs.app_repository }}
+          APP_PR: ${{ steps.link.outputs.app_pr }}
+          APP_SHA: ${{ steps.image.outputs.app_sha }}
+          APP_IMAGE: ${{ steps.image.outputs.app_image }}
+          APP_BUILD_PERFORMED: ${{ steps.image.outputs.app_build_performed }}
+        run: |
+          {
+            if [ "$APP_SOURCE" = "pull-request" ]; then
+              printf '### Application source: Pull Request\n\n'
+              printf -- '- repository: `%s`\n' "$APP_REPOSITORY"
+              printf -- '- pull request: #%s\n' "$APP_PR"
+              printf -- '- SHA: `%s`\n' "$APP_SHA"
+              printf -- '- image: `%s`\n' "$APP_IMAGE"
+              if [ "$APP_BUILD_PERFORMED" = "true" ]; then
+                printf -- '- build: performed\n'
+              else
+                printf -- '- build: skipped, the image for this commit already existed\n'
+              fi
+            else
+              printf '### Application source: Docker image\n\n'
+              if [ -n "$APP_PR_STATE" ] && [ "$APP_PR_STATE" != "open" ]; then
+                printf -- '- application pull request #%s is **%s**, so there is no version left to test\n' "$APP_PR" "$APP_PR_STATE"
+                printf -- '- the run fell back to normal mode\n'
+                printf -- '- remove the `Application-PR:` line from this pull request description to silence this\n'
+              fi
+              printf -- '- the application repository was not cloned and no image was built\n'
+              printf -- '- the profile manifest image is used, as before\n'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

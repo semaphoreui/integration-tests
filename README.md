@@ -211,9 +211,35 @@ GitHub Actions разделены по стоимости и назначени�
 
 - `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite и короткий Chromium UI smoke на `core-sqlite-local`;
 - `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH, приватный HTTPS Git, прямой и HTTPS/subpath OIDC, LDAPS, TOTP и ротацию database encryption keyring;
-- `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.8 → v2.19.12` на SQLite и PostgreSQL.
+- `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.8 → v2.19.12` на SQLite и PostgreSQL;
+- `Application PR trigger` принимает `repository_dispatch` из основного репозитория и запускает CI для тестовых PR, явно связанных с изменившимся PR приложения;
+- `Cleanup temporary application images` ежедневно в `04:00 UTC` удаляет временные images закрытых и смерженных PR приложения.
 
 Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
+
+### Источник тестов и источник приложения
+
+Две настройки независимы. `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` /
+`git.fixtures.branch`) по-прежнему определяют только то, какие фикстуры и тесты использовать.
+Отдельная группа `APP_REPOSITORY` / `APP_PR` определяет, какую версию приложения тестировать.
+
+Если application PR не задан, поведение не меняется: основной репозиторий не клонируется,
+приложение не собирается, временный Docker image не создаётся, используется image из манифеста
+профиля. Чтобы прогнать тесты против конкретного PR основного репозитория, достаточно добавить
+одну строку в **описание тестового PR**:
+
+```text
+Application-PR: semaphoreui/semaphore#123
+```
+
+Описание PR выбрано намеренно: в отличие от файла в репозитории оно не попадает в `main` при
+merge, поэтому забытая связь не может повлиять на обычные прогоны.
+
+CI определяет HEAD SHA этого PR, переиспользует уже опубликованный
+`ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-pr-123-<sha>` и собирает приложение только
+тогда, когда image для этого commit ещё не существует. Изменение только тестов повторной сборки
+не вызывает. Полное описание, включая автозапуск, авторизацию и очистку временных images, —
+в [`docs/application-pr-testing.md`](docs/application-pr-testing.md).
 
 При ручном запуске `Configuration matrix` можно включить inputs `include_schedule_investigation`
 и/или `include_shell_output_investigation`. Тогда к матрице только для этого run добавятся

@@ -1,0 +1,135 @@
+name: Cleanup temporary application images
+
+# Removes temporary application images built for application pull requests that are closed or
+# merged. Only the semaphore-ci package of this test repository is touched; release images of
+# semaphoreui/semaphore live in a different registry namespace and are never inspected here.
+#
+# Deleting a package version needs a token with delete:packages, which the built-in GITHUB_TOKEN
+# does not have. Store one as the GHCR_CLEANUP_TOKEN secret. Without it the workflow only
+# reports what it would delete.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Only report the deletion candidates
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cleanup-pr-images
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Delete images of closed application pull requests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GH_TOKEN: ${{ secrets.GHCR_CLEANUP_TOKEN || secrets.GITHUB_TOKEN }}
+      PACKAGE_OWNER: ${{ github.repository_owner }}
+      PACKAGE_NAME: ${{ github.event.repository.name }}/semaphore-ci
+      DEFAULT_APP_REPOSITORY: ${{ vars.APPLICATION_REPOSITORY || 'semaphoreui/semaphore' }}
+      DRY_RUN: ${{ inputs.dry_run || !secrets.GHCR_CLEANUP_TOKEN }}
+      # Grace period after the application pull request was closed or merged, so that a run
+      # started just before the merge can still pull its image.
+      RETENTION_HOURS: "24"
+    steps:
+      - name: Delete stale temporary images
+        run: |
+          set -eu
+          work_dir=$(mktemp -d)
+
+          owner_type=organization
+          if [ "$(gh api "users/$PACKAGE_OWNER" --jq '.type')" = "User" ]; then
+            owner_type=user
+          fi
+          case "$owner_type" in
+            organization) versions_path="orgs/$PACKAGE_OWNER/packages/container/$(printf '%s' "$PACKAGE_NAME" | sed 's|/|%2F|g')/versions" ;;
+            user) versions_path="users/$PACKAGE_OWNER/packages/container/$(printf '%s' "$PACKAGE_NAME" | sed 's|/|%2F|g')/versions" ;;
+          esac
+
+          if ! gh api --paginate "$versions_path" \
+            --jq '.[] | [(.id | tostring), (.metadata.container.tags | join(","))] | @tsv' \
+            > "$work_dir/versions.tsv" 2>"$work_dir/error"; then
+            if grep -qi 'not found' "$work_dir/error"; then
+              printf 'No temporary image package exists yet; nothing to clean up.\n'
+              exit 0
+            fi
+            cat "$work_dir/error" >&2
+            exit 1
+          fi
+
+          now=$(date -u +%s)
+          candidates=0
+          deleted=0
+          kept=0
+
+          while IFS=$'\t' read -r version_id tags; do
+            [ -n "$version_id" ] || continue
+
+            # Only tags produced by scripts/app-source.sh are considered: ci-pr-<number>-<sha>.
+            pr_number=$(printf '%s\n' "$tags" | tr ',' '\n' | sed -n 's/^ci-pr-\([0-9][0-9]*\)-[0-9a-f]\{40\}$/\1/p' | sed -n '1p')
+            if [ -z "$pr_number" ]; then
+              kept=$((kept + 1))
+              continue
+            fi
+
+            pr_state=$(gh api "repos/$DEFAULT_APP_REPOSITORY/pulls/$pr_number" \
+              --jq '[.state, (.closed_at // "")] | @tsv' 2>/dev/null || true)
+            if [ -z "$pr_state" ]; then
+              printf 'Version %s (%s): application PR #%s is unreachable, keeping the image\n' \
+                "$version_id" "$tags" "$pr_number"
+              kept=$((kept + 1))
+              continue
+            fi
+
+            state=$(printf '%s' "$pr_state" | cut -f1)
+            closed_at=$(printf '%s' "$pr_state" | cut -f2)
+            if [ "$state" != "closed" ] || [ -z "$closed_at" ]; then
+              kept=$((kept + 1))
+              continue
+            fi
+
+            closed_epoch=$(date -u -d "$closed_at" +%s)
+            age_hours=$(( (now - closed_epoch) / 3600 ))
+            if [ "$age_hours" -lt "$RETENTION_HOURS" ]; then
+              printf 'Version %s (%s): application PR #%s closed %sh ago, within the retention window\n' \
+                "$version_id" "$tags" "$pr_number" "$age_hours"
+              kept=$((kept + 1))
+              continue
+            fi
+
+            candidates=$((candidates + 1))
+            if [ "$DRY_RUN" = "true" ]; then
+              printf 'Version %s (%s): would delete, application PR #%s closed %sh ago\n' \
+                "$version_id" "$tags" "$pr_number" "$age_hours"
+              continue
+            fi
+
+            printf 'Version %s (%s): deleting, application PR #%s closed %sh ago\n' \
+              "$version_id" "$tags" "$pr_number" "$age_hours"
+            gh api --method DELETE "$versions_path/$version_id"
+            deleted=$((deleted + 1))
+          done < "$work_dir/versions.tsv"
+
+          rm -rf "$work_dir"
+          {
+            printf '### Temporary application images\n\n'
+            printf -- '- package: `ghcr.io/%s/%s`\n' "$PACKAGE_OWNER" "$PACKAGE_NAME"
+            printf -- '- deletion candidates: %s\n' "$candidates"
+            printf -- '- deleted: %s\n' "$deleted"
+            printf -- '- kept: %s\n' "$kept"
+            if [ "$DRY_RUN" = "true" ]; then
+              printf -- '- dry run: no version was deleted (set the GHCR_CLEANUP_TOKEN secret to enable deletion)\n'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

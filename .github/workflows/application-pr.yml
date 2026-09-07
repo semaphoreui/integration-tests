@@ -1,0 +1,128 @@
+name: Application PR trigger
+
+# Runs the integration tests of every test pull request whose description declares an
+# "Application-PR:" trailer pointing at the application pull request named in the event payload.
+#
+# The application repository sends the event; see docs/application-pr-testing.md for the
+# workflow snippet it needs. Only test pull requests whose description declares this exact
+# application pull request are started: a change of an arbitrary branch of the application
+# repository starts nothing, and the link is never inferred from branch names.
+
+on:
+  repository_dispatch:
+    types:
+      - application-pr-updated
+  workflow_dispatch:
+    inputs:
+      application_repository:
+        description: Application repository as owner/name
+        required: true
+        type: string
+        default: semaphoreui/semaphore
+      application_pull_request:
+        description: Application pull request number
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: application-pr-${{ github.event.client_payload.pull_request || inputs.application_pull_request }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Start linked test pull requests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EVENT_APP_REPOSITORY: ${{ github.event.client_payload.repository || inputs.application_repository }}
+      EVENT_APP_PR: ${{ github.event.client_payload.pull_request || inputs.application_pull_request }}
+      EVENT_APP_SHA: ${{ github.event.client_payload.sha }}
+    steps:
+      - name: Checkout tests
+        uses: actions/checkout@v7
+
+      - name: Validate the event payload
+        run: |
+          set -eu
+          case "$EVENT_APP_PR" in
+            ''|*[!0-9]*)
+              printf 'Invalid application pull request in the event payload: %s\n' "$EVENT_APP_PR" >&2
+              exit 1
+              ;;
+          esac
+          case "$EVENT_APP_REPOSITORY" in
+            */*) ;;
+            *)
+              printf 'Invalid application repository in the event payload: %s\n' "$EVENT_APP_REPOSITORY" >&2
+              exit 1
+              ;;
+          esac
+          printf 'Application repository: %s\n' "$EVENT_APP_REPOSITORY"
+          printf 'Application PR: #%s\n' "$EVENT_APP_PR"
+          [ -z "$EVENT_APP_SHA" ] || printf 'Application SHA: %s\n' "$EVENT_APP_SHA"
+
+      - name: Start every linked test pull request
+        run: |
+          set -eu
+          work_dir=$(mktemp -d)
+          started=0
+          inspected=0
+
+          # Every open test pull request is listed with its description, which is where the
+          # Application-PR trailer lives.
+          gh pr list --state open --limit 100 \
+            --json number,headRefName,isCrossRepository \
+            --jq '.[] | [.number, .headRefName, (.isCrossRepository | tostring)] | @tsv' \
+            > "$work_dir/pulls.tsv"
+
+          while IFS=$'\t' read -r pr_number head_ref cross_repository; do
+            [ -n "$pr_number" ] || continue
+            inspected=$((inspected + 1))
+
+            # A fork branch cannot be used as a workflow_dispatch ref; such pull requests keep
+            # running on their own pull_request events instead.
+            if [ "$cross_repository" = "true" ]; then
+              printf 'Test PR #%s: skipped, the head branch lives in a fork\n' "$pr_number"
+              continue
+            fi
+
+            body_file="$work_dir/body-$pr_number.md"
+            gh pr view "$pr_number" --json body --jq '.body // ""' > "$body_file"
+
+            if ! link=$(APP_REPOSITORY= APP_PR= APP_LINK_BODY_FILE="$body_file" \
+              scripts/app-source.sh link 2>"$work_dir/link-error"); then
+              printf 'Test PR #%s: skipped, the Application-PR declaration is invalid\n' "$pr_number"
+              sed 's/^/  /' "$work_dir/link-error" || true
+              continue
+            fi
+
+            linked_pr=$(printf '%s\n' "$link" | sed -n 's/^APP_PR=//p')
+            linked_repository=$(printf '%s\n' "$link" | sed -n 's/^APP_REPOSITORY=//p')
+            if [ "$linked_pr" != "$EVENT_APP_PR" ] || [ "$linked_repository" != "$EVENT_APP_REPOSITORY" ]; then
+              printf 'Test PR #%s: not linked to %s#%s\n' "$pr_number" "$EVENT_APP_REPOSITORY" "$EVENT_APP_PR"
+              continue
+            fi
+
+            printf 'Test PR #%s: linked to %s#%s, starting CI on %s\n' \
+              "$pr_number" "$EVENT_APP_REPOSITORY" "$EVENT_APP_PR" "$head_ref"
+            gh workflow run ci.yml --ref "$head_ref" \
+              --field "application_repository=$EVENT_APP_REPOSITORY" \
+              --field "application_pull_request=$EVENT_APP_PR"
+            started=$((started + 1))
+          done < "$work_dir/pulls.tsv"
+
+          rm -rf "$work_dir"
+          printf 'Inspected %s open test pull requests, started %s runs.\n' "$inspected" "$started"
+          {
+            printf '### Application PR %s#%s\n\n' "$EVENT_APP_REPOSITORY" "$EVENT_APP_PR"
+            printf -- '- open test pull requests inspected: %s\n' "$inspected"
+            printf -- '- linked test pull requests started: %s\n' "$started"
+          } >> "$GITHUB_STEP_SUMMARY"
