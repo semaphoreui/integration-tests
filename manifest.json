@@ -4,6 +4,60 @@
     {
       "schemaVersion": 1,
       "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/34092435291",
+      "versions": [
+        "v2.19.12"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "v2.19.12",
+          "previousVersion": "",
+          "versionLabel": "v2.19.12",
+          "tests": 62,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 34,
+            "skipped": 28,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 73,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 73,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "Merge pull request #13 from semaphoreui/feat/chain_test",
+      "event": "push",
+      "conclusion": "success",
+      "runId": 34092435291,
+      "runAttempt": 1,
+      "runNumber": 39,
+      "createdAt": "2026-09-07T06:47:58Z",
+      "date": "2026-09-07",
+      "headSha": "edc88ca8628e2538163a9844835248175f8934e1",
+      "shortSha": "edc88ca",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/edc88ca8628e2538163a9844835248175f8934e1",
+      "path": "reports/2026-09-07/ci/34092435291-1"
+    },
+    {
+      "schemaVersion": 1,
+      "title": "Semaphore CI",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/34092418316",
       "versions": [
         "v2.19.12"
