@@ -10,6 +10,7 @@ import io.bookwright.api.model.semaphore.TerraformTaskParameters;
 import io.bookwright.api.model.semaphore.TerraformTemplateParameters;
 import io.bookwright.api.model.semaphore.VariableGroupRequest;
 import io.bookwright.api.model.semaphore.VariableGroupSecretRequest;
+import io.bookwright.config.MainConfig;
 import io.bookwright.util.TestData;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -27,13 +28,15 @@ public record SemaphoreTerraformFixtures(
     Tool tofu,
     String workspaceOutputName) {
 
-  public static SemaphoreTerraformFixtures from(TestData data) {
+  public static SemaphoreTerraformFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreTerraformFixtures(
         new ProjectRequest("bookwright-terraform-" + suffix, false, 0),
         new AccessKey("bookwright-terraform-key-" + suffix, "none"),
         new Repository(
-            "bookwright-terraform-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            "bookwright-terraform-repository-" + suffix,
+            config.fixturesRepository(),
+            config.fixturesDefaultBranch()),
         new TerraformVariableGroup(
             "bookwright-terraform-variables-" + suffix,
             "TF_VAR_bookwright_secret",
@@ -46,13 +49,18 @@ public record SemaphoreTerraformFixtures(
                 "bookwright-tf-" + suffix,
                 "terraform-workspace"),
             new ToolTemplate(
-                "bookwright-terraform-template-" + suffix, "terraform-workspace", "terraform")),
+                "bookwright-terraform-template-" + suffix,
+                "test-environment/fixtures/ansible/terraform-workspace",
+                "terraform")),
         new Tool(
             new WorkspaceInventory(
                 "bookwright-tofu-workspace-" + suffix,
                 "bookwright-tofu-" + suffix,
                 "tofu-workspace"),
-            new ToolTemplate("bookwright-tofu-template-" + suffix, "terraform-workspace", "tofu")),
+            new ToolTemplate(
+                "bookwright-tofu-template-" + suffix,
+                "test-environment/fixtures/ansible/terraform-workspace",
+                "tofu")),
         "semaphore_bookwright_workspace");
   }
 

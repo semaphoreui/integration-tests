@@ -72,7 +72,7 @@ public record SemaphoreSurveyFixtures(
                 null));
     return new SemaphoreSurveyFixtures(
         "bookwright-survey-template-" + suffix,
-        "survey-overrides.yml",
+        "test-environment/fixtures/ansible/survey-overrides.yml",
         surveyVariables,
         new AnsibleTemplateParameters(
             true, false, true, true, true, true, false, List.of(), List.of(), List.of()),

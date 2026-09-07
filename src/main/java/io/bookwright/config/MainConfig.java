@@ -55,4 +55,12 @@ public interface MainConfig extends Config {
   @Key("teardown.failOnError")
   @DefaultValue("true")
   boolean teardownFailOnError();
+
+  @Key("git.fixtures.repository")
+  @DefaultValue("https://github.com/semaphoreui/integration-tests.git")
+  String fixturesRepository();
+
+  @Key("git.fixtures.branch")
+  @DefaultValue("main")
+  String fixturesDefaultBranch();
 }

@@ -1,6 +1,7 @@
 package io.bookwright.fixtures.semaphore;
 
 import io.bookwright.api.model.semaphore.ProjectRequest;
+import io.bookwright.config.MainConfig;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.Inventory;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.Repository;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures.Schedule;
@@ -17,7 +18,7 @@ public record SemaphoreUpgradeFixtures(
     Schedule schedule,
     String outputMarker) {
 
-  public static SemaphoreUpgradeFixtures standard() {
+  public static SemaphoreUpgradeFixtures from(MainConfig config) {
     return new SemaphoreUpgradeFixtures(
         new ProjectRequest("bookwright-release-upgrade", false, 0),
         new SecretAccessKey(
@@ -25,12 +26,19 @@ public record SemaphoreUpgradeFixtures(
             "login_password",
             "bookwright-upgrade-user",
             "Bookwright-upgrade-password-42!"),
-        new Repository("bookwright-upgrade-repository", "file:///fixtures/ansible", "main"),
+        new Repository(
+            "bookwright-upgrade-repository",
+            config.fixturesRepository(),
+            config.fixturesDefaultBranch()),
         new Inventory(
             "bookwright-upgrade-inventory",
             "[local]\nlocalhost ansible_connection=local",
             "static"),
-        new Template("bookwright-upgrade-template", "smoke.yml", "ansible", ""),
+        new Template(
+            "bookwright-upgrade-template",
+            "test-environment/fixtures/ansible/smoke.yml",
+            "ansible",
+            ""),
         new Schedule("bookwright-upgrade-schedule", "0 0 * * *", false, ""),
         "semaphore-bookwright-smoke-ok");
   }

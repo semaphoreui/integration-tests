@@ -5,6 +5,7 @@ import io.bookwright.api.model.semaphore.InventoryRequest;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
+import io.bookwright.config.MainConfig;
 import io.bookwright.util.TestData;
 import java.time.Duration;
 
@@ -17,13 +18,15 @@ public record SemaphoreShellOutputFixtures(
     Templates templates,
     Expectations expectations) {
 
-  public static SemaphoreShellOutputFixtures from(TestData data) {
+  public static SemaphoreShellOutputFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreShellOutputFixtures(
         new ProjectRequest("bookwright-shell-output-" + suffix, false, 0),
         new AccessKey("bookwright-shell-output-key-" + suffix, "none"),
         new Repository(
-            "bookwright-shell-output-repository-" + suffix, "file:///fixtures/ansible", "main"),
+            "bookwright-shell-output-repository-" + suffix,
+            config.fixturesRepository(),
+            config.fixturesDefaultBranch()),
         new Inventory(
             "bookwright-shell-output-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",
@@ -31,12 +34,12 @@ public record SemaphoreShellOutputFixtures(
         new Templates(
             new Template(
                 "bookwright-shell-output-template-" + suffix,
-                "bash/capture-output/normal.sh",
+                "test-environment/fixtures/ansible/bash/capture-output/normal.sh",
                 "bash",
                 ""),
             new Template(
                 "bookwright-background-shell-output-template-" + suffix,
-                "bash/capture-output/background.sh",
+                "test-environment/fixtures/ansible/bash/capture-output/background.sh",
                 "bash",
                 "")),
         new Expectations(

@@ -15,8 +15,8 @@ external() {
 main() {
   command="$1"
   shift || true
-  
-  case "$command" in 
+
+  case "$command" in
     external)
     external
   ;;

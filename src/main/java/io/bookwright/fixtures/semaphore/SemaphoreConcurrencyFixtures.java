@@ -23,7 +23,7 @@ public record SemaphoreConcurrencyFixtures(
     return new SemaphoreConcurrencyFixtures(
         "bookwright-concurrency-" + suffix,
         "bookwright-parallel-template-" + suffix,
-        "long-running.yml",
+        "test-environment/fixtures/ansible/long-running.yml",
         1,
         2,
         "semaphore-bookwright-stop-ready",
