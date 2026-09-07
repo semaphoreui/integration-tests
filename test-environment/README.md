@@ -1,43 +1,43 @@
-# Локальное тестовое окружение
+# Local test environment
 
-Профиль `core-sqlite-local`: минимальный стенд Semaphore UI `v2.19.12` с SQLite, локальным выполнением задач и доверенным Git fixture.
+The `core-sqlite-local` profile: a minimal Semaphore UI `v2.19.12` stand with SQLite, local task execution, and a trusted Git fixture.
 
-Manifest профиля находится в `profiles/<profile>/profile.yaml`. В нём закреплены версия Semaphore, способ установки, СУБД, execution mode и capabilities. Lifecycle-команда читает manifest, использует стабильное Compose project name и записывает фактическую конфигурацию и image digests в `build/allure-results/environment.properties`.
+The profile manifest lives in `profiles/<profile>/profile.yaml`. It pins the Semaphore version, installation method, DBMS, execution mode, and capabilities. The lifecycle command reads the manifest, uses a stable Compose project name, and records the actual configuration and image digests in `build/allure-results/environment.properties`.
 
-Доступны пять опорных профилей и десять feature-профилей:
+Five baseline profiles and ten feature profiles are available:
 
-| Профиль | СУБД | Назначение |
+| Profile | DBMS | Purpose |
 |---|---|---|
-| `core-sqlite-local` | SQLite | быстрый основной baseline |
-| `core-postgres-local` | PostgreSQL 14.3 | black-box проверка SQL dialect и миграций на чистом PostgreSQL |
-| `core-mysql-local` | MySQL 8.4 | black-box проверка MySQL dialect и миграций |
-| `core-mariadb-local` | MariaDB 10.11 | проверка совместимости MariaDB через MySQL dialect |
+| `core-sqlite-local` | SQLite | fast primary baseline |
+| `core-postgres-local` | PostgreSQL 14.3 | black-box verification of the SQL dialect and migrations on a clean PostgreSQL |
+| `core-mysql-local` | MySQL 8.4 | black-box verification of the MySQL dialect and migrations |
+| `core-mariadb-local` | MariaDB 10.11 | MariaDB compatibility check via the MySQL dialect |
 | `prod-postgres-runner` | PostgreSQL 14.3 | production-like server → DB → persistent remote runner |
-| `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target и защита key material |
-| `feature-git-https` | SQLite | приватный Git over HTTPS, Basic Auth, доверенный self-signed CA и защита credentials |
-| `feature-oidc-local` | SQLite | browser login через Dex, session/logout, provisioning и negative account/provider scenarios |
-| `feature-proxy-oidc` | PostgreSQL 14.3 | OIDC через NGINX, HTTPS и non-root public path `/semaphore` |
-| `feature-ldap-tls` | SQLite | LDAPS bind/search, provisioning/reuse user, logout и negative credential/account scenarios |
-| `feature-totp-local` | SQLite | API и browser TOTP: Security/QR, challenge, invalid passcode и recovery lifecycle |
-| `feature-encryption-rotation` | PostgreSQL 14.3 | hot reload keyring, mixed-key reads, vault rekey и удаление retired key |
-| `feature-schedule-timezone` | SQLite | cron/run-at execution в `Pacific/Kiritimati`; локальный defect reproducer |
-| `feature-dynamic-runner` | SQLite | webhook-launched one-off runner; defect reproducer для незавершающегося процесса |
-| `feature-shell-output` | SQLite | строгий defect reproducer потери `stdout`/`stderr` короткой task |
+| `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target, and key material protection |
+| `feature-git-https` | SQLite | private Git over HTTPS, Basic Auth, trusted self-signed CA, and credentials protection |
+| `feature-oidc-local` | SQLite | browser login via Dex, session/logout, provisioning, and negative account/provider scenarios |
+| `feature-proxy-oidc` | PostgreSQL 14.3 | OIDC via NGINX, HTTPS, and non-root public path `/semaphore` |
+| `feature-ldap-tls` | SQLite | LDAPS bind/search, user provisioning/reuse, logout, and negative credential/account scenarios |
+| `feature-totp-local` | SQLite | API and browser TOTP: Security/QR, challenge, invalid passcode, and recovery lifecycle |
+| `feature-encryption-rotation` | PostgreSQL 14.3 | keyring hot reload, mixed-key reads, vault rekey, and retired key removal |
+| `feature-schedule-timezone` | SQLite | cron/run-at execution in `Pacific/Kiritimati`; local defect reproducer |
+| `feature-dynamic-runner` | SQLite | webhook-launched one-off runner; defect reproducer for a process that never exits |
+| `feature-shell-output` | SQLite | strict defect reproducer for the loss of `stdout`/`stderr` in a short task |
 
-Общая конфигурация Semaphore и Git fixture находится в `compose.base.yml`, а профили добавляют только DB/execution-specific overlay. Все публикуют Semaphore на порту `3000`, поэтому одновременно должен быть запущен только один профиль.
+The shared Semaphore configuration and the Git fixture live in `compose.base.yml`, while profiles only add a DB/execution-specific overlay. All of them publish Semaphore on port `3000`, so only one profile may be running at a time.
 
-## Запуск
+## Startup
 
 ```bash
 test-environment/profile up core-sqlite-local
 ```
 
-После запуска UI доступен по адресу <http://localhost:3000>.
+After startup the UI is available at <http://localhost:3000>.
 
-- пользователь: `admin`
-- пароль: `test-password`
+- user: `admin`
+- password: `test-password`
 
-## Состояние и логи
+## Status and logs
 
 ```bash
 test-environment/profile ps core-sqlite-local
@@ -45,49 +45,49 @@ test-environment/profile logs core-sqlite-local
 test-environment/profile logs core-sqlite-local --follow
 ```
 
-Без флага команда `logs` печатает конечный снимок логов всех сервисов профиля, что подходит для CI diagnostics. Флаг `--follow` включает интерактивное слежение.
+Without the flag, the `logs` command prints a final snapshot of the logs of all services in the profile, which is suitable for CI diagnostics. The `--follow` flag enables interactive tailing.
 
-## Остановка
+## Shutdown
 
 ```bash
 test-environment/profile down core-sqlite-local
 ```
 
-SQLite хранится в именованном Docker volume и сохраняется между перезапусками.
+SQLite is stored in a named Docker volume and persists between restarts.
 
-Полностью пересоздать профиль вместе с volume можно только с явным подтверждением:
+Fully recreating a profile together with its volume requires explicit confirmation:
 
 ```bash
 test-environment/profile clean core-sqlite-local --yes
 test-environment/profile up core-sqlite-local
 ```
 
-Продуктовые API-тесты с readiness check и Allure metadata:
+Product API tests with a readiness check and Allure metadata:
 
 ```bash
 test-environment/profile test core-sqlite-local
 ```
 
-После поднятия того же профиля минимальный browser smoke запускается отдельно:
+After bringing up the same profile, the minimal browser smoke is run separately:
 
 ```bash
 ./gradlew uiTest -DSTAND=semaphore -DSEMAPHORE_PROFILE=core-sqlite-local
 ```
 
-Он проверяет password login, реальный запуск API-подготовленного template через форму и client-side validation пустого project name. Validation-сценарий дополнительно доказывает, что `POST /api/projects` не отправлялся.
+It verifies password login, a real launch of an API-prepared template through the form, and client-side validation of an empty project name. The validation scenario additionally proves that `POST /api/projects` was never sent.
 
-Список профилей и manifest выбранного профиля:
+Listing the profiles and showing the manifest of the selected profile:
 
 ```bash
 test-environment/profile list
 test-environment/profile show core-sqlite-local
 ```
 
-Прямой вызов `docker compose -f test-environment/compose.yml ...` сохранён для диагностики и обратной совместимости, но основной интерфейс запуска — команда `profile`.
+Direct invocation of `docker compose -f test-environment/compose.yml ...` is kept for diagnostics and backward compatibility, but the primary launch interface is the `profile` command.
 
-## SQL-матрица
+## SQL matrix
 
-Переключение профилей с сохранением данных каждой СУБД:
+Switching profiles while preserving the data of each DBMS:
 
 ```bash
 test-environment/profile down core-sqlite-local
@@ -103,13 +103,13 @@ test-environment/profile up core-mariadb-local
 test-environment/profile test core-mariadb-local
 ```
 
-Каждый профиль использует отдельные Compose project и volumes. `down` сохраняет БД, а `clean <profile> --yes` удаляет только volumes выбранного профиля.
+Each profile uses its own Compose project and volumes. `down` preserves the DB, while `clean <profile> --yes` deletes only the volumes of the selected profile.
 
-Версии MySQL 8.4 и MariaDB 10.11 закреплены в тестовой матрице и прошли core suite на Semaphore `v2.19.8`. Старые официальные Compose-примеры используют MySQL 8.0 и MariaDB 10.8; их можно позже добавить в compatibility-набор после фиксации минимально поддерживаемых версий.
+The MySQL 8.4 and MariaDB 10.11 versions are pinned in the test matrix and passed the core suite on Semaphore `v2.19.8`. The older official Compose examples use MySQL 8.0 and MariaDB 10.8; they can be added to the compatibility set later, once the minimum supported versions are settled.
 
 ## Remote runner
 
-Production-like профиль использует тот же PostgreSQL overlay, включает `SEMAPHORE_USE_REMOTE_RUNNER` и запускает `semaphoreui/runner:v2.19.12` отдельным сервисом:
+The production-like profile uses the same PostgreSQL overlay, enables `SEMAPHORE_USE_REMOTE_RUNNER`, and starts `semaphoreui/runner:v2.19.12` as a separate service:
 
 ```bash
 test-environment/profile down core-postgres-local
@@ -117,15 +117,15 @@ test-environment/profile up prod-postgres-runner
 test-environment/profile test prod-postgres-runner
 ```
 
-При первом старте runner регистрируется через тестовый global registration token и сохраняет выданный долгоживущий token в `runner-data`. Авторегистрация создаёт global runner с `is_default=false`, а задачи без runner tag выбирают только default runners. Поэтому one-shot `runner-configure` после регистрации входит через admin API, выставляет `is_default=true`, и lifecycle не объявляет профиль готовым до успешного завершения этой настройки.
+On first start the runner registers via a test global registration token and stores the issued long-lived token in `runner-data`. Auto-registration creates a global runner with `is_default=false`, and tasks without a runner tag only select default runners. Therefore the one-shot `runner-configure` logs in via the admin API after registration, sets `is_default=true`, and the lifecycle does not declare the profile ready until this configuration completes successfully.
 
-Git fixture монтируется по одинаковому пути `/fixtures/ansible` в server и runner. Иначе локальный repository был бы доступен server, но отсутствовал бы в реальной среде исполнения задачи.
+The Git fixture is mounted at the same path `/fixtures/ansible` in both the server and the runner. Otherwise the local repository would be available to the server but missing from the actual task execution environment.
 
-API-набор дополнительно проверяет, что runner активен, зарегистрирован, назначен default, имеет статус `online` и отправляет heartbeat. Успешные task/output и stop/force-stop сценарии при включённом remote mode подтверждают фактическое выполнение на runner.
+The API suite additionally verifies that the runner is active, registered, assigned as default, has `online` status, and sends heartbeats. Successful task/output and stop/force-stop scenarios with remote mode enabled confirm actual execution on the runner.
 
-На `v2.19.8` профиль также содержит known-defect canary: secret survey variable теряется перед remote dispatch, хотя тот же launch проходит при local execution. Canary не печатает значение секрета; upstream-исправление #4086 и критерий удаления workaround описаны в `remote-runner-survey-secrets-defect.md`.
+On `v2.19.8` the profile also contains a known-defect canary: a secret survey variable is lost before remote dispatch, although the same launch passes with local execution. The canary does not print the secret value; the upstream fix #4086 and the criterion for removing the workaround are described in `remote-runner-survey-secrets-defect.md`.
 
-## SSH feature-профиль
+## SSH feature profile
 
 ```bash
 test-environment/profile down prod-postgres-runner
@@ -133,13 +133,13 @@ test-environment/profile up feature-ssh-local
 test-environment/profile test feature-ssh-local
 ```
 
-Профиль собирает минимальный Alpine SSH fixture и монтирует в него локальный Git repository read-only. Один зашифрованный Semaphore access key используется для clone `ssh://fixture@ssh-fixture:22/repositories/ansible` и подключения Ansible к `ssh-fixture`. Отдельный negative-сценарий проверяет неверный ключ и clone failure. Create/get/list responses, structured output и raw output проверяются на отсутствие private key и passphrase.
+The profile builds a minimal Alpine SSH fixture and mounts the local Git repository into it read-only. A single encrypted Semaphore access key is used both to clone `ssh://fixture@ssh-fixture:22/repositories/ansible` and for Ansible to connect to `ssh-fixture`. A separate negative scenario verifies an invalid key and a clone failure. Create/get/list responses, structured output, and raw output are checked for the absence of the private key and passphrase.
 
-Пара ключей генерируется при `profile up` в игнорируемом Git каталоге `build/test-fixtures/ssh`. В контейнер монтируется только public key, а private key остаётся вне Docker build context и используется Java-тестом только для локального API. Версия fixture image записывается в Allure environment.
+The key pair is generated during `profile up` in the Git-ignored directory `build/test-fixtures/ssh`. Only the public key is mounted into the container, while the private key stays outside the Docker build context and is used by the Java test only for the local API. The fixture image version is recorded in the Allure environment.
 
-## Private HTTPS Git feature-профиль
+## Private HTTPS Git feature profile
 
-Приватный HTTPS Git fixture поднимает pinned NGINX, публикует bare-репозиторий только внутри Compose network и требует Basic Auth. Self-signed CA генерируется в игнорируемом `build/test-fixtures/git-https` и передаётся дочерним Git-процессам через разрешённую переменную окружения:
+The private HTTPS Git fixture brings up a pinned NGINX, publishes a bare repository only inside the Compose network, and requires Basic Auth. A self-signed CA is generated in the Git-ignored `build/test-fixtures/git-https` and passed to child Git processes via an allowed environment variable:
 
 ```bash
 test-environment/profile down feature-ssh-local
@@ -147,7 +147,7 @@ test-environment/profile up feature-git-https
 test-environment/profile test feature-git-https
 ```
 
-## Schedule timezone feature-профиль
+## Schedule timezone feature profile
 
 ```bash
 test-environment/profile down feature-ssh-local
@@ -155,11 +155,11 @@ test-environment/profile up feature-schedule-timezone
 test-environment/profile test feature-schedule-timezone
 ```
 
-Профиль задаёт `SEMAPHORE_SCHEDULE_TIMEZONE=Pacific/Kiritimati`, передаёт ту же зону в test JVM и записывает её в Allure environment. Тесты рассчитывают ближайший cron в этой зоне и отдельный `run_at`, затем ожидают автоматически созданную task по `schedule_id` и её успешный output.
+The profile sets `SEMAPHORE_SCHEDULE_TIMEZONE=Pacific/Kiritimati`, passes the same zone to the test JVM, and records it in the Allure environment. The tests compute the nearest cron occurrence in that zone and a separate `run_at`, then wait for the automatically created task by `schedule_id` and its successful output.
 
-На release `v2.19.8` профиль сейчас является defect reproducer: API сохраняет активные cron и one-shot schedules, но task не появляется. Он сознательно не включён в CI matrix до Linux-подтверждения и решения по upstream issue. Полный отчёт — `schedule-execution-defect.md`.
+On release `v2.19.8` the profile is currently a defect reproducer: the API stores active cron and one-shot schedules, but no task appears. It is deliberately excluded from the CI matrix until Linux confirmation and a decision on the upstream issue. The full report is in `schedule-execution-defect.md`.
 
-## Shell output feature-профиль
+## Shell output feature profile
 
 ```bash
 test-environment/profile down feature-schedule-timezone
@@ -167,12 +167,12 @@ test-environment/profile up feature-shell-output
 test-environment/profile test feature-shell-output
 ```
 
-На release `v2.19.12` короткая успешно завершённая Bash-задача может сохранить только один из
-потоков процесса: `stdout` или `stderr`. Профиль запускает только строгий `ShellOutputTest`,
-включая background-child сценарий, и остаётся ручным красным reproducer до появления уже
-существующих upstream-исправлений в stable. Полный отчёт — `shell-output-loss-defect.md`.
+On release `v2.19.12` a short, successfully completed Bash task may retain only one of the
+process streams: `stdout` or `stderr`. The profile runs only the strict `ShellOutputTest`,
+including the background-child scenario, and remains a manual red reproducer until the already
+existing upstream fixes land in stable. The full report is in `shell-output-loss-defect.md`.
 
-## OIDC feature-профиль
+## OIDC feature profile
 
 ```bash
 test-environment/profile down feature-schedule-timezone
@@ -180,9 +180,9 @@ test-environment/profile up feature-oidc-local
 test-environment/profile test feature-oidc-local
 ```
 
-Профиль запускает pinned Dex `v2.45.1` и браузерный `uiTest`. Positive path проверяет provider button, credentials на IdP, OAuth callback, Semaphore session через `/api/user`, возврат на `/tokens` и provisioning non-admin external user. Повторный вход доказывает reuse того же user ID, logout очищает session, а отдельные negative paths защищают локальный account при совпадении email и не создают session при отказе discovery. `SEMAPHORE_WEB_ROOT` задан явно, а claims `username`/`name` маппятся на `email`, потому что локальный Dex connector не выдаёт `preferred_username`.
+The profile starts a pinned Dex `v2.45.1` and the browser-based `uiTest`. The positive path verifies the provider button, credentials on the IdP, the OAuth callback, the Semaphore session via `/api/user`, the return to `/tokens`, and provisioning of a non-admin external user. A repeated login proves reuse of the same user ID, logout clears the session, and separate negative paths protect the local account on an email match and create no session when discovery is refused. `SEMAPHORE_WEB_ROOT` is set explicitly, and the `username`/`name` claims are mapped to `email`, because the local Dex connector does not issue `preferred_username`.
 
-## HTTPS proxy + OIDC feature-профиль
+## HTTPS proxy + OIDC feature profile
 
 ```bash
 test-environment/profile down feature-oidc-local
@@ -190,11 +190,11 @@ test-environment/profile up feature-proxy-oidc
 test-environment/profile test feature-proxy-oidc
 ```
 
-Профиль использует PostgreSQL 14.3, Dex и pinned NGINX `1.27.5-alpine`. Semaphore публикуется как `https://localhost:3443/semaphore`; proxy сохраняет subpath и поддерживает WebSocket upgrade. Lifecycle генерирует localhost certificate и PKCS12 truststore в `build/test-fixtures/proxy-tls`, передаёт truststore только test JVM и ждёт readiness через доверенный HTTPS endpoint.
+The profile uses PostgreSQL 14.3, Dex, and a pinned NGINX `1.27.5-alpine`. Semaphore is published as `https://localhost:3443/semaphore`; the proxy preserves the subpath and supports WebSocket upgrade. The lifecycle generates a localhost certificate and a PKCS12 truststore in `build/test-fixtures/proxy-tls`, passes the truststore only to the test JVM, and waits for readiness via the trusted HTTPS endpoint.
 
-Тот же OIDC-набор проверяет discovery, callback, return path, provisioning/reuse, logout и negative account/provider paths. После успешного входа отдельно подтверждаются `HttpOnly`, `Secure` и cookie path `/`. Сертификат, truststore и private key являются disposable fixtures и не входят в Git.
+The same OIDC suite verifies discovery, callback, return path, provisioning/reuse, logout, and negative account/provider paths. After a successful login, `HttpOnly`, `Secure`, and the cookie path `/` are confirmed separately. The certificate, truststore, and private key are disposable fixtures and are not committed to Git.
 
-## LDAPS feature-профиль
+## LDAPS feature profile
 
 ```bash
 test-environment/profile down feature-oidc-local
@@ -202,9 +202,9 @@ test-environment/profile up feature-ldap-tls
 test-environment/profile test feature-ldap-tls
 ```
 
-Профиль запускает pinned OpenLDAP `1.5.0` с самоподписанным TLS и тремя directory users. Semaphore подключается по LDAPS `636`, делает service bind, search по `uid`, user bind и mapping `uid`/`cn`/`mail`. Четыре сценария проверяют provisioning external user, reuse того же ID после logout, отказ неверного пароля без provisioning и защиту локального admin при совпадении email.
+The profile starts a pinned OpenLDAP `1.5.0` with self-signed TLS and three directory users. Semaphore connects over LDAPS on `636`, performs a service bind, a search by `uid`, a user bind, and maps `uid`/`cn`/`mail`. Four scenarios verify provisioning of an external user, reuse of the same ID after logout, rejection of a wrong password without provisioning, and protection of the local admin on an email match.
 
-## TOTP feature-профиль
+## TOTP feature profile
 
 ```bash
 test-environment/profile down feature-ldap-tls
@@ -212,11 +212,11 @@ test-environment/profile up feature-totp-local
 test-environment/profile test feature-totp-local
 ```
 
-Профиль явно включает TOTP и recovery и запускает общий `totpTest`. API-сценарий создаёт отдельного non-admin пользователя, выполняет self-enrollment, получает `otpauth://` material, проверяет состояние `TOTP_REQUIRED`, отказ изменённого passcode и успешный вход с RFC 6238-кодом. Затем recovery code восстанавливает сессию и удаляет старую TOTP-привязку; повторный enrollment выпускает новый recovery code, а старый получает `INVALID_RECOVERY_CODE`.
+The profile explicitly enables TOTP and recovery and runs the shared `totpTest`. The API scenario creates a separate non-admin user, performs self-enrollment, obtains the `otpauth://` material, verifies the `TOTP_REQUIRED` state, the rejection of a tampered passcode, and a successful login with an RFC 6238 code. Then a recovery code restores the session and removes the old TOTP binding; a repeated enrollment issues a new recovery code, while the old one receives `INVALID_RECOVERY_CODE`.
 
-Независимый browser-сценарий включает TOTP через вкладку Security, проверяет загрузку QR и показ recovery code, выходит из сессии, проходит password → challenge flow с отрицательной и положительной проверкой passcode, а затем использует UI recovery form. API после восстановления подтверждает удаление TOTP-привязки.
+An independent browser scenario enables TOTP via the Security tab, verifies that the QR loads and the recovery code is shown, logs out, goes through the password → challenge flow with negative and positive passcode checks, and then uses the UI recovery form. After recovery, the API confirms that the TOTP binding has been removed.
 
-OTP secret, passcode и recovery code не попадают в HTTP attachments и raw Allure result JSON. Шаги принимают redacted request-объекты: одного визуального `hidden`-режима Allure недостаточно, поскольку он оставляет исходное значение внутри downloadable artifact. Для browser-сценария при падении сохраняется только безопасная browser diagnostics; screenshot, HTML и Playwright trace отключены, потому что могут содержать QR, recovery code или введённый passcode.
+The OTP secret, passcode, and recovery code never end up in HTTP attachments or raw Allure result JSON. Steps accept redacted request objects: Allure's visual `hidden` mode alone is not enough, since it leaves the original value inside the downloadable artifact. For the browser scenario, only safe browser diagnostics are saved on failure; screenshot, HTML, and Playwright trace are disabled because they may contain the QR, the recovery code, or the entered passcode.
 
 ## Dynamic one-off runner
 
@@ -226,23 +226,23 @@ test-environment/profile up feature-dynamic-runner
 test-environment/profile test feature-dynamic-runner
 ```
 
-Профиль регистрирует global runner с webhook, назначает его default и на `start` запускает отдельный `semaphore runner start --no-config` с `SEMAPHORE_RUNNER_ONE_OFF=true`. Launcher записывает события `webhook_start`, `runner_started`, `webhook_finish` и фактический exit code процесса, но сам процесс не останавливает.
+The profile registers a global runner with a webhook, assigns it as default, and on `start` launches a separate `semaphore runner start --no-config` with `SEMAPHORE_RUNNER_ONE_OFF=true`. The launcher records the `webhook_start`, `runner_started`, and `webhook_finish` events and the actual exit code of the process, but does not stop the process itself.
 
-На `v2.19.8` task успешно выполняется и сервер вызывает `finish`, однако runner остаётся жив. Тест намеренно красный, потому что ожидает `runner_exited` с кодом `0`. Профиль не входит в обычную CI matrix; полная репродукция и анализ исходного кода — в `dynamic-runner-one-off-exit-defect.md`.
+On `v2.19.8` the task completes successfully and the server calls `finish`, yet the runner stays alive. The test is intentionally red because it expects `runner_exited` with code `0`. The profile is not part of the regular CI matrix; the full reproduction and source code analysis are in `dynamic-runner-one-off-exit-defect.md`.
 
-## Rotation ключей шифрования БД
+## DB encryption key rotation
 
 ```bash
 test-environment/profile encryption-rotation-test feature-encryption-rotation
 ```
 
-Специализированная команда пересоздаёт только volumes этого профиля и проводит три фазы на PostgreSQL. Сначала Semaphore создаёт зашифрованный `login_password` access key и выполняет template со старым primary. Затем keyring атомарно переключается на новый primary без рестарта: старый secret по-прежнему читается, а новый записывается уже с другим key ID. Команда `semaphore vault check` должна показать одновременно `retired, rekey pending` и `active`.
+The specialized command recreates only the volumes of this profile and runs three phases on PostgreSQL. First, Semaphore creates an encrypted `login_password` access key and executes a template with the old primary. Then the keyring atomically switches to the new primary without a restart: the old secret is still readable, while the new one is already written with a different key ID. The `semaphore vault check` command must show both `retired, rekey pending` and `active` at the same time.
 
-После `semaphore vault rekey --backup` lifecycle требует для конкретного старого key ID состояние `0 rows — retired, SAFE TO REMOVE`, убирает его из keyring и снова запускает сохранённый template. Финальная фаза также создаёт новый secret, поэтому проверяет и чтение rekeyed ciphertext, и запись после удаления retired key. Сгенерированные test-only keys находятся в игнорируемом `build/test-fixtures/encryption-rotation` и не входят в Git.
+After `semaphore vault rekey --backup`, the lifecycle requires the state `0 rows — retired, SAFE TO REMOVE` for the specific old key ID, removes it from the keyring, and runs the saved template again. The final phase also creates a new secret, so it verifies both reading the rekeyed ciphertext and writing after the retired key has been removed. The generated test-only keys live in the Git-ignored `build/test-fixtures/encryption-rotation` and are not committed to Git.
 
-## Обновление N-1 → current
+## N-1 → current upgrade
 
-Два изолированных профиля проверяют обновление release image `v2.19.8` → `v2.19.12` с сохранением одной и той же БД:
+Two isolated profiles verify the upgrade of the release image `v2.19.8` → `v2.19.12` while keeping the same DB:
 
 ```bash
 test-environment/profile upgrade-test upgrade-sqlite-local
@@ -250,59 +250,59 @@ test-environment/profile down upgrade-sqlite-local
 test-environment/profile upgrade-test upgrade-postgres-local
 ```
 
-Команда удаляет только volumes выбранного upgrade-профиля, поднимает N-1, создаёт связанный persisted fixture и выполняет задачу. Затем она пересоздаёт только server на текущем image, проверяет сохранённые project/access key/repository/inventory/template/schedule/task output, повторно выполняет старый template и запускает обычную core suite. Оба image references и digests записываются в Allure environment.
+The command deletes only the volumes of the selected upgrade profile, brings up N-1, creates a linked persisted fixture, and executes a task. Then it recreates only the server on the current image, verifies the persisted project/access key/repository/inventory/template/schedule/task output, re-executes the old template, and runs the regular core suite. Both image references and digests are recorded in the Allure environment.
 
-Пара `v2.19.8` → `v2.19.12` является текущим upgrade gate и успешно прошла на SQLite и
-PostgreSQL в Linux CI 2026-09-04. Предыдущая пара `v2.19.7` → `v2.19.8` также читала сохранённые
-project/access key/repository/inventory/template/schedule/task и повторно выполняла template на
-обеих СУБД 2026-08-19. Upgrade workflow остаётся отдельным наблюдаемым gate, потому что проверяет
-миграцию сохранённого состояния между release images.
-Подробности — в `v2.19.8-regression-report.md`; исторический schema-дефект
-`v2.19.6` → `v2.19.7` сохранён в `upgrade-report.md`.
+The `v2.19.8` → `v2.19.12` pair is the current upgrade gate and passed successfully on SQLite and
+PostgreSQL in Linux CI on 2026-09-04. The previous pair `v2.19.7` → `v2.19.8` also read the persisted
+project/access key/repository/inventory/template/schedule/task and re-executed the template on
+both DBMSs on 2026-08-19. The upgrade workflow remains a separate observed gate because it verifies
+the migration of persisted state between release images.
+Details are in `v2.19.8-regression-report.md`; the historical schema defect
+`v2.19.6` → `v2.19.7` is preserved in `upgrade-report.md`.
 
-## CI-профили
+## CI profiles
 
-Профили подключены к трём GitHub Actions workflows:
+The profiles are wired into three GitHub Actions workflows:
 
-| Workflow | Триггер | Профили |
+| Workflow | Trigger | Profiles |
 |---|---|---|
-| `CI` | pull request и push в `main` | API suite и Chromium UI smoke на `core-sqlite-local` после framework quality gate |
-| `Configuration matrix` | ежедневно `01:30 UTC`, вручную | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation` |
-| `Release upgrade` | воскресенье `03:30 UTC`, вручную | `upgrade-sqlite-local`, `upgrade-postgres-local` |
+| `CI` | pull request and push to `main` | API suite and Chromium UI smoke on `core-sqlite-local` after the framework quality gate |
+| `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation` |
+| `Release upgrade` | Sunday at `03:30 UTC`, manually | `upgrade-sqlite-local`, `upgrade-postgres-local` |
 
-Каждый matrix profile работает на отдельном runner, поэтому общий порт `3000` не создаёт конфликтов. После выполнения workflow сохраняет JUnit/HTML/Allure artifacts, при ошибке добавляет `profile ps` и конечный снимок Compose logs, а затем удаляет только контейнеры и volumes выбранного профиля.
+Each matrix profile runs on its own runner, so the shared port `3000` causes no conflicts. After execution the workflow keeps JUnit/HTML/Allure artifacts, adds `profile ps` and a final snapshot of the Compose logs on failure, and then removes only the containers and volumes of the selected profile.
 
-На stable `v2.19.12` команда `profile test` выполняет JUnit-классы последовательно из-за
-подтверждённой гонки product output collector. Это не отключает проверку конкурентного выполнения:
-`ProjectConcurrencyApiTest` сам запускает несколько Semaphore tasks и проверяет queue admission.
-Строгий конкурентный/short-output контракт изолирован в `feature-shell-output`.
+On stable `v2.19.12` the `profile test` command runs JUnit classes sequentially because of a
+confirmed race in the product output collector. This does not disable concurrent execution checks:
+`ProjectConcurrencyApiTest` itself launches several Semaphore tasks and verifies queue admission.
+The strict concurrent/short-output contract is isolated in `feature-shell-output`.
 
-В ручном `Configuration matrix` inputs `include_schedule_investigation=true` и
-`include_shell_output_investigation=true` добавляют соответствующие defect-профили только к
-выбранному run. Их ожидаемое до исправления падение не загрязняет ежедневный gate, но сохраняет
-Linux diagnostics для подтверждения дефектов.
+In the manual `Configuration matrix`, the inputs `include_schedule_investigation=true` and
+`include_shell_output_investigation=true` add the corresponding defect profiles only to the
+selected run. Their failure, expected until the fix, does not pollute the daily gate but preserves
+Linux diagnostics for confirming the defects.
 
-Raw Allure results каждого job загружаются отдельным artifact. Финальный reusable workflow скачивает их, генерирует независимый HTML-отчёт для каждого профиля и загружает общий сайт как downloadable artifact. Сборка выполняется и после тестового падения, включая pull request, поэтому диагностику красного run можно открыть без GitHub Pages. Pages deployment приостановлен, пока private-репозиторий остаётся на тарифе без private Pages.
+The raw Allure results of each job are uploaded as a separate artifact. The final reusable workflow downloads them, generates an independent HTML report for each profile, and uploads the combined site as a downloadable artifact. The build runs even after a test failure, including on pull requests, so the diagnostics of a red run can be opened without GitHub Pages. Pages deployment is suspended while the private repository stays on a plan without private Pages.
 
-Compose-сервис `fixture-init` создаёт отдельный Git repository из `fixtures/ansible` с ветками `main` и `bookwright-fixture-ref`. Инициализация безопасно повторяется для существующего volume и завершается ошибкой при сбое Git-команды. Repository монтируется в Semaphore read-only и используется для проверки task lifecycle, выбора ветки и отсутствующего ref. `long-running.yml` содержит marker начала, контролируемую паузу и marker завершения для детерминированной проверки stop/force-stop.
+The `fixture-init` Compose service creates a separate Git repository from `fixtures/ansible` with the `main` and `bookwright-fixture-ref` branches. Initialization is safely repeatable for an existing volume and fails with an error when a Git command fails. The repository is mounted into Semaphore read-only and is used to verify the task lifecycle, branch selection, and a missing ref. `long-running.yml` contains a start marker, a controlled pause, and a completion marker for deterministic stop/force-stop verification.
 
-## Быстрая проверка
+## Quick check
 
 ```bash
 curl http://localhost:3000/api/ping
 ```
 
-Ожидаемый ответ: `pong`.
+Expected response: `pong`.
 
 ## API smoke
 
-Smoke создаёт отдельный проект, проверяет его и удаляет в блоке cleanup:
+The smoke creates a separate project, verifies it, and deletes it in the cleanup block:
 
 ```bash
 node test-environment/api-smoke.mjs
 ```
 
-Адрес стенда и учётную запись можно переопределить:
+The stand address and credentials can be overridden:
 
 ```bash
 SEMAPHORE_BASE_URL=http://localhost:3000 \

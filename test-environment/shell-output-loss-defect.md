@@ -1,102 +1,102 @@
-# Дефект: короткая Bash-задача теряет `stdout` или `stderr`
+# Defect: a short Bash task loses `stdout` or `stderr`
 
-## Статус
+## Status
 
 - severity: High;
-- затронутая версия: Semaphore UI `v2.19.12` (`012ed06d`);
-- конфигурация: Community, Docker Compose, SQLite, local task execution;
-- воспроизведено: 2026-09-04 в Linux CI;
+- affected version: Semaphore UI `v2.19.12` (`012ed06d`);
+- configuration: Community, Docker Compose, SQLite, local task execution;
+- reproduced: 2026-09-04 in Linux CI;
 - GitHub Actions run: [33866188839](https://github.com/semaphoreui/integration-tests/actions/runs/33866188839);
-- исправлено в `develop`, но исправление ещё не входит в текущий stable release `v2.19.12`.
+- fixed in `develop`, but the fix is not yet included in the current stable release `v2.19.12`.
 
-## Описание
+## Description
 
-После успешного выполнения короткой Bash-команды Semaphore может сохранить только один из двух
-потоков процесса. Статус task уже равен `success`, но API output не содержит либо `stdout`, либо
-`stderr`. Потерянный поток не появляется при последующем чтении.
+After a short Bash command completes successfully, Semaphore may persist only one of the two
+process streams. The task status is already `success`, but the API output is missing either `stdout` or
+`stderr`. The lost stream does not appear on subsequent reads.
 
-Это делает успешный статус недостаточным доказательством завершённого сбора логов. Пользователь
-может потерять диагностические сообщения, значения, которые скрипт намеренно пишет в конкретный
-поток, и часть аудита выполнения.
+This makes a successful status insufficient proof that log collection has completed. A user
+may lose diagnostic messages, values that a script deliberately writes to a specific
+stream, and part of the execution audit trail.
 
-## Шаги воспроизведения
+## Steps to reproduce
 
-1. Поднять ручной профиль:
+1. Bring up the manual profile:
 
    ```bash
    test-environment/profile up feature-shell-output
    ```
 
-2. Запустить строгий reproducer:
+2. Run the strict reproducer:
 
    ```bash
    test-environment/profile test feature-shell-output \
      --tests io.bookwright.tests.semaphore.ShellOutputTest
    ```
 
-3. Тест создаёт локальный Git repository, inventory и template, выполняющий:
+3. The test creates a local Git repository, an inventory, and a template that executes:
 
    ```bash
    printf 'semaphore-shell-stdout-marker'
    printf 'semaphore-shell-stderr-marker' >&2
    ```
 
-4. Дождаться `success` и прочитать task output через API.
+4. Wait for `success` and read the task output via the API.
 
-Второй сценарий повторяет проверку с background child (`sleep 60 &`), чтобы дополнительно
-контролировать завершение команды, от которой дочерний процесс унаследовал output pipes.
+The second scenario repeats the check with a background child (`sleep 60 &`) to additionally
+verify the completion of a command whose child process inherited the output pipes.
 
-## Ожидаемый результат
+## Expected result
 
-Task быстро переходит в `success`; сохранённый output содержит оба маркера:
+The task quickly transitions to `success`; the persisted output contains both markers:
 
 ```text
 semaphore-shell-stdout-marker
 semaphore-shell-stderr-marker
 ```
 
-## Фактический результат
+## Actual result
 
-В одном CI-сценарии остался только `stdout`:
+In one CI scenario only `stdout` remained:
 
 ```text
 ... installing static inventory
 semaphore-shell-stdout-marker
 ```
 
-В другом остался только `stderr`:
+In another only `stderr` remained:
 
 ```text
 ... installing static inventory
 semaphore-shell-stderr-marker
 ```
 
-Оба task при этом завершились со статусом `success`. Воспроизведение относится к API/process
-lifecycle, поэтому screenshot не добавляет диагностической ценности; доказательства находятся в
-JUnit XML, Allure results и Compose logs указанного CI run.
+Both tasks nevertheless finished with the status `success`. The reproduction concerns the API/process
+lifecycle, so a screenshot adds no diagnostic value; the evidence is in the
+JUnit XML, Allure results, and Compose logs of the referenced CI run.
 
-## Причина и upstream-исправления
+## Root cause and upstream fixes
 
-В `v2.19.12` `TaskRunner.LogCmd` увеличивает `WaitGroup` внутри reader goroutine. `WaitLog` может
-успеть увидеть нулевой счётчик и продолжить финализацию до чтения обоих потоков. Кроме того,
-`ShellApp.Run` вызывает `cmd.Wait()` до гарантированного drain `StdoutPipe`/`StderrPipe`, хотя
-`Wait` освобождает связанные с `Cmd` ресурсы.
+In `v2.19.12`, `TaskRunner.LogCmd` increments the `WaitGroup` inside the reader goroutine. `WaitLog` may
+observe a zero counter and proceed with finalization before both streams have been read. In addition,
+`ShellApp.Run` calls `cmd.Wait()` before `StdoutPipe`/`StderrPipe` are guaranteed to be drained, even though
+`Wait` releases the resources associated with the `Cmd`.
 
-Upstream исправил обе части после выпуска `v2.19.12`:
+Upstream fixed both parts after the `v2.19.12` release:
 
-- [`5c2d6e34` — preserve output from short shell commands](https://github.com/semaphoreui/semaphore/commit/5c2d6e34bed587b3cbea029c0799c5577e781800): регистрирует readers до запуска goroutine и дожидается drain pipes перед `cmd.Wait()`;
-- [`4976e916` — prevent hangs from inherited output pipes](https://github.com/semaphoreui/semaphore/commit/4976e91699886157184d04fa2069e912e40156b9): вводит command-scoped finalizer, `io.Pipe` и ограниченный `WaitDelay` для descendants, удерживающих output pipes.
+- [`5c2d6e34` — preserve output from short shell commands](https://github.com/semaphoreui/semaphore/commit/5c2d6e34bed587b3cbea029c0799c5577e781800): registers the readers before starting the goroutine and waits for the pipes to drain before `cmd.Wait()`;
+- [`4976e916` — prevent hangs from inherited output pipes](https://github.com/semaphoreui/semaphore/commit/4976e91699886157184d04fa2069e912e40156b9): introduces a command-scoped finalizer, `io.Pipe`, and a bounded `WaitDelay` for descendants holding the output pipes.
 
-## Автоматизированный контроль
+## Automated control
 
-`ShellOutputTest` сохраняет строгие проверки обоих маркеров и времени завершения background
-сценария. До появления исправления в stable он запускается только профилем
-`feature-shell-output`, не маскируется retry и не входит в зелёный PR/nightly gate. В ручном
-`Configuration matrix` его можно включить input-параметром
-`include_shell_output_investigation=true` и получить стандартные CI artifacts.
+`ShellOutputTest` keeps strict checks of both markers and of the completion time of the background
+scenario. Until the fix lands in stable, it runs only under the
+`feature-shell-output` profile, is not masked by retries, and is not part of the green PR/nightly gate. In the manual
+`Configuration matrix` it can be enabled with the input parameter
+`include_shell_output_investigation=true` to obtain the standard CI artifacts.
 
-Остальные profile suites выполняют JUnit-классы последовательно и ждут собственный доказательный
-marker. Это снижает давление на дефектный конкурентный output collector `v2.19.12`, не добавляя
-случайные sleeps или retries всего теста. Реальная конкуренция Semaphore tasks по-прежнему
-проверяется внутри `ProjectConcurrencyApiTest`. Workaround не используется в `ShellOutputTest`,
-поэтому регрессионный сигнал продукта не маскируется.
+The remaining profile suites execute JUnit classes sequentially and wait for their own evidentiary
+marker. This reduces pressure on the defective concurrent output collector of `v2.19.12` without adding
+random sleeps or whole-test retries. Real concurrency of Semaphore tasks is still
+verified inside `ProjectConcurrencyApiTest`. The workaround is not used in `ShellOutputTest`,
+so the product regression signal is not masked.

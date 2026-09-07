@@ -1,76 +1,76 @@
-# Карта компонентов Semaphore UI для анализа дефектов
+# Semaphore UI Component Map for Defect Analysis
 
-**Дата среза:** 2026-08-06  
-**Источник:** структура репозитория `semaphoreui/semaphore`, роуты API и основные сервисы.  
-**Назначение:** единая классификация issues и будущих тестов.
+**Snapshot date:** 2026-08-06  
+**Source:** the structure of the `semaphoreui/semaphore` repository, API routes, and core services.  
+**Purpose:** a unified classification for issues and future tests.
 
-## Правило классификации
+## Classification rule
 
-Для каждого тикета указываем:
+For each ticket we specify:
 
-- **основной компонент** — место, где проявилась или была исправлена проблема;
-- **дополнительные теги** — затронутые поперечные области, например `RBAC`, `Secrets`, `Migration`, `UI`, `Performance`;
-- если причина не установлена, компонент помечается как **«требует проверки»**, а не угадывается по заголовку.
+- **primary component** — the place where the problem manifested or was fixed;
+- **additional tags** — affected cross-cutting areas, for example `RBAC`, `Secrets`, `Migration`, `UI`, `Performance`;
+- if the cause is not established, the component is marked as **"needs verification"** rather than guessed from the title.
 
-Один тикет может затрагивать несколько компонентов. Например, доступ пользователя проекта A к логу задачи проекта B классифицируется как `Tasks & execution` с тегами `Auth/RBAC`, `Project isolation`, `Task output`.
+One ticket may affect several components. For example, a project A user accessing a project B task log is classified as `Tasks & execution` with the tags `Auth/RBAC`, `Project isolation`, `Task output`.
 
-## Продуктовые компоненты
+## Product components
 
-| Код | Компонент | Что входит | Основные области кода | Типичные риски и проверки |
+| Code | Component | What it includes | Main code areas | Typical risks and checks |
 |---|---|---|---|---|
-| AUTH | Аутентификация и сессии | Login/logout, API tokens, TOTP, recovery, LDAP, OIDC, внешние identity, JWT/JWKS | `api/login*.go`, `api/auth.go`, `api/jwks.go`, `services/session_svc.go`, `pkg/jwt/`, `db/Session.go`, `db/UserExternalIdentity.go` | Обход аутентификации, срок жизни сессии, logout, token leakage, несовместимость LDAP/OIDC |
-| USERS | Пользователи и глобальное администрирование | Пользователи, администраторы, настройки пользователя, системная информация | `api/users.go`, `api/user*.go`, `api/admin_info.go`, `db/User.go`, `cli/cmd/user*.go` | Повышение привилегий, lifecycle пользователя, несовместимые настройки |
-| PROJECTS | Проекты и изоляция | Создание/изменение проектов, участники, приглашения, роли проекта, статистика | `api/projects/project*.go`, `api/projects/users.go`, `services/server/project_svc.go`, `db/Project*.go`, `db/Role.go` | Горизонтальный доступ, неверная роль, удаление связанных данных, изоляция проектов |
-| TEMPLATES | Шаблоны задач | Task templates, параметры запуска, привязки inventory/repository/environment/key, template permissions | `api/projects/templates.go`, `db/Template*.go`, `api/router.go` | Некорректные связи, override параметров, права на запуск/редактирование, обратная совместимость |
-| WORKFLOWS | Workflows | Workflow definitions, nodes, approvals, запуски и артефакты | `api/projects/workflows.go`, `db/Workflow*.go`, `pro_interfaces/workflow_*`, `pro/services/` | Порядок шагов, остановка, approval bypass, частичный сбой, доступ к артефактам |
-| TASKS | Задачи и исполнение | Очередь, lifecycle задачи, локальное исполнение, stop/confirm/reject, статусы и retry | `api/projects/tasks.go`, `api/tasks/`, `services/tasks/`, `db/Task*.go` | Потерянные/зависшие задачи, гонки, неверный статус, остановка, параллелизм, cleanup |
-| OUTPUT | Вывод задач и события | Сохранение output, stages, raw output, WebSocket streaming, event log, alerts | `services/tasks/TaskRunner_logging.go`, `pkg/task_logger/`, `api/sockets/`, `db/Event.go`, `services/tasks/alert.go` | Потеря строк, утечка секретов, зависание стрима, большой вывод, неверный порядок, алерты |
-| RUNNERS | Удалённые раннеры | Регистрация, токены, теги, polling, назначение и выполнение job, reconciliation | `api/runners/`, `services/runners/`, `services/tasks/RemoteJob.go`, `db/Runner.go`, `cli/cmd/runner*.go` | Неверное назначение, потеря связи, duplicate execution, token auth, runner tags, большой payload |
-| REPOSITORIES | Git-репозитории | Clone/pull, SSH/HTTPS auth, branches, playbooks, cache | `api/projects/repository.go`, `db_lib/*Git*`, `pkg/git/`, `db/Repository.go`, `api/cache.go` | Private repo auth, branch/ref, timeout, cache invalidation, command injection, недоступный remote |
-| INVENTORY | Inventory и целевые хосты | Static/file/Terraform inventory, aliases и Terraform state | `api/projects/inventory.go`, `db/Inventory.go`, `db/TerraformInventory*`, `services/server/inventory_svc.go`, `pro_interfaces/terraform_inventory_ctl.go` | Большой inventory, неверный формат, утечка содержимого, state locking, удаление используемого ресурса |
-| SECRETS | Ключи, секреты и Variable Groups | Access keys, SSH/login/vault keys, environments, secret storage, sync, task secrets | `api/projects/keys.go`, `api/projects/environment.go`, `api/projects/secret_storages.go`, `services/server/*secret*`, `services/server/access_key_*`, `db/AccessKey.go`, `db/Environment.go`, `db/SecretStorage.go` | Утечка в API/UI/logs/backup, encryption at rest, неправильный key, masking, sync, cross-project access |
-| SCHEDULES | Расписания и время | Cron/run-at, timezone, activation, scheduler pool | `api/projects/schedules.go`, `services/schedules/`, `db/Schedule.go`, `pkg/tz/` | DST/timezone, повторный/пропущенный запуск, disable race, восстановление после рестарта |
-| INTEGRATIONS | Интеграции и webhooks | Webhooks, aliases, matchers, extracted values, внешние триггеры | `api/integration.go`, `api/projects/integration*.go`, `hook_helpers/`, `db/Integration*.go` | Неавторизованный запуск, неверный matcher, replay, parsing payload, secret verification |
-| PROJECT_DATA | Backup, restore, import и export | Экспорт/импорт проекта, backup/restore связанных сущностей | `api/projects/backup_restore.go`, `services/project/`, `services/export/`, `cli/cmd/project_*` | Потеря/дублирование данных, утечка секретов, несовместимость версий, broken references |
-| UI | Веб-интерфейс | Vue-приложение, формы, таблицы, маршрутизация, отображение задач и логов | `web/src/`, `web/tests/` | Неверное состояние формы, скрытие ошибок, permissions only in UI, browser compatibility, accessibility |
-| CLI | CLI и setup | Server/setup, user/project/vault commands, migrations, runner management | `cli/`, `cli/cmd/`, `cli/setup/` | Различие с API, destructive defaults, validation, exit codes, secret exposure in terminal |
+| AUTH | Authentication and sessions | Login/logout, API tokens, TOTP, recovery, LDAP, OIDC, external identities, JWT/JWKS | `api/login*.go`, `api/auth.go`, `api/jwks.go`, `services/session_svc.go`, `pkg/jwt/`, `db/Session.go`, `db/UserExternalIdentity.go` | Authentication bypass, session lifetime, logout, token leakage, LDAP/OIDC incompatibility |
+| USERS | Users and global administration | Users, administrators, user settings, system information | `api/users.go`, `api/user*.go`, `api/admin_info.go`, `db/User.go`, `cli/cmd/user*.go` | Privilege escalation, user lifecycle, incompatible settings |
+| PROJECTS | Projects and isolation | Project creation/modification, members, invitations, project roles, statistics | `api/projects/project*.go`, `api/projects/users.go`, `services/server/project_svc.go`, `db/Project*.go`, `db/Role.go` | Horizontal access, wrong role, deletion of related data, project isolation |
+| TEMPLATES | Task templates | Task templates, launch parameters, inventory/repository/environment/key bindings, template permissions | `api/projects/templates.go`, `db/Template*.go`, `api/router.go` | Incorrect relations, parameter overrides, run/edit permissions, backward compatibility |
+| WORKFLOWS | Workflows | Workflow definitions, nodes, approvals, runs, and artifacts | `api/projects/workflows.go`, `db/Workflow*.go`, `pro_interfaces/workflow_*`, `pro/services/` | Step order, stopping, approval bypass, partial failure, artifact access |
+| TASKS | Tasks and execution | Queue, task lifecycle, local execution, stop/confirm/reject, statuses, and retry | `api/projects/tasks.go`, `api/tasks/`, `services/tasks/`, `db/Task*.go` | Lost/hung tasks, races, wrong status, stopping, parallelism, cleanup |
+| OUTPUT | Task output and events | Output persistence, stages, raw output, WebSocket streaming, event log, alerts | `services/tasks/TaskRunner_logging.go`, `pkg/task_logger/`, `api/sockets/`, `db/Event.go`, `services/tasks/alert.go` | Lost lines, secret leakage, stream hangs, large output, wrong order, alerts |
+| RUNNERS | Remote runners | Registration, tokens, tags, polling, job assignment and execution, reconciliation | `api/runners/`, `services/runners/`, `services/tasks/RemoteJob.go`, `db/Runner.go`, `cli/cmd/runner*.go` | Wrong assignment, lost connection, duplicate execution, token auth, runner tags, large payload |
+| REPOSITORIES | Git repositories | Clone/pull, SSH/HTTPS auth, branches, playbooks, cache | `api/projects/repository.go`, `db_lib/*Git*`, `pkg/git/`, `db/Repository.go`, `api/cache.go` | Private repo auth, branch/ref, timeout, cache invalidation, command injection, unreachable remote |
+| INVENTORY | Inventory and target hosts | Static/file/Terraform inventory, aliases, and Terraform state | `api/projects/inventory.go`, `db/Inventory.go`, `db/TerraformInventory*`, `services/server/inventory_svc.go`, `pro_interfaces/terraform_inventory_ctl.go` | Large inventory, invalid format, content leakage, state locking, deletion of a resource in use |
+| SECRETS | Keys, secrets, and Variable Groups | Access keys, SSH/login/vault keys, environments, secret storage, sync, task secrets | `api/projects/keys.go`, `api/projects/environment.go`, `api/projects/secret_storages.go`, `services/server/*secret*`, `services/server/access_key_*`, `db/AccessKey.go`, `db/Environment.go`, `db/SecretStorage.go` | Leakage in API/UI/logs/backup, encryption at rest, wrong key, masking, sync, cross-project access |
+| SCHEDULES | Schedules and time | Cron/run-at, timezone, activation, scheduler pool | `api/projects/schedules.go`, `services/schedules/`, `db/Schedule.go`, `pkg/tz/` | DST/timezone, repeated/missed run, disable race, recovery after restart |
+| INTEGRATIONS | Integrations and webhooks | Webhooks, aliases, matchers, extracted values, external triggers | `api/integration.go`, `api/projects/integration*.go`, `hook_helpers/`, `db/Integration*.go` | Unauthorized launch, wrong matcher, replay, payload parsing, secret verification |
+| PROJECT_DATA | Backup, restore, import, and export | Project export/import, backup/restore of related entities | `api/projects/backup_restore.go`, `services/project/`, `services/export/`, `cli/cmd/project_*` | Data loss/duplication, secret leakage, version incompatibility, broken references |
+| UI | Web interface | Vue application, forms, tables, routing, task and log display | `web/src/`, `web/tests/` | Wrong form state, hidden errors, permissions only in UI, browser compatibility, accessibility |
+| CLI | CLI and setup | Server/setup, user/project/vault commands, migrations, runner management | `cli/`, `cli/cmd/`, `cli/setup/` | Divergence from the API, destructive defaults, validation, exit codes, secret exposure in terminal |
 
-## Платформенные компоненты
+## Platform components
 
-| Код | Компонент | Что входит | Основные области кода | Типичные риски и проверки |
+| Code | Component | What it includes | Main code areas | Typical risks and checks |
 |---|---|---|---|---|
-| API | HTTP API и контракт | Router, middleware, request validation, response/error contracts, OpenAPI | `api/router.go`, `api/helpers/`, `api-docs.yml`, `.dredd/` | Документация расходится с кодом, неверные status codes, отсутствующая validation, несовместимые изменения |
-| RBAC | Авторизация и права | Глобальные и проектные роли, permissions на ресурсы и шаблоны | `api/router.go`, auth middleware, `db/Role.go`, `db/ProjectUser.go`, `db/TemplateRole*` | IDOR, horizontal access, privilege escalation, UI скрывает разрешённый backend endpoint |
-| DB | Хранилище и целостность данных | Store interfaces, SQL implementations, transactions, constraints и индексы | `db/`, `db/sql/`, `db/factory/` | Различия SQLite/MySQL/Postgres/Bolt, N+1, race, orphan data, неправильные транзакции |
-| MIGRATIONS | Миграции и обновления | Schema migrations, version transitions, rekey/compatibility | `db/migration/`, `db/sql/migration*.go`, `deployment/`, `cli/cmd/migrate.go`, `cli/cmd/vault_*` | Апгрейд со старой версии, потеря данных, rollback/restart, большие БД, secret migration |
-| EXECUTORS | Интеграция с исполняемыми инструментами | Ansible, Terraform/OpenTofu/Terragrunt, Bash, PowerShell, локальные команды | `db_lib/*App.go`, `services/tasks/*executor*`, `db/ansible.go` | Аргументы команд, quoting/injection, exit codes, timeouts, несовместимые версии инструментов |
-| CONFIG | Конфигурация приложения | Env/config file, schema, feature flags, mail/alerts, paths | `config.schema.yaml`, `util/config.go`, `api/options.go`, `db/Option.go` | Ошибочные defaults, несовместимые env vars, validation, secret values in config/logs |
-| DEPLOYMENT | Установка и упаковка | Docker, compose, systemd, deb/rpm, devcontainer, release artifacts | `deployment/`, `.devcontainer/`, Dockerfile, release workflows | Права на файлы, volume/data loss, platform/arch, upgrade path, healthcheck |
-| HA | Кластер и high availability | Claims, coordination, cluster status, Pro HA boundaries | `api/cluster.go`, `pro_interfaces/ha.go`, `pro/` | Duplicate execution, split brain, stale claim, failover, consistency |
-| OBSERVABILITY | Логи, метрики и диагностика | Application logs, task logs, metrics, debug log, system info | `pkg/debuglog/`, `pkg/metrics/`, `api/system_info.go`, `api/admin_info.go` | Недостаточная диагностика, PII/secrets в логах, неправильные метрики, excessive logging |
-| CI | Сборка и CI проекта | Unit/integration/e2e jobs, lint, release workflows | `.github/workflows/`, `Taskfile.yml`, `.golangci.yml`, `qodana.yaml`, `.codacy.yml` | Тесты не запускаются, flaky pipeline, различие local/CI, отсутствие артефактов |
-| TEST_INFRA | Тестовая инфраструктура | E2E environment, fixtures, test cases, Playwright | `test/`, `test/e2e/`, `web/tests/` | Невоспроизводимость, shared state, brittle selectors, реальные секреты, слабая диагностика |
+| API | HTTP API and contract | Router, middleware, request validation, response/error contracts, OpenAPI | `api/router.go`, `api/helpers/`, `api-docs.yml`, `.dredd/` | Documentation diverges from code, wrong status codes, missing validation, incompatible changes |
+| RBAC | Authorization and permissions | Global and project roles, permissions on resources and templates | `api/router.go`, auth middleware, `db/Role.go`, `db/ProjectUser.go`, `db/TemplateRole*` | IDOR, horizontal access, privilege escalation, UI hides an allowed backend endpoint |
+| DB | Storage and data integrity | Store interfaces, SQL implementations, transactions, constraints, and indexes | `db/`, `db/sql/`, `db/factory/` | SQLite/MySQL/Postgres/Bolt differences, N+1, races, orphan data, incorrect transactions |
+| MIGRATIONS | Migrations and upgrades | Schema migrations, version transitions, rekey/compatibility | `db/migration/`, `db/sql/migration*.go`, `deployment/`, `cli/cmd/migrate.go`, `cli/cmd/vault_*` | Upgrade from an old version, data loss, rollback/restart, large databases, secret migration |
+| EXECUTORS | Integration with execution tools | Ansible, Terraform/OpenTofu/Terragrunt, Bash, PowerShell, local commands | `db_lib/*App.go`, `services/tasks/*executor*`, `db/ansible.go` | Command arguments, quoting/injection, exit codes, timeouts, incompatible tool versions |
+| CONFIG | Application configuration | Env/config file, schema, feature flags, mail/alerts, paths | `config.schema.yaml`, `util/config.go`, `api/options.go`, `db/Option.go` | Wrong defaults, incompatible env vars, validation, secret values in config/logs |
+| DEPLOYMENT | Installation and packaging | Docker, compose, systemd, deb/rpm, devcontainer, release artifacts | `deployment/`, `.devcontainer/`, Dockerfile, release workflows | File permissions, volume/data loss, platform/arch, upgrade path, healthcheck |
+| HA | Cluster and high availability | Claims, coordination, cluster status, Pro HA boundaries | `api/cluster.go`, `pro_interfaces/ha.go`, `pro/` | Duplicate execution, split brain, stale claim, failover, consistency |
+| OBSERVABILITY | Logs, metrics, and diagnostics | Application logs, task logs, metrics, debug log, system info | `pkg/debuglog/`, `pkg/metrics/`, `api/system_info.go`, `api/admin_info.go` | Insufficient diagnostics, PII/secrets in logs, wrong metrics, excessive logging |
+| CI | Project build and CI | Unit/integration/e2e jobs, lint, release workflows | `.github/workflows/`, `Taskfile.yml`, `.golangci.yml`, `qodana.yaml`, `.codacy.yml` | Tests not running, flaky pipeline, local/CI divergence, missing artifacts |
+| TEST_INFRA | Test infrastructure | E2E environment, fixtures, test cases, Playwright | `test/`, `test/e2e/`, `web/tests/` | Non-reproducibility, shared state, brittle selectors, real secrets, weak diagnostics |
 
-## Поперечные теги
+## Cross-cutting tags
 
-Эти значения не заменяют основной компонент:
+These values do not replace the primary component:
 
-| Тег | Когда использовать |
+| Tag | When to use |
 |---|---|
-| `Security` | Нарушение границы доверия, обход проверки, инъекция, небезопасный default |
-| `Secrets` | Возможна утечка, повреждение или неверное использование чувствительных данных |
-| `RBAC` | Ошибка зависит от роли или принадлежности проекту |
-| `Regression` | Ранее работавший сценарий сломан изменением |
-| `Data loss` | Потеря, повреждение или необратимое изменение данных |
-| `Performance` | Время, CPU, память, размер payload, DB load или масштабирование |
-| `Concurrency` | Race, duplicate execution, deadlock, очередь или параллельные задачи |
-| `Compatibility` | Версия ОС, браузера, БД, Ansible/Terraform или формат старых данных |
-| `Upgrade` | Установка новой версии поверх существующей |
-| `Documentation` | Поведение расходится с документацией или документации недостаточно |
-| `UX` | Ошибка понятности, обратной связи или предотвращения пользовательской ошибки |
-| `Flaky` | Результат нестабилен при одинаковых входных данных |
+| `Security` | Trust boundary violation, check bypass, injection, insecure default |
+| `Secrets` | Possible leakage, corruption, or misuse of sensitive data |
+| `RBAC` | The error depends on the role or project membership |
+| `Regression` | A previously working scenario is broken by a change |
+| `Data loss` | Loss, corruption, or irreversible modification of data |
+| `Performance` | Time, CPU, memory, payload size, DB load, or scaling |
+| `Concurrency` | Race, duplicate execution, deadlock, queue, or parallel tasks |
+| `Compatibility` | OS, browser, DB, Ansible/Terraform version, or legacy data format |
+| `Upgrade` | Installing a new version on top of an existing one |
+| `Documentation` | Behavior diverges from the documentation or the documentation is insufficient |
+| `UX` | A clarity, feedback, or user-error-prevention problem |
+| `Flaky` | The result is unstable with identical inputs |
 
-## Укрупнённая карта потока выполнения
+## High-level execution flow map
 
 ```text
 User / API client
@@ -85,9 +85,9 @@ User / API client
   -> task status + DB output + WebSocket + alerts
 ```
 
-## Замечания для анализа issues
+## Notes for issue analysis
 
-- Жалоба пользователя и корневая причина — разные поля. Например, «UI бесконечно грузится» может быть дефектом DB query или WebSocket.
-- Для закрытого тикета способ исправления подтверждаем PR, commit или diff. Если такой связи нет, пишем «не установлено».
-- Если тикет закрыт без исправления, это фиксируется явно: duplicate, cannot reproduce, configuration/support question, stale или won’t fix.
-- Дату тикета в реестре следует понимать как дату создания; для закрытых тикетов дополнительно полезна дата закрытия.
+- The user complaint and the root cause are different fields. For example, "UI loads forever" may be a DB query or WebSocket defect.
+- For a closed ticket, the fix method is confirmed by a PR, commit, or diff. If there is no such link, we write "not established".
+- If a ticket is closed without a fix, this is recorded explicitly: duplicate, cannot reproduce, configuration/support question, stale, or won't fix.
+- The ticket date in the register should be understood as the creation date; for closed tickets, the closing date is also useful.

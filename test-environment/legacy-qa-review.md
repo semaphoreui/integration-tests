@@ -1,83 +1,83 @@
-# Ревью тестового наследия Semaphore UI
+# Semaphore UI Legacy Test Review
 
-**Дата:** 2026-08-19
-**Источник:** upstream `semaphore/test/` на commit `ae12f3acac626f78673b95cc57acd62ed873b089`
+**Date:** 2026-08-19
+**Source:** upstream `semaphore/test/` at commit `ae12f3acac626f78673b95cc57acd62ed873b089`
 
-## Решение
+## Decision
 
-Старый код не переносится в Bookwright как готовая реализация. Сценарии сохраняются как источник требований и постепенно переписываются на подходящем уровне: API для бизнес-правил и lifecycle, UI только для критичных пользовательских путей и клиентской валидации.
+The old code is not ported into Bookwright as a ready-made implementation. The scenarios are kept as a source of requirements and are gradually rewritten at the appropriate level: API for business rules and lifecycle, UI only for critical user paths and client-side validation.
 
 ## Playwright `test/e2e`
 
-В наборе пять тестов: успешный запуск task, stop в состояниях waiting/cloning/running и запрет Variable Group с пустым именем.
+The suite contains five tests: a successful task run, stop in the waiting/cloning/running states, and rejection of a Variable Group with an empty name.
 
-Причины не использовать реализацию напрямую:
+Reasons not to use the implementation directly:
 
-- `package.json` не содержит команды запуска;
-- `baseURL` закреплён на `http://localhost:8080`, тогда как воспроизводимый стенд работает на `3000`;
-- тесты создают внешний demo-проект и зависят от его содержимого;
-- ожидания привязаны к английскому UI и конкретным строкам Ansible output;
-- `afterEach` предполагает открытый dialog, поэтому первоначальная ошибка может быть скрыта падением cleanup;
-- три worker запускают stateful UI-сценарии параллельно без доказанной изоляции;
-- trace, video и screenshots при падении выключены;
-- fixture `role` фактически не назначает выбранную роль: соответствующая строка закомментирована.
+- `package.json` contains no run command;
+- `baseURL` is hardcoded to `http://localhost:8080`, whereas the reproducible test bench runs on `3000`;
+- the tests create an external demo project and depend on its contents;
+- expectations are tied to the English UI and to specific lines of Ansible output;
+- `afterEach` assumes an open dialog, so the original failure may be hidden by a cleanup failure;
+- three workers run stateful UI scenarios in parallel without proven isolation;
+- trace, video, and screenshots on failure are disabled;
+- the `role` fixture does not actually assign the selected role: the corresponding line is commented out.
 
-Что сохраняем:
+What we keep:
 
-| Старый сценарий | Текущее покрытие | Решение |
+| Legacy scenario | Current coverage | Decision |
 |---|---|---|
-| Task success через UI | Покрыто | Короткий UI smoke запускает API-подготовленный executable template без demo-проекта и подтверждает success через API |
-| Stop while waiting | Покрыто через queue/capacity | Waiting admission и dequeue проверены; отдельный UI stop не нужен |
-| Stop while cloning | Есть clone failure и stop running, но не их пересечение | Backlog task lifecycle |
-| Stop while running | Покрыто обычным stop и force-stop | Старый код не нужен |
-| Variable Group с пустым key | Покрыто API | Оставить будущую UI validation-проверку |
+| Task success via UI | Covered | A short UI smoke launches an API-prepared executable template without the demo project and confirms success via the API |
+| Stop while waiting | Covered via queue/capacity | Waiting admission and dequeue are verified; a separate UI stop is not needed |
+| Stop while cloning | Clone failure and stop running exist, but not their intersection | Backlog task lifecycle |
+| Stop while running | Covered by regular stop and force-stop | The old code is not needed |
+| Variable Group with empty key | Covered by API | Keep a future UI validation check |
 
-## Ручные test cases
+## Manual test cases
 
-Обозначения: **покрыто** — контракт уже защищён автоматизацией; **частично** — защищена основа, но не весь исходный сценарий; **backlog** — полезный пробел; **внешний** — требует отдельной инфраструктуры или сервиса.
+Legend: **covered** — the contract is already protected by automation; **partial** — the core is protected, but not the entire original scenario; **backlog** — a useful gap; **external** — requires separate infrastructure or a service.
 
-| ID | Область | Статус | Решение |
+| ID | Area | Status | Decision |
 |---|---|---|---|
-| TC-001 | Admin login | Покрыто | API login и независимый browser password-login smoke проходят |
-| TC-002 | Invalid login / brute force | Покрыто с security gap | Existing/unknown/empty credentials не создают session и не раскрывают account; пять повторов остаются без throttle и warning |
-| TC-003 | TOTP | Покрыто | API и browser enrollment/challenge/recovery проходят с управляемым RFC 6238 secret |
-| TC-004 | User lifecycle | Покрыто в границах API | Create/update/delete/absence/recreate автоматизированы; deactivate/reactivate отсутствует в текущих router и модели пользователя |
-| TC-005 | API token | Покрыто | Create/list, expiry validation, Bearer access, revoke и защита token material автоматизированы |
-| TC-006 | Project create | Покрыто | Не дублировать |
-| TC-007 | Max parallel tasks | Покрыто | Лимиты 1→2, waiting admission, slot release и одновременный running автоматизированы |
-| TC-008 | Backup/restore | Покрыто с дефектом | Round trip, relinking, execution и negative paths автоматизированы; duplicate-name validation содержит отдельный canary |
-| TC-009 | Delete project dependencies | Покрыто с дефектом | После `stopped` каскадное удаление проходит; при `running` API ошибочно возвращает `204`, executor продолжает работу и вызывает FK errors |
-| TC-010 | SSH Git repository | Покрыто | Локальный SSH Git fixture, negative auth и rotation автоматизированы |
-| TC-011 | HTTPS token repository | Покрыто | Локальный private HTTPS remote проверяет trusted TLS, Basic Auth, execution, negative auth и masking |
-| TC-012 | SSH inventory key | Покрыто | Тот же SSH fixture подтверждает удалённое Ansible execution |
-| TC-013 | Login/password key | Покрыто | Использование и отсутствие plaintext проверяются |
-| TC-014 | Vault storage | Внешний | Feature profile с Vault dev server |
-| TC-015 | Static inventory | Покрыто | INI `static` и YAML `static-yaml` сохраняются; template `limit` выбирает одну группу, а host второй группы не выполняется |
-| TC-016 | File inventory | Покрыто с дефектом | Repository-backed file реально выполняется; create пропускает traversal, а update отклоняет его пустым `400` |
-| TC-017 | Terraform inventory | Покрыто | Plan-only Terraform/OpenTofu используют выбранные workspace inventories на локальном module без provider downloads |
-| TC-018 | Variable Groups mixed | Покрыто | JSON/ENV/secret var+env, rename, masking и task execution автоматизированы |
-| TC-019 | TF_VAR secrets | Покрыто | Secret типа `env` реально становится Terraform/OpenTofu input variable; SHA-256 marker подтверждает injection без plaintext в API/output/Allure |
-| TC-020 | Ansible template execution | Покрыто | Не дублировать |
-| TC-021 | Build/deploy chain | Покрыто с уточнением | Ручной выбор successful build, `build_task_id`, nested history version и target/incoming executor env автоматизированы; собственное `version` существует только у build task |
-| TC-022 | Survey variables | Покрыто API с дефектом | Enum/int/string/env/secret metadata, persistence, local execution и backend target validation; `v2.19.8` теряет secret при remote dispatch; UI widgets/required остаются browser-проверкой |
-| TC-023 | Task overrides | Покрыто API | Launch values, template/task arguments и Ansible limit/tags/skip-tags/diff/skip-galaxy реально выполняются |
-| TC-024 | Stop task | Покрыто | Обычный stop и force-stop детерминированы marker-ом |
-| TC-025 | Cron schedule | Частично | CRUD/validation/toggle добавлены; реальное fire и DST вынести в slow profile |
-| TC-026 | Run-at schedule | Частично | Payload/validation добавлены; fire/delete-after-run вынести в slow profile |
-| TC-027 | Runner registration | Частично | Registration/status/heartbeat покрыты; offline recovery воспроизводит `error` вместо ожидаемого waiting |
-| TC-028 | Runner tags | Покрыто с дефектом | Exact tag и used_runner_id проходят, busy runner requeue работает; unavailable/unmatched tag завершается error |
-| TC-029 | GitHub integration | Внешний | Нужен webhook receiver и управляемый GitHub event fixture |
-| TC-030 | Task Runner RBAC | Покрыто | Permission mask и запрещённые mutations проверяются |
+| TC-001 | Admin login | Covered | API login and an independent browser password-login smoke pass |
+| TC-002 | Invalid login / brute force | Covered with a security gap | Existing/unknown/empty credentials do not create a session and do not disclose the account; five repeated attempts remain without throttle or warning |
+| TC-003 | TOTP | Covered | API and browser enrollment/challenge/recovery pass with a controlled RFC 6238 secret |
+| TC-004 | User lifecycle | Covered within API boundaries | Create/update/delete/absence/recreate are automated; deactivate/reactivate is absent from the current router and user model |
+| TC-005 | API token | Covered | Create/list, expiry validation, Bearer access, revoke, and protection of token material are automated |
+| TC-006 | Project create | Covered | Do not duplicate |
+| TC-007 | Max parallel tasks | Covered | Limits 1→2, waiting admission, slot release, and concurrent running are automated |
+| TC-008 | Backup/restore | Covered with a defect | Round trip, relinking, execution, and negative paths are automated; duplicate-name validation has a separate canary |
+| TC-009 | Delete project dependencies | Covered with a defect | After `stopped`, cascading deletion succeeds; while `running`, the API incorrectly returns `204`, the executor keeps working and causes FK errors |
+| TC-010 | SSH Git repository | Covered | Local SSH Git fixture, negative auth, and rotation are automated |
+| TC-011 | HTTPS token repository | Covered | A local private HTTPS remote verifies trusted TLS, Basic Auth, execution, negative auth, and masking |
+| TC-012 | SSH inventory key | Covered | The same SSH fixture confirms remote Ansible execution |
+| TC-013 | Login/password key | Covered | Usage and absence of plaintext are verified |
+| TC-014 | Vault storage | External | Feature profile with a Vault dev server |
+| TC-015 | Static inventory | Covered | INI `static` and YAML `static-yaml` are persisted; the template `limit` selects one group, and the host of the second group is not executed |
+| TC-016 | File inventory | Covered with a defect | A repository-backed file is actually executed; create lets traversal through, while update rejects it with an empty `400` |
+| TC-017 | Terraform inventory | Covered | Plan-only Terraform/OpenTofu use the selected workspace inventories on a local module without provider downloads |
+| TC-018 | Variable Groups mixed | Covered | JSON/ENV/secret var+env, rename, masking, and task execution are automated |
+| TC-019 | TF_VAR secrets | Covered | A secret of type `env` actually becomes a Terraform/OpenTofu input variable; a SHA-256 marker confirms injection without plaintext in API/output/Allure |
+| TC-020 | Ansible template execution | Covered | Do not duplicate |
+| TC-021 | Build/deploy chain | Covered with a clarification | Manual selection of a successful build, `build_task_id`, nested history version, and target/incoming executor env are automated; a `version` of its own exists only on the build task |
+| TC-022 | Survey variables | Covered by API with a defect | Enum/int/string/env/secret metadata, persistence, local execution, and backend target validation; `v2.19.8` loses the secret on remote dispatch; UI widgets/required remain a browser check |
+| TC-023 | Task overrides | Covered by API | Launch values, template/task arguments, and Ansible limit/tags/skip-tags/diff/skip-galaxy are actually executed |
+| TC-024 | Stop task | Covered | Regular stop and force-stop are made deterministic by a marker |
+| TC-025 | Cron schedule | Partial | CRUD/validation/toggle added; real fire and DST to be moved to the slow profile |
+| TC-026 | Run-at schedule | Partial | Payload/validation added; fire/delete-after-run to be moved to the slow profile |
+| TC-027 | Runner registration | Partial | Registration/status/heartbeat are covered; offline recovery reproduces `error` instead of the expected waiting |
+| TC-028 | Runner tags | Covered with a defect | Exact tag and used_runner_id pass, busy runner requeue works; unavailable/unmatched tag ends in error |
+| TC-029 | GitHub integration | External | Needs a webhook receiver and a controlled GitHub event fixture |
+| TC-030 | Task Runner RBAC | Covered | Permission mask and forbidden mutations are verified |
 
-## MCP-планы
+## MCP plans
 
-`test/mcp/api` и `test/mcp/e2e` — инструкции для интерактивного agent-run, а не детерминированные regression tests. Они запускают внешний `cursor-agent`, используют demo data и в одном случае выполняют Bash из полного upstream-репозитория. В CI их не переносим. Полезные идеи — update проекта, build/deploy chain и user lifecycle — уже отражены в backlog выше.
+`test/mcp/api` and `test/mcp/e2e` are instructions for an interactive agent run, not deterministic regression tests. They launch an external `cursor-agent`, use demo data, and in one case execute Bash from the full upstream repository. We do not port them to CI. The useful ideas — project update, build/deploy chain, and user lifecycle — are already reflected in the backlog above.
 
-## Очерёдность переноса
+## Migration order
 
-1. Schedules contract и validation — текущая реализация.
-2. Локальный SSH Git/inventory fixture без внешней сети.
-3. Variable Groups, survey variables и launch-time overrides — выполнено на API.
-4. Queue/max parallel и runner tags — выполнено; unavailable runner recovery и потеря survey secret при remote dispatch зафиксированы отдельными reproducer/canary.
-5. Минимальные UI smoke — выполнено: password login, запуск task и client-side project-name validation без POST.
-6. Отдельные feature profiles для Vault, Terraform и webhook integration.
+1. Schedules contract and validation — current implementation.
+2. Local SSH Git/inventory fixture without external network access.
+3. Variable Groups, survey variables, and launch-time overrides — done at the API level.
+4. Queue/max parallel and runner tags — done; unavailable runner recovery and loss of the survey secret on remote dispatch are captured by separate reproducers/canaries.
+5. Minimal UI smoke — done: password login, task launch, and client-side project-name validation without a POST.
+6. Separate feature profiles for Vault, Terraform, and webhook integration.

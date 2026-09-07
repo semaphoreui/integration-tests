@@ -1,69 +1,69 @@
 # Semaphore UI test automation
 
-Тестовый проект для [Semaphore UI](https://github.com/semaphoreui/semaphore), построенный на основе [Bookwright v1.4.0](https://github.com/dantro86/bookwright/releases/tag/v1.4.0) (`b30d7e6`).
+Test project for [Semaphore UI](https://github.com/semaphoreui/semaphore), built on top of [Bookwright v1.4.0](https://github.com/dantro86/bookwright/releases/tag/v1.4.0) (`b30d7e6`).
 
-Текущая release-матрица Semaphore `v2.19.12` полностью подтверждена в Linux CI: 11 профилей
-конфигураций прошли 2026-09-04. Переход `v2.19.8 → v2.19.12` отдельно прошёл на SQLite и
+The current Semaphore release matrix `v2.19.12` is fully confirmed in Linux CI: 11 configuration
+profiles passed on 2026-09-04. The `v2.19.8 → v2.19.12` upgrade separately passed on SQLite and
 PostgreSQL.
 
-## Стек
+## Stack
 
 - Java 21;
 - Gradle;
 - JUnit 5;
-- Retrofit и OkHttp;
+- Retrofit and OkHttp;
 - Playwright;
 - Guice;
 - AssertJ;
 - Allure;
 - Awaitility.
 
-Framework адаптирован под Semaphore с сохранением архитектуры Bookwright v1.4.0: API и steps разделены как `target/domain`, сценарные данные принадлежат typed fixtures, а состояние preconditions читается только через typed `TestStore`.
+The framework is adapted for Semaphore while preserving the Bookwright v1.4.0 architecture: API and steps are separated as `target/domain`, scenario data belongs to typed fixtures, and precondition state is read only through the typed `TestStore`.
 
-## Локальный стенд
+## Local environment
 
 ```bash
 test-environment/profile up core-sqlite-local
 ```
 
-Semaphore будет доступен на <http://localhost:3000>.
+Semaphore will be available at <http://localhost:3000>.
 
-## Первый API smoke
+## First API smoke
 
 ```bash
 test-environment/profile test core-sqlite-local
 ```
 
-Команда сама проверяет readiness и добавляет точную конфигурацию стенда в Allure environment. Остановка с сохранением SQLite volume: `test-environment/profile down core-sqlite-local`. Полное удаление состояния требует явной команды `test-environment/profile clean core-sqlite-local --yes`.
+The command checks readiness on its own and adds the exact environment configuration to the Allure environment. Stop while keeping the SQLite volume: `test-environment/profile down core-sqlite-local`. Removing the state completely requires the explicit command `test-environment/profile clean core-sqlite-local --yes`.
 
-Core-набор также защищает lifecycle удаления проекта: после остановки task проект и зависимые
-ресурсы удаляются корректно. Known-defect canary для `v2.19.8` показывает, что удаление во время
-`running` ошибочно возвращает `204`, оставляет executor работающим и заканчивается FK errors.
-Воспроизведение и source boundary описаны в
+The core suite also guards the project deletion lifecycle: after a task is stopped, the project and
+its dependent resources are deleted correctly. A known-defect canary for `v2.19.8` shows that deletion
+while `running` incorrectly returns `204`, leaves the executor running and ends with FK errors.
+The reproduction and source boundary are described in
 `test-environment/project-deletion-running-task-defect.md`.
 
-Static inventory проверяется в обоих штатных форматах — INI `static` и YAML `static-yaml`.
-Для каждого формата сценарий сохраняет две группы с разными host aliases и выполняет template с
-default `limit`. Task output подтверждает выполнение только выбранной группы.
+Static inventory is verified in both standard formats — INI `static` and YAML `static-yaml`.
+For each format the scenario saves two groups with different host aliases and runs a template with a
+default `limit`. The task output confirms that only the selected group was executed.
 
-Password-login security test сравнивает ответы для существующего и неизвестного аккаунта, проверяет
-отсутствие session cookie и корректный отказ пустого пароля. На `v2.19.8` пять последовательных
-ошибок остаются без throttle и audit warning; этот security gap описан в
+The password-login security test compares responses for an existing and an unknown account, verifies
+the absence of a session cookie and the correct rejection of an empty password. On `v2.19.8` five consecutive
+failures remain without throttling or an audit warning; this security gap is described in
 `test-environment/password-login-brute-force-protection-gap.md`.
 
-Тот же core-профиль выполняет plan-only сценарии на встроенных в release image Terraform 1.11.3 и
-OpenTofu 1.11.0. Минимальный локальный module не скачивает providers; workspace inventories типов
-`terraform-workspace` и `tofu-workspace` подтверждаются реальным output каждого tool. Привязанный
-Variable Group передаёт секрет типа `env` с префиксом `TF_VAR_`: module сравнивает его SHA-256 и
-выводит только безопасный marker, а тест исключает plaintext из API, structured/raw output и Allure.
+The same core profile runs plan-only scenarios on the Terraform 1.11.3 and OpenTofu 1.11.0 bundled in
+the release image. The minimal local module does not download providers; workspace inventories of types
+`terraform-workspace` and `tofu-workspace` are confirmed by the real output of each tool. The attached
+Variable Group passes a secret of type `env` with the `TF_VAR_` prefix: the module compares its SHA-256 and
+prints only a safe marker, while the test excludes plaintext from the API, structured/raw output and Allure.
 
-Короткий browser smoke на том же стенде проверяет password login, запуск подготовленного executable template через UI и обязательность project name до отправки запроса:
+A short browser smoke on the same environment verifies password login, launching a prepared executable template through the UI, and that the project name is required before the request is submitted:
 
 ```bash
 ./gradlew uiTest -DSTAND=semaphore -DSEMAPHORE_PROFILE=core-sqlite-local
 ```
 
-Тот же набор выполняется без копирования тестов на PostgreSQL, MySQL и MariaDB. Профили используют общий порт и запускаются последовательно:
+The same suite runs without copying tests on PostgreSQL, MySQL and MariaDB. The profiles share a common port and are started sequentially:
 
 ```bash
 test-environment/profile down core-sqlite-local
@@ -79,7 +79,7 @@ test-environment/profile up core-mariadb-local
 test-environment/profile test core-mariadb-local
 ```
 
-Production-like вариант выполняет задачи в отдельном persistent runner:
+The production-like variant executes tasks in a separate persistent runner:
 
 ```bash
 test-environment/profile down core-postgres-local
@@ -87,13 +87,13 @@ test-environment/profile up prod-postgres-runner
 test-environment/profile test prod-postgres-runner
 ```
 
-Runner регистрируется автоматически, сохраняет долгоживущий token в отдельном volume и через admin API назначается default runner. API-тесты подтверждают `active`, `registered`, `is_default`, `online`, heartbeat, exact tag routing по persisted `used_runner_id` и capacity `1`: второй task остаётся в `waiting`, пока первый занимает runner.
+The runner registers automatically, stores a long-lived token in a separate volume and is assigned as the default runner through the admin API. The API tests confirm `active`, `registered`, `is_default`, `online`, heartbeat, exact tag routing by the persisted `used_runner_id` and capacity `1`: the second task stays in `waiting` while the first one occupies the runner.
 
-При отсутствии подходящего активного runner поведение отличается от capacity: `v2.19.8` переводит task в `error: no runners available`, а не сохраняет в очереди. Это воспроизведено для временно отключённого matching runner и несуществующего tag; подробности находятся в `test-environment/runner-unavailable-routing-defect.md`.
+When no suitable active runner is available, the behaviour differs from the capacity case: `v2.19.8` moves the task to `error: no runners available` instead of keeping it in the queue. This was reproduced for a temporarily disabled matching runner and for a non-existent tag; details are in `test-environment/runner-unavailable-routing-defect.md`.
 
-Ещё одно отличие remote execution: `v2.19.8` теряет secret survey variables перед dispatch, поэтому задача получает undefined variable. Профиль содержит безопасный known-defect canary без вывода значения; исправление upstream #4086 уже входит в `v2.20.0-alpha1`. Доказательства и критерий переключения на positive regression описаны в `test-environment/remote-runner-survey-secrets-defect.md`.
+Another remote execution difference: `v2.19.8` loses secret survey variables before dispatch, so the task receives an undefined variable. The profile contains a safe known-defect canary that does not print the value; the upstream fix #4086 is already included in `v2.20.0-alpha1`. The evidence and the criterion for switching to a positive regression are described in `test-environment/remote-runner-survey-secrets-defect.md`.
 
-SSH feature-профиль проверяет зашифрованный access key сразу на двух клиентских границах: Git clone по SSH и подключение Ansible к удалённому target:
+The SSH feature profile verifies an encrypted access key on two client boundaries at once: Git clone over SSH and an Ansible connection to a remote target:
 
 ```bash
 test-environment/profile down prod-postgres-runner
@@ -101,9 +101,9 @@ test-environment/profile up feature-ssh-local
 test-environment/profile test feature-ssh-local
 ```
 
-Два изолированных SSH-сервера доступны только внутри Compose network и принимают разные сгенерированные ключи. Положительный сценарий подтверждает удалённое выполнение playbook, отрицательный — полезную clone-диагностику с неверным ключом. Rotation-сценарий сначала получает отказ второго сервера со старым ключом, обновляет secret у того же access key через API и затем подтверждает успешные Git clone и Ansible SSH. Все сценарии проверяют отсутствие private key и passphrase в API и task output.
+Two isolated SSH servers are reachable only inside the Compose network and accept different generated keys. The positive scenario confirms remote playbook execution, the negative one confirms useful clone diagnostics with a wrong key. The rotation scenario first gets a rejection from the second server with the old key, updates the secret of the same access key through the API and then confirms a successful Git clone and Ansible SSH. All scenarios verify that the private key and passphrase are absent from the API and task output.
 
-Приватный Git по HTTPS проверяется отдельно, через локальный NGINX с self-signed TLS и обязательной Basic Auth:
+A private Git over HTTPS is verified separately, through a local NGINX with self-signed TLS and mandatory Basic Auth:
 
 ```bash
 test-environment/profile down feature-ssh-local
@@ -111,9 +111,9 @@ test-environment/profile up feature-git-https
 test-environment/profile test feature-git-https
 ```
 
-Профиль передаёт доверенный CA в Git-процессы через штатный `SEMAPHORE_FORWARDED_ENV_VARS`. Positive-сценарий выполняет playbook после authenticated clone, negative подтверждает отказ без access key. Password не попадает в API/Allure diagnostics, а login и password отсутствуют в structured/raw task output.
+The profile passes the trusted CA to Git processes through the standard `SEMAPHORE_FORWARDED_ENV_VARS`. The positive scenario runs a playbook after an authenticated clone, the negative one confirms rejection without an access key. The password does not leak into API/Allure diagnostics, and the login and password are absent from the structured/raw task output.
 
-OIDC feature-профиль выполняет полный браузерный вход через локальный Dex и проверяет callback, session, return path, provisioning external user, повторный вход, logout, конфликт с локальным email и отказ недоступного provider:
+The OIDC feature profile performs a full browser login through a local Dex and verifies the callback, session, return path, external user provisioning, repeated login, logout, a conflict with a local email and rejection of an unavailable provider:
 
 ```bash
 test-environment/profile down feature-ssh-local
@@ -121,7 +121,7 @@ test-environment/profile up feature-oidc-local
 test-environment/profile test feature-oidc-local
 ```
 
-Production-like OIDC-вариант повторяет тот же контракт через pinned NGINX, HTTPS и non-root public URL `/semaphore` на PostgreSQL:
+The production-like OIDC variant repeats the same contract through a pinned NGINX, HTTPS and the non-root public URL `/semaphore` on PostgreSQL:
 
 ```bash
 test-environment/profile down feature-oidc-local
@@ -129,17 +129,17 @@ test-environment/profile up feature-proxy-oidc
 test-environment/profile test feature-proxy-oidc
 ```
 
-TLS certificate и JVM truststore генерируются локально в игнорируемом `build/test-fixtures`. Тест дополнительно проверяет `Secure`, `HttpOnly` и path session cookie, routing API/assets через subpath и возврат OIDC callback на public HTTPS origin.
+The TLS certificate and JVM truststore are generated locally in the ignored `build/test-fixtures`. The test additionally verifies the `Secure`, `HttpOnly` and path attributes of the session cookie, API/assets routing through the subpath and the return of the OIDC callback to the public HTTPS origin.
 
-Ротация database encryption keyring проверяется отдельным трёхфазным lifecycle на PostgreSQL:
+Rotation of the database encryption keyring is verified by a separate three-phase lifecycle on PostgreSQL:
 
 ```bash
 test-environment/profile encryption-rotation-test feature-encryption-rotation
 ```
 
-Сценарий переключает primary без рестарта, подтверждает одновременное чтение старого и запись нового ciphertext, выполняет `vault check`/`vault rekey`, удаляет retired key и повторно выполняет сохранённый template. Test-only key material генерируется в игнорируемом `build/test-fixtures/encryption-rotation`.
+The scenario switches the primary without a restart, confirms simultaneous reading of the old and writing of the new ciphertext, runs `vault check`/`vault rekey`, removes the retired key and re-runs the saved template. Test-only key material is generated in the ignored `build/test-fixtures/encryption-rotation`.
 
-LDAPS feature-профиль поднимает pinned OpenLDAP, выполняет service search и user bind по TLS, а затем проверяет provisioning/reuse external user, logout, неверный пароль и защиту локального account:
+The LDAPS feature profile brings up a pinned OpenLDAP, performs a service search and user bind over TLS, and then verifies external user provisioning/reuse, logout, a wrong password and protection of the local account:
 
 ```bash
 test-environment/profile down feature-oidc-local
@@ -147,7 +147,7 @@ test-environment/profile up feature-ldap-tls
 test-environment/profile test feature-ldap-tls
 ```
 
-TOTP MFA проверяется отдельным self-contained профилем:
+TOTP MFA is verified by a separate self-contained profile:
 
 ```bash
 test-environment/profile down feature-ldap-tls
@@ -155,9 +155,9 @@ test-environment/profile up feature-totp-local
 test-environment/profile test feature-totp-local
 ```
 
-Общий `totpTest` покрывает API self-enrollment, `TOTP_REQUIRED`, неверный и корректный RFC 6238 passcode, recovery, повторный enrollment и отказ уже использованного recovery code. Browser-сценарий отдельно проверяет Security settings, QR/recovery-code rendering, challenge и recovery form. OTP material редактируется в HTTP и raw Allure JSON, а чувствительные browser artifacts при падении не публикуются.
+The shared `totpTest` covers API self-enrollment, `TOTP_REQUIRED`, an invalid and a valid RFC 6238 passcode, recovery, repeated enrollment and rejection of an already used recovery code. The browser scenario separately verifies the Security settings, QR/recovery-code rendering, the challenge and the recovery form. OTP material is redacted in HTTP and raw Allure JSON, and sensitive browser artifacts are not published on failure.
 
-Dynamic runner profile проверяет start/finish webhook, запуск отдельного one-off runner и реальное выполнение задачи:
+The dynamic runner profile verifies the start/finish webhook, launching a separate one-off runner and real task execution:
 
 ```bash
 test-environment/profile down feature-ldap-tls
@@ -165,9 +165,9 @@ test-environment/profile up feature-dynamic-runner
 test-environment/profile test feature-dynamic-runner
 ```
 
-На `v2.19.8` задача завершается успешно, но one-off runner не выходит после terminal progress. Профиль оставлен ручным красным reproducer и не входит в стабильную CI matrix. Анализ и вероятная причина находятся в `test-environment/dynamic-runner-one-off-exit-defect.md`.
+On `v2.19.8` the task finishes successfully, but the one-off runner does not exit after the terminal progress. The profile is kept as a manual red reproducer and is not part of the stable CI matrix. The analysis and probable cause are in `test-environment/dynamic-runner-one-off-exit-defect.md`.
 
-Короткие Bash-команды и background child проверяются отдельным shell-output профилем:
+Short Bash commands and a background child are verified by a separate shell-output profile:
 
 ```bash
 test-environment/profile down feature-dynamic-runner
@@ -175,12 +175,12 @@ test-environment/profile up feature-shell-output
 test-environment/profile test feature-shell-output
 ```
 
-На `v2.19.12` task получает `success`, но сохранённый output может потерять целиком `stdout` или
-`stderr`. Строгий тест обоих потоков оставлен ручным красным reproducer и не входит в стабильный
-PR/nightly gate. Причина, CI-доказательства и два upstream-исправления описаны в
+On `v2.19.12` the task gets `success`, but the saved output may lose the whole `stdout` or
+`stderr`. The strict test of both streams is kept as a manual red reproducer and is not part of the stable
+PR/nightly gate. The cause, CI evidence and two upstream fixes are described in
 `test-environment/shell-output-loss-defect.md`.
 
-Экспериментальный schedule-профиль воспроизводит реальное cron/`run_at` исполнение в non-UTC timezone:
+The experimental schedule profile reproduces real cron/`run_at` execution in a non-UTC timezone:
 
 ```bash
 test-environment/profile down feature-ssh-local
@@ -188,9 +188,9 @@ test-environment/profile up feature-schedule-timezone
 test-environment/profile test feature-schedule-timezone
 ```
 
-На `v2.19.8` оба сценария локально воспроизводят дефект: активное расписание сохраняется, но task не создаётся. Профиль пока не включён в CI matrix; доказательства и ожидаемое поведение находятся в `test-environment/schedule-execution-defect.md`.
+On `v2.19.8` both scenarios reproduce the defect locally: the active schedule is saved, but no task is created. The profile is not yet included in the CI matrix; the evidence and expected behaviour are in `test-environment/schedule-execution-defect.md`.
 
-Проверка обновления опубликованных образов на сохранённой SQLite или PostgreSQL запускается отдельной командой:
+Verification of upgrading the published images on a preserved SQLite or PostgreSQL database is launched by a separate command:
 
 ```bash
 test-environment/profile upgrade-test upgrade-sqlite-local
@@ -198,59 +198,59 @@ test-environment/profile down upgrade-sqlite-local
 test-environment/profile upgrade-test upgrade-postgres-local
 ```
 
-Текущий upgrade-путь — `v2.19.8 → v2.19.12`. Он успешно подтвердил сохранность ресурсов,
-access keys и task output на SQLite и PostgreSQL в Linux CI 2026-09-04. Предыдущая пара
-`v2.19.7 → v2.19.8` прошла на обеих СУБД 2026-08-19. Upgrade остаётся отдельным наблюдаемым
-gate: он проверяет миграцию сохранённого состояния, а не только чистую установку.
-Диагностика зафиксирована в `test-environment/v2.19.8-regression-report.md`; исторический
-schema-дефект пары `v2.19.6 → v2.19.7` — в `test-environment/upgrade-report.md`.
+The current upgrade path is `v2.19.8 → v2.19.12`. It successfully confirmed preservation of resources,
+access keys and task output on SQLite and PostgreSQL in Linux CI on 2026-09-04. The previous pair
+`v2.19.7 → v2.19.8` passed on both DBMSs on 2026-08-19. The upgrade remains a separate observed
+gate: it verifies migration of the preserved state, not just a clean installation.
+The diagnostics are recorded in `test-environment/v2.19.8-regression-report.md`; the historical
+schema defect of the `v2.19.6 → v2.19.7` pair is in `test-environment/upgrade-report.md`.
 
 ## CI
 
-GitHub Actions разделены по стоимости и назначению:
+GitHub Actions are split by cost and purpose:
 
-- `CI` запускается для каждого pull request и push в `main`: сначала выполняет framework quality gate, затем core API suite и короткий Chromium UI smoke на `core-sqlite-local`;
-- `Configuration matrix` ежедневно в `01:30 UTC` и вручную проверяет PostgreSQL, MySQL, MariaDB, production-like PostgreSQL с persistent runner, SSH, приватный HTTPS Git, прямой и HTTPS/subpath OIDC, LDAPS, TOTP и ротацию database encryption keyring;
-- `Release upgrade` еженедельно по воскресеньям в `03:30 UTC` и вручную проверяет обновление `v2.19.8 → v2.19.12` на SQLite и PostgreSQL;
-- `Application PR trigger` принимает `repository_dispatch` из основного репозитория и запускает CI для тестовых PR, явно связанных с изменившимся PR приложения;
-- `Cleanup temporary application images` ежедневно в `04:00 UTC` удаляет временные images закрытых и смерженных PR приложения.
+- `CI` runs for every pull request and push to `main`: it first runs the framework quality gate, then the core API suite and a short Chromium UI smoke on `core-sqlite-local`;
+- `Configuration matrix` runs daily at `01:30 UTC` and manually, and verifies PostgreSQL, MySQL, MariaDB, production-like PostgreSQL with a persistent runner, SSH, private HTTPS Git, direct and HTTPS/subpath OIDC, LDAPS, TOTP and database encryption keyring rotation;
+- `Release upgrade` runs weekly on Sundays at `03:30 UTC` and manually, and verifies the `v2.19.8 → v2.19.12` upgrade on SQLite and PostgreSQL;
+- `Application PR trigger` accepts `repository_dispatch` from the main repository and launches CI for test PRs explicitly linked to the changed application PR;
+- `Cleanup temporary application images` runs daily at `04:00 UTC` and removes temporary images of closed and merged application PRs.
 
-Matrix jobs используют отдельные GitHub-hosted runners и выполняются параллельно с `fail-fast: false`. JUnit, HTML-отчёты, Allure results и диагностика контейнеров при падении сохраняются как artifacts. Upgrade workflow не входит в PR gate; зелёный job должен означать и сохранность данных, и полную финализацию task output.
+Matrix jobs use separate GitHub-hosted runners and run in parallel with `fail-fast: false`. JUnit, HTML reports, Allure results and container diagnostics on failure are saved as artifacts. The upgrade workflow is not part of the PR gate; a green job must mean both data preservation and full finalization of the task output.
 
-### Источник тестов и источник приложения
+### Test source and application source
 
-Две настройки независимы. `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` /
-`git.fixtures.branch`) по-прежнему определяют только то, какие фикстуры и тесты использовать.
-Отдельная группа `APP_REPOSITORY` / `APP_PR` определяет, какую версию приложения тестировать.
+The two settings are independent. `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` /
+`git.fixtures.branch`) still determine only which fixtures and tests to use.
+A separate group `APP_REPOSITORY` / `APP_PR` determines which version of the application to test.
 
-Если application PR не задан, поведение не меняется: основной репозиторий не клонируется,
-приложение не собирается, временный Docker image не создаётся, используется image из манифеста
-профиля. Чтобы прогнать тесты против конкретного PR основного репозитория, достаточно добавить
-одну строку в **описание тестового PR**:
+If the application PR is not set, the behaviour does not change: the main repository is not cloned,
+the application is not built, no temporary Docker image is created, and the image from the profile
+manifest is used. To run the tests against a specific PR of the main repository, it is enough to add
+one line to the **test PR description**:
 
 ```text
 Application-PR: semaphoreui/semaphore#123
 ```
 
-Описание PR выбрано намеренно: в отличие от файла в репозитории оно не попадает в `main` при
-merge, поэтому забытая связь не может повлиять на обычные прогоны.
+The PR description was chosen deliberately: unlike a file in the repository, it does not land in `main` on
+merge, so a forgotten link cannot affect regular runs.
 
-CI определяет HEAD SHA этого PR, переиспользует уже опубликованный
-`ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-pr-123-<sha>` и собирает приложение только
-тогда, когда image для этого commit ещё не существует. Изменение только тестов повторной сборки
-не вызывает. Полное описание, включая автозапуск, авторизацию и очистку временных images, —
-в [`docs/application-pr-testing.md`](docs/application-pr-testing.md).
+CI determines the HEAD SHA of that PR, reuses the already published
+`ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-pr-123-<sha>` and builds the application only
+when an image for that commit does not exist yet. A change to the tests alone does not trigger a
+rebuild. The full description, including auto-triggering, authorization and cleanup of temporary images, is
+in [`docs/application-pr-testing.md`](docs/application-pr-testing.md).
 
-При ручном запуске `Configuration matrix` можно включить inputs `include_schedule_investigation`
-и/или `include_shell_output_investigation`. Тогда к матрице только для этого run добавятся
-соответствующие известные красные defect-профили, чтобы подтвердить проблему на Linux и собрать
-стандартные артефакты; ежедневный запуск остаётся зелёным gate без expected failures.
+When `Configuration matrix` is launched manually, the inputs `include_schedule_investigation`
+and/or `include_shell_output_investigation` can be enabled. Then, for that run only, the corresponding
+known red defect profiles are added to the matrix to confirm the problem on Linux and collect the
+standard artifacts; the daily run remains a green gate without expected failures.
 
-После каждого CI, nightly matrix или release-upgrade запуска Allure автоматически собирается в готовый HTML-сайт и загружается как artifact `allure-html-<run>-<attempt>`. Каждый Allure-отчёт собирается в single-file mode: после скачивания достаточно распаковать архив и открыть `index.html` двойным кликом — локальный HTTP-сервер не нужен. Для matrix run стартовая страница содержит отдельный отчёт каждого профиля, поэтому результаты разных СУБД не смешиваются в retries.
+After every CI, nightly matrix or release-upgrade run, Allure is automatically assembled into a ready-made HTML site and uploaded as the artifact `allure-html-<run>-<attempt>`. Every Allure report is built in single-file mode: after downloading, it is enough to unpack the archive and open `index.html` with a double click — no local HTTP server is needed. For a matrix run the start page contains a separate report for each profile, so the results of different DBMSs are not mixed in retries.
 
-Завершённые запуски доверенной ветки `main` дополнительно публикуются на [GitHub Pages](https://semaphoreui.github.io/integration-tests/). Мини-сайт хранит не более 60 запусков за последние 30 дней, группирует их по датам и позволяет фильтровать по workflow и версии Semaphore. Для каждого запуска доступны итоговый статус, commit, профили, распределение тестов и отдельные Allure-отчёты. PR и external-environment прогоны намеренно не публикуются. Сгенерированная история хранится в ветке `gh-pages`; её не следует редактировать вручную. Перед первым deployment владелец репозитория должен один раз выбрать `Settings → Pages → Source → GitHub Actions`.
+Completed runs of the trusted `main` branch are additionally published on [GitHub Pages](https://semaphoreui.github.io/integration-tests/). The mini-site keeps at most 60 runs from the last 30 days, groups them by date and allows filtering by workflow and Semaphore version. For each run the final status, commit, profiles, test distribution and individual Allure reports are available. PR and external-environment runs are deliberately not published. The generated history is stored in the `gh-pages` branch; it should not be edited manually. Before the first deployment the repository owner must select `Settings → Pages → Source → GitHub Actions` once.
 
-Тест проверяет health, неверный и корректный login, создаёт изолированный проект и основную цепочку ресурсов:
+The test verifies health, an invalid and a valid login, creates an isolated project and the main resource chain:
 
 ```text
 project → access key → local Git repository → inventory → task template
@@ -260,83 +260,83 @@ project → access key → local Git repository → inventory → task template
 → unassigned project isolation
 ```
 
-После теста Bookwright LIFO cleanup удаляет проектные данные в обратном порядке. Для RBAC используется один стабильный fixture-пользователь `bookwright-rbac-guest`: повторные запуски переиспользуют его, потому что Semaphore не позволяет удалить пользователя после создания login-сессии.
+After the test, Bookwright LIFO cleanup removes the project data in reverse order. For RBAC a single stable fixture user `bookwright-rbac-guest` is used: repeated runs reuse it, because Semaphore does not allow deleting a user after a login session has been created.
 
-Отдельный RBAC-набор фиксирует встроенные контракты `manager` и `task_runner`. Manager может создавать проектные ресурсы и запускать задачи, но не может удалить проект или управлять участниками. Task runner может запускать задачи, но получает `403` при изменении ресурсов, проекта и состава участников.
+A separate RBAC suite pins the built-in `manager` and `task_runner` contracts. A manager can create project resources and run tasks, but cannot delete the project or manage members. A task runner can run tasks, but gets `403` when modifying resources, the project and the membership.
 
-API-token-набор создаёт ограниченный по времени token, проверяет prefix-only listing, аутентифицирует отдельный Retrofit session через Bearer header и создаёт проект. После отзыва тот же token получает `401`; создание уже истёкшего token отклоняется с `400`. Полное значение не попадает в URL, step parameters или HTTP/Allure attachments: creation response намеренно скрывается, Authorization редактируется, а delete использует публичный восьмисимвольный prefix.
+The API token suite creates a time-limited token, verifies prefix-only listing, authenticates a separate Retrofit session through the Bearer header and creates a project. After revocation the same token gets `401`; creating an already expired token is rejected with `400`. The full value does not leak into the URL, step parameters or HTTP/Allure attachments: the creation response is deliberately hidden, Authorization is redacted, and delete uses the public eight-character prefix.
 
-User lifecycle-набор проверяет поддерживаемую Community API последовательность create → update → delete → absence → recreate на одноразовом typed fixture. У модели пользователя в текущем Semaphore нет поля `active/disabled` и endpoints deactivate/reactivate, поэтому такой контракт не имитируется подменой password/delete.
+The user lifecycle suite verifies the sequence create → update → delete → absence → recreate supported by the Community API on a disposable typed fixture. The user model in the current Semaphore has no `active/disabled` field and no deactivate/reactivate endpoints, so such a contract is not imitated by substituting password/delete.
 
-File inventory-набор создаёт repository-backed `type=file`, выполняет playbook через inventory-файл из доверенного Git fixture и проверяет сохранённый `repository_id`. Отдельный безопасный canary фиксирует дефект `v2.19.8`: create принимает traversal-путь `../…`, хотя update корректно возвращает `400`; такой inventory не запускается.
+The file inventory suite creates a repository-backed `type=file`, runs a playbook through an inventory file from the trusted Git fixture and verifies the saved `repository_id`. A separate safe canary pins a `v2.19.8` defect: create accepts the traversal path `../…`, although update correctly returns `400`; such an inventory is not executed.
 
-Отдельный security smoke создаёт `login_password` access key с уникальным маркером, использует его как inventory credential при выполнении задачи и проверяет отсутствие plaintext в create/get/list API, структурированном и raw task output, Allure и JUnit artifacts.
+A separate security smoke creates a `login_password` access key with a unique marker, uses it as the inventory credential during task execution and verifies the absence of plaintext in the create/get/list API, structured and raw task output, Allure and JUnit artifacts.
 
-Variable Group-набор создаёт смешанную группу с JSON extra vars, ENV и секретами типов `var`/`env`, переименовывает сохранённый secret без замены значения и реально выполняет `variables.yml`. Playbook проверяет секреты по SHA-256 под `no_log` и выводит только безопасный marker; тест отдельно контролирует create/get/list API и structured/raw output. Тот же контракт прошёл на SQLite и PostgreSQL `v2.19.8`; пустое имя ENV-переменной получает диагностируемый `400`.
+The Variable Group suite creates a mixed group with JSON extra vars, ENV and secrets of types `var`/`env`, renames the saved secret without replacing its value and really runs `variables.yml`. The playbook verifies the secrets by SHA-256 under `no_log` and prints only a safe marker; the test separately checks the create/get/list API and structured/raw output. The same contract passed on SQLite and PostgreSQL `v2.19.8`; an empty ENV variable name gets a diagnosable `400`.
 
-Terraform/OpenTofu-набор отдельно проверяет нативный контракт `TF_VAR_*`: уникальный secret хранится
-в Variable Group как `env`, подключается к обоим templates и действительно читается как Terraform
-input variable. Provider-free module публикует marker только после совпадения хеша; plaintext не
-появляется в Variable Group API, task output или HTTP/Allure diagnostics.
+The Terraform/OpenTofu suite separately verifies the native `TF_VAR_*` contract: a unique secret is stored
+in a Variable Group as `env`, attached to both templates and really read as a Terraform
+input variable. The provider-free module publishes the marker only after the hash matches; plaintext does not
+appear in the Variable Group API, task output or HTTP/Allure diagnostics.
 
-Build/Deploy-набор создаёт связанную пару Ansible templates и вручную выбирает успешную build-задачу
-при запуске deploy. Semaphore назначает build `start_version`, передаёт её как
-`SEMAPHORE_TASK_TARGET_VERSION`, сохраняет `build_task_id` у deploy и передаёт ту же версию как
-`SEMAPHORE_TASK_INCOMING_VERSION`. Оба playbook сверяют API metadata с executor environment и выводят
-безопасные version markers. В detail API deploy хранится связь, а отображаемая версия берётся из
-вложенного `build_task` в task history — собственного поля `version` у deploy-задачи нет.
+The Build/Deploy suite creates a linked pair of Ansible templates and manually selects a successful build task
+when launching the deploy. Semaphore assigns the build a `start_version`, passes it as
+`SEMAPHORE_TASK_TARGET_VERSION`, saves `build_task_id` on the deploy and passes the same version as
+`SEMAPHORE_TASK_INCOMING_VERSION`. Both playbooks compare the API metadata with the executor environment and print
+safe version markers. The deploy detail API stores the link, while the displayed version is taken from the
+nested `build_task` in the task history — the deploy task has no `version` field of its own.
 
-Survey/task override-набор сохраняет в template enum, integer, string, env-target и secret survey variables, затем запускает `survey-overrides.yml` с переопределёнными значениями, template/task arguments и Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. Task действительно выполняется на SQLite и PostgreSQL с local execution, secret проверяется по SHA-256 под `no_log` и отсутствует в structured/raw output. Persistent runner на `v2.19.8` теряет survey secret перед dispatch; это покрыто отдельным canary до перехода на upstream #4086. Неподдерживаемый survey target получает `400`. Также зафиксирован gap `v2.19.8`: enum default вне списка принимается backend-ом; исправление уже есть в upstream `v2.20.0-alpha1`.
+The survey/task override suite saves enum, integer, string, env-target and secret survey variables in the template, then runs `survey-overrides.yml` with overridden values, template/task arguments and Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. The task really runs on SQLite and PostgreSQL with local execution, the secret is verified by SHA-256 under `no_log` and is absent from the structured/raw output. The persistent runner on `v2.19.8` loses the survey secret before dispatch; this is covered by a separate canary until the move to upstream #4086. An unsupported survey target gets `400`. A `v2.19.8` gap is also recorded: an enum default outside the list is accepted by the backend; the fix is already in upstream `v2.20.0-alpha1`.
 
-Webhook integration-набор создаёт token-authenticated searchable integration, project alias, header matcher и extractors из JSON body/header. Запросы с неверным token или event не запускают task, а валидный webhook возвращает task identifiers, сохраняет связь через `integration_id` и реально передаёт extracted значения в Ansible playbook. Token хранится в `login_password` access key и редактируется в API/Allure diagnostics.
+The webhook integration suite creates a token-authenticated searchable integration, a project alias, a header matcher and extractors from the JSON body/header. Requests with a wrong token or event do not launch a task, while a valid webhook returns task identifiers, saves the link through `integration_id` and really passes the extracted values to the Ansible playbook. The token is stored in a `login_password` access key and is redacted in API/Allure diagnostics.
 
-Project backup/restore-набор экспортирует конфигурацию с access keys, repository, inventory, template и schedule после реального task execution. Backup не содержит plaintext authentication secret и task history; восстановленный проект получает новые ID с корректно перелинкованными ресурсами, после чего его template снова успешно выполняется. Workflows и external Secret Storage management не имитируются на Community image: обе возможности отключены feature flags и требуют Pro test subscription для честного e2e.
+The project backup/restore suite exports the configuration with access keys, repository, inventory, template and schedule after a real task execution. The backup contains no plaintext authentication secret and no task history; the restored project gets new IDs with correctly relinked resources, after which its template runs successfully again. Workflows and external Secret Storage management are not imitated on the Community image: both capabilities are disabled by feature flags and require a Pro test subscription for an honest e2e.
 
-Negative restore checks подтверждают запрет операции для non-admin и отклонение отсутствующей repository-ссылки. На `v2.19.8` найден общий off-by-one дефект duplicate validation: документ с двумя одинаковыми именами repository принимается и создаёт оба ресурса; canary и source boundary описаны в `test-environment/project-backup-restore-validation-defect.md`.
+Negative restore checks confirm that the operation is forbidden for a non-admin and that a missing repository reference is rejected. On `v2.19.8` a general off-by-one defect of duplicate validation was found: a document with two identical repository names is accepted and creates both resources; the canary and source boundary are described in `test-environment/project-backup-restore-validation-defect.md`.
 
-Concurrency-набор создаёт template с `allow_parallel_tasks=true`, чтобы не смешивать project limit с template-lock. При `max_parallel_tasks=1` первая задача доходит до marker, а вторая стабильно остаётся в `waiting`; после освобождения слота она запускается. После API-обновления проекта до лимита `2` две задачи одновременно достигают marker и обе корректно останавливаются.
+The concurrency suite creates a template with `allow_parallel_tasks=true` so as not to mix the project limit with the template lock. With `max_parallel_tasks=1` the first task reaches the marker, while the second one reliably stays in `waiting`; after the slot is freed it starts. After the project is updated through the API to a limit of `2`, two tasks reach the marker simultaneously and both stop correctly.
 
-Git-набор проверяет выполнение задачи из явно выбранной ветки, диагностируемый отказ для отсутствующей ветки и недоступного HTTPS remote. Для authenticated clone дополнительно проверяется, что login/password не попадают в structured и raw task output.
+The Git suite verifies task execution from an explicitly selected branch, a diagnosable failure for a missing branch and for an unreachable HTTPS remote. For an authenticated clone it additionally verifies that the login/password do not leak into the structured and raw task output.
 
-SSH-набор использует отдельный typed fixture и проверяет успешный Git clone по SSH, выполнение playbook на SSH target, безопасный отказ с неверным ключом и ротацию секрета без замены key ID. Две зашифрованные тестовые пары ключей генерируются в игнорируемом `build/test-fixtures/ssh`; private keys не входят ни в Git, ни в Docker build context. Строгая проверка `known_hosts` не тестируется на закреплённом `v2.19.8`, потому что соответствующая конфигурация присутствует только в более новом upstream `develop`.
+The SSH suite uses a separate typed fixture and verifies a successful Git clone over SSH, playbook execution on an SSH target, a safe failure with a wrong key and secret rotation without replacing the key ID. Two encrypted test key pairs are generated in the ignored `build/test-fixtures/ssh`; private keys are included neither in Git nor in the Docker build context. Strict `known_hosts` checking is not tested on the pinned `v2.19.8`, because the corresponding configuration is present only in the newer upstream `develop`.
 
-Task lifecycle-набор запускает безопасный long-running playbook, дожидается marker фактического выполнения и проверяет обычный stop и force-stop. В обоих случаях задача переходит в `stopped`, а шаг после паузы не выполняется.
+The task lifecycle suite launches a safe long-running playbook, waits for the marker of actual execution and verifies a regular stop and a force-stop. In both cases the task moves to `stopped`, and the step after the pause is not executed.
 
-Ansible-код берётся только из доверенных `test-environment/fixtures/ansible`, упакованных Compose в локальный read-only Git volume с ветками `main` и `bookwright-fixture-ref`. Внешний код при API-запуске не исполняется.
+Ansible code is taken only from the trusted `test-environment/fixtures/ansible`, packaged by Compose into a local read-only Git volume with the `main` and `bookwright-fixture-ref` branches. No external code is executed on an API-triggered run.
 
-Полный набор инфраструктурных self-tests Bookwright и продуктовых тестов Semaphore:
+The full set of Bookwright infrastructure self-tests and Semaphore product tests:
 
 ```bash
 JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 ./gradlew spotlessCheck test -DSTAND=semaphore
 ```
 
-## Материалы исследования
+## Research materials
 
-- `semaphore-ui-testing-assessment-plan.md` — общий план;
-- `semaphore-testing-component-map.md` — карта компонентов;
-- `outputs/issues-assessment/` — полный реестр issues;
-- `test-environment/api-map.md` — карта API и приоритеты автоматизации;
-- `test-environment/legacy-qa-review.md` — разбор старых UI-тестов и ручных сценариев;
-- `test-environment/configuration-testing-overview.md` — матрица клиентских конфигураций и опорные профили;
-- `test-environment/smoke-report.md` — результаты проверки стенда.
-- `test-environment/known-defects.md` — сводка актуальных дефектов с приоритетами и шагами воспроизведения.
-- `test-environment/schedule-execution-defect.md` — воспроизводимый дефект cron/run-at execution.
-- `test-environment/dynamic-runner-one-off-exit-defect.md` — воспроизводимый дефект завершения one-off runner.
-- `test-environment/runner-unavailable-routing-defect.md` — fail-fast вместо recoverable queue при отсутствии matching runner.
-- `test-environment/remote-runner-survey-secrets-defect.md` — потеря secret survey variables при remote dispatch.
-- `test-environment/survey-default-validation-defect.md` — отсутствие enum default validation в `v2.19.8`.
+- `semaphore-ui-testing-assessment-plan.md` — overall plan;
+- `semaphore-testing-component-map.md` — component map;
+- `outputs/issues-assessment/` — full issue registry;
+- `test-environment/api-map.md` — API map and automation priorities;
+- `test-environment/legacy-qa-review.md` — review of the legacy UI tests and manual scenarios;
+- `test-environment/configuration-testing-overview.md` — matrix of client configurations and reference profiles;
+- `test-environment/smoke-report.md` — environment verification results.
+- `test-environment/known-defects.md` — summary of current defects with priorities and reproduction steps.
+- `test-environment/schedule-execution-defect.md` — reproducible cron/run-at execution defect.
+- `test-environment/dynamic-runner-one-off-exit-defect.md` — reproducible one-off runner exit defect.
+- `test-environment/runner-unavailable-routing-defect.md` — fail-fast instead of a recoverable queue when no matching runner is available.
+- `test-environment/remote-runner-survey-secrets-defect.md` — loss of secret survey variables on remote dispatch.
+- `test-environment/survey-default-validation-defect.md` — missing enum default validation in `v2.19.8`.
 
-Исходный код Semaphore хранится локально в `/semaphore/` и исключён из этого репозитория.
+The Semaphore source code is stored locally in `/semaphore/` and is excluded from this repository.
 
-## Безопасная проверка внешнего Semaphore
+## Safe verification of an external Semaphore
 
-`externalTest` запускает только read-only сценарии с тегом `external`: health, password login,
-system info и список доступных проектов. Он не создаёт проекты, пользователей, templates или tasks и
-не зависит от локальных Git/SSH/runner fixtures.
+`externalTest` runs only read-only scenarios tagged `external`: health, password login,
+system info and the list of available projects. It does not create projects, users, templates or tasks and
+does not depend on local Git/SSH/runner fixtures.
 
-Адрес и credentials задаются явно через environment, чтобы случайно не направить полный локальный
-набор на пользовательский стенд и не передавать пароль аргументом launcher-скрипта:
+The address and credentials are set explicitly through the environment, so that the full local
+suite is not accidentally pointed at a user environment and the password is not passed as a launcher script argument:
 
 ```bash
 export API_BASE_URL=https://semaphore.example.test/api/
@@ -345,7 +345,7 @@ export API_PASSWORD='set-from-secret-storage'
 scripts/run-external-tests.sh
 ```
 
-Дополнительные Gradle arguments передаются после имени скрипта. Для self-signed TLS можно передать
-существующие `-Dbookwright.test.ssl.trustStore=...` и
-`-Dbookwright.test.ssl.trustStorePassword=...`. Обычный `apiTest` остаётся локальным полным набором и
-никогда не вызывается launcher-ом внешнего стенда.
+Additional Gradle arguments are passed after the script name. For self-signed TLS the existing
+`-Dbookwright.test.ssl.trustStore=...` and
+`-Dbookwright.test.ssl.trustStorePassword=...` can be passed. The regular `apiTest` remains the local full suite and
+is never invoked by the external environment launcher.

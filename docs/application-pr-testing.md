@@ -1,93 +1,93 @@
-# Тестирование Pull Request основного репозитория
+# Testing Pull Requests of the Application Repository
 
-Тестовый и основной репозитории остаются независимыми: submodule не используются, тесты не
-переносятся в основной репозиторий, а приложение — в тестовый. Разделены две независимые
-настройки.
+The test repository and the application repository remain independent: no submodules are used, the tests
+are not moved into the application repository, and the application is not moved into the test repository.
+Two independent settings are kept separate.
 
-| Что определяет | Настройка | Где задаётся |
+| What it determines | Setting | Where it is set |
 | --- | --- | --- |
-| **Какие тесты запускать** | `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` / `git.fixtures.branch`) | [MainConfig.java](../src/main/java/io/bookwright/config/MainConfig.java), stand properties, `-D`-параметры |
-| **Какую версию приложения тестировать** | строка `Application-PR:` в описании тестового PR | описание PR; `APP_REPOSITORY` / `APP_PR` как служебный механизм CI |
+| **Which tests to run** | `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` / `git.fixtures.branch`) | [MainConfig.java](../src/main/java/io/bookwright/config/MainConfig.java), stand properties, `-D` parameters |
+| **Which application version to test** | the `Application-PR:` line in the test PR description | PR description; `APP_REPOSITORY` / `APP_PR` as an internal CI mechanism |
 
-Семантика `TEST_REPOSITORY` / `TEST_BRANCH` не изменилась.
+The semantics of `TEST_REPOSITORY` / `TEST_BRANCH` have not changed.
 
-## Два режима
+## Two modes
 
-### Обычный режим (по умолчанию)
+### Normal mode (default)
 
-В описании тестового PR нет строки `Application-PR:`. Основной репозиторий не клонируется,
-приложение не собирается, временный Docker image не создаётся. Используется image из манифеста профиля
-(`test-environment/profiles/<profile>/profile.yaml`, ключ `semaphore_image`) — ровно как раньше.
+The test PR description contains no `Application-PR:` line. The application repository is not cloned,
+the application is not built, and no temporary Docker image is created. The image from the profile manifest
+(`test-environment/profiles/<profile>/profile.yaml`, key `semaphore_image`) is used — exactly as before.
 
 ```text
 clone tests → pull semaphore_image → start application → run tests
 ```
 
-Никаких дополнительных действий при обычной разработке тестов не требуется.
+No additional steps are required for regular test development.
 
-### PR-режим
+### PR mode
 
-Тестовый прогон явно связан с Pull Request основного репозитория. Pipeline определяет HEAD SHA
-этого PR, вычисляет тег временного image, переиспользует его при наличии и собирает только при
-отсутствии.
+The test run is explicitly linked to a Pull Request of the application repository. The pipeline determines the
+HEAD SHA of that PR, computes the tag of the temporary image, reuses it if it exists, and builds it only if
+it is missing.
 
 ```text
-APP_PR → HEAD SHA → image exists? → (нет: checkout PR → build → push) → start application → run tests
+APP_PR → HEAD SHA → image exists? → (no: checkout PR → build → push) → start application → run tests
 ```
 
-## Связывание тестового PR с PR приложения
+## Linking a test PR to an application PR
 
-Связь всегда **явная**. Она никогда не выводится из названия ветки, слова `feature`, совпадения
-названий веток или самого факта изменения тестовой ветки.
+The link is always **explicit**. It is never inferred from the branch name, the word `feature`, matching
+branch names, or the mere fact that the test branch has changed.
 
-Единственное место, где разработчик её задаёт, — **описание тестового PR**. Достаточно добавить
-одну строку:
+The only place where a developer declares it is the **test PR description**. Adding a single line is
+enough:
 
 ```text
 Application-PR: semaphoreui/semaphore#123
 ```
 
-Всё. Дальше CI делает остальное.
+That is all. CI takes care of the rest.
 
-### Почему именно описание PR
+### Why the PR description
 
-Описание PR не является частью содержимого репозитория и **не попадает в `main` при merge**.
-Поэтому забытая связь физически не может превратить обычный прогон `main` в сборку давно
-закрытого PR приложения, а ветки, срезанные от `main`, ничего не наследуют. Файл в репозитории
-такой гарантии не даёт — он мержится вместе с PR.
+The PR description is not part of the repository contents and **does not land in `main` on merge**.
+Therefore a forgotten link physically cannot turn a normal `main` run into a build of a long-closed
+application PR, and branches cut from `main` inherit nothing. A file in the repository provides no
+such guarantee — it gets merged together with the PR.
 
-### Принимаемые формы
+### Accepted forms
 
-| Запись | Смысл |
+| Entry | Meaning |
 | --- | --- |
-| `Application-PR: semaphoreui/semaphore#123` | репозиторий и номер явно |
-| `Application-PR: #123` | репозиторий по умолчанию — `semaphoreui/semaphore` |
-| `Application-PR: 123` | то же самое |
-| `Application-PR: https://github.com/semaphoreui/semaphore/pull/123` | ссылка целиком, можно с `/files` |
+| `Application-PR: semaphoreui/semaphore#123` | repository and number explicitly |
+| `Application-PR: #123` | default repository — `semaphoreui/semaphore` |
+| `Application-PR: 123` | the same |
+| `Application-PR: https://github.com/semaphoreui/semaphore/pull/123` | full link, optionally with `/files` |
 
-Ключ нечувствителен к регистру и допускает `Application PR:` и `Application_PR:`. Строка должна
-начинать строку описания — упоминание `Application-PR:` внутри предложения связью не считается.
-Текст внутри HTML-комментариев игнорируется, поэтому шаблон PR может содержать
-закомментированный пример.
+The key is case-insensitive and also accepts `Application PR:` and `Application_PR:`. The entry must
+start a line of the description — a mention of `Application-PR:` inside a sentence is not treated as a link.
+Text inside HTML comments is ignored, so the PR template may contain a
+commented-out example.
 
-Две и более строки `Application-PR:` — ошибка pipeline, а не молчаливый выбор одной из них.
+Two or more `Application-PR:` lines are a pipeline error, not a silent choice of one of them.
 
-Редактирование описания перезапускает CI: `ci.yml` подписан на тип события `edited` вдобавок к
-`opened`/`synchronize`/`reopened`. Без этого добавленная после открытия PR строка не подхватилась
-бы, а ручной re-run не помог бы — он воспроизводит исходный payload со старым описанием.
+Editing the description re-runs CI: `ci.yml` subscribes to the `edited` event type in addition to
+`opened`/`synchronize`/`reopened`. Without this, a line added after the PR was opened would not be
+picked up, and a manual re-run would not help — it replays the original payload with the old description.
 
-### Что происходит после merge PR приложения
+### What happens after the application PR is merged
 
-Пока тестовый PR открыт, его PR приложения может быть смержен. У такого PR не осталось версии
-для тестирования: коммиты уже в основной ветке приложения. Pipeline громко пишет причину и
-откатывается в обычный режим — берёт image из манифеста профиля, вместо того чтобы навсегда
-прибить тесты к устаревшему коммиту. Строку из описания после этого стоит убрать.
+While the test PR is open, its application PR may get merged. Such a PR no longer has a version
+to test: its commits are already in the application's main branch. The pipeline loudly reports the reason and
+falls back to normal mode — it takes the image from the profile manifest instead of pinning the tests
+to an outdated commit forever. The line should be removed from the description after that.
 
-### CI-переменные
+### CI variables
 
-`APP_REPOSITORY` и `APP_PR` — служебный механизм CI, а не способ ручного объявления связи. Через
-них workflow автозапуска стартует прогон для ветки, где контекста PR (а значит и описания) нет.
-Они имеют приоритет над описанием. Тот же путь доступен вручную:
+`APP_REPOSITORY` and `APP_PR` are an internal CI mechanism, not a way to declare the link manually. Through
+them the auto-trigger workflow starts a run for a branch that has no PR context (and therefore no description).
+They take precedence over the description. The same path is available manually:
 
 ```bash
 gh workflow run ci.yml --ref feature/BOOK-123 \
@@ -95,45 +95,45 @@ gh workflow run ci.yml --ref feature/BOOK-123 \
   --field application_pull_request=123
 ```
 
-## Идентификация и изоляция временных images
+## Identification and isolation of temporary images
 
-Тег временного image содержит номер PR и полный SHA его HEAD commit:
+The tag of the temporary image contains the PR number and the full SHA of its HEAD commit:
 
 ```text
 ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-pr-123-abc123456789...
 ```
 
-* два разных commit одного PR дают разные images;
-* несколько пар application/test PR никогда не делят один image;
-* временные images лежат в отдельном namespace GHCR тестового репозитория, поэтому release-теги
-  `semaphoreui/semaphore` не читаются, не перезаписываются и вообще не затрагиваются.
+* two different commits of the same PR produce different images;
+* multiple application/test PR pairs never share a single image;
+* temporary images live in a separate GHCR namespace of the test repository, so the release tags of
+  `semaphoreui/semaphore` are not read, not overwritten, and not touched at all.
 
-Namespace переопределяется переменной `APP_IMAGE_REPOSITORY`, префикс тега — `APP_IMAGE_TAG_PREFIX`.
+The namespace is overridden with the `APP_IMAGE_REPOSITORY` variable, the tag prefix with `APP_IMAGE_TAG_PREFIX`.
 
-## Повторное использование образа
+## Image reuse
 
-Перед сборкой проверяется наличие image для вычисленного SHA:
+Before building, the pipeline checks whether an image for the computed SHA exists:
 
-| Ситуация | Поведение |
+| Situation | Behavior |
 | --- | --- |
-| Изменился только тестовый PR, SHA приложения прежний | image существует → `pull → test`, сборка не выполняется |
-| В application PR появился новый commit | новый тег → `build → push → test` |
-| В описании нет `Application-PR:` | ни клонирования, ни сборки, ни временного image |
-| Application PR закрыт или смержен | откат в обычный режим, сборки нет |
-| Прогон не является тестовым PR | описания нет в контексте, обычный режим |
+| Only the test PR changed, the application SHA is the same | image exists → `pull → test`, no build is performed |
+| A new commit appeared in the application PR | new tag → `build → push → test` |
+| No `Application-PR:` in the description | no cloning, no build, no temporary image |
+| Application PR is closed or merged | fallback to normal mode, no build |
+| The run is not a test PR | no description in the context, normal mode |
 
-## Автоматический запуск
+## Automatic triggering
 
-### При изменении PR приложения
+### When the application PR changes
 
-Workflow [`application-pr.yml`](../.github/workflows/application-pr.yml) принимает событие
-`repository_dispatch` типа `application-pr-updated`, читает описания всех открытых тестовых PR и
-находит **те, что явно объявили связь с этим PR приложения**, после чего запускает для них CI. Тестовые PR без связи или связанные с
-другим application PR не запускаются, изменение произвольной ветки основного репозитория не
-запускает ничего.
+The [`application-pr.yml`](../.github/workflows/application-pr.yml) workflow accepts the
+`repository_dispatch` event of type `application-pr-updated`, reads the descriptions of all open test PRs and
+finds **those that explicitly declared a link to this application PR**, then starts CI for them. Test PRs without a link or linked to
+a different application PR are not started, and a change to an arbitrary branch of the application repository
+starts nothing.
 
-Чтобы включить автозапуск, в основной репозиторий `semaphoreui/semaphore` нужно один раз добавить
-`.github/workflows/notify-integration-tests.yml`:
+To enable auto-triggering, add `.github/workflows/notify-integration-tests.yml` to the application repository
+`semaphoreui/semaphore` once:
 
 ```yaml
 name: Notify integration tests
@@ -160,11 +160,11 @@ jobs:
             --field 'client_payload[sha]=${{ github.event.pull_request.head.sha }}'
 ```
 
-`INTEGRATION_TESTS_DISPATCH_TOKEN` — токен с правом `contents: write` на тестовый репозиторий
-(fine-grained PAT или GitHub App installation token). Токен хранится только в secrets и не
-передаётся через параметры командной строки.
+`INTEGRATION_TESTS_DISPATCH_TOKEN` is a token with `contents: write` permission on the test repository
+(a fine-grained PAT or a GitHub App installation token). The token is stored only in secrets and is not
+passed via command-line parameters.
 
-Тот же workflow запускается вручную:
+The same workflow can be started manually:
 
 ```bash
 gh workflow run application-pr.yml \
@@ -172,56 +172,56 @@ gh workflow run application-pr.yml \
   --field application_pull_request=123
 ```
 
-**Ограничение fork**: у тестового PR из fork `GITHUB_TOKEN` доступен только на чтение, поэтому
-такой PR нельзя ни запустить через `workflow_dispatch` (его ветки нет в тестовом репозитории), ни
-использовать для push временного image. Такие PR продолжают проверяться собственным событием
-`pull_request` в обычном режиме; в логе `Application PR trigger` они отмечаются явно. Для
-PR-режима ветку тестового PR нужно держать в самом тестовом репозитории.
+**Fork limitation**: for a test PR from a fork, `GITHUB_TOKEN` is read-only, so
+such a PR can neither be started via `workflow_dispatch` (its branch does not exist in the test repository) nor
+be used to push a temporary image. Such PRs continue to be checked by their own
+`pull_request` event in normal mode; they are explicitly marked in the `Application PR trigger` log. For
+PR mode, the test PR branch must be kept in the test repository itself.
 
-### При изменении тестового PR
+### When the test PR changes
 
-Обычное событие `pull_request` workflow [`ci.yml`](../.github/workflows/ci.yml). Оно передаёт
-описание PR в job `Application source`, который резолвит связь, переиспользует существующий image и запускает тесты. Если
-SHA приложения не изменился, сборка не выполняется.
+The regular `pull_request` event of the [`ci.yml`](../.github/workflows/ci.yml) workflow. It passes the
+PR description to the `Application source` job, which resolves the link, reuses the existing image and starts the tests. If
+the application SHA has not changed, no build is performed.
 
-## Авторизация
+## Authorization
 
-| Секрет / переменная | Назначение | Обязателен |
+| Secret / variable | Purpose | Required |
 | --- | --- | --- |
-| `GITHUB_TOKEN` (встроенный) | чтение публичного основного репозитория, push временного image в GHCR тестового репозитория | да, выдаётся автоматически |
-| `APPLICATION_REPOSITORY_TOKEN` | чтение и checkout основного репозитория, если он private | только для private |
-| `GHCR_CLEANUP_TOKEN` | удаление временных images (`delete:packages`) | только для очистки |
-| `vars.APPLICATION_REPOSITORY` | основной репозиторий для очистки, по умолчанию `semaphoreui/semaphore` | нет |
+| `GITHUB_TOKEN` (built-in) | reading the public application repository, pushing the temporary image to the test repository's GHCR | yes, issued automatically |
+| `APPLICATION_REPOSITORY_TOKEN` | reading and checking out the application repository if it is private | only for private |
+| `GHCR_CLEANUP_TOKEN` | deleting temporary images (`delete:packages`) | only for cleanup |
+| `vars.APPLICATION_REPOSITORY` | application repository for cleanup, defaults to `semaphoreui/semaphore` | no |
 
-Токены передаются только через переменные окружения и secrets. При checkout PR используется
-git credential helper, читающий токен из окружения, поэтому токен не попадает ни в командную
-строку, ни в репозиторий.
+Tokens are passed only via environment variables and secrets. When checking out a PR, a
+git credential helper that reads the token from the environment is used, so the token ends up neither in the command
+line nor in the repository.
 
-## Очистка временных images
+## Cleanup of temporary images
 
-Workflow [`cleanup-pr-images.yml`](../.github/workflows/cleanup-pr-images.yml) выполняется
-ежедневно и удаляет версии пакета `semaphore-ci`, чей тег соответствует закрытому или
-смерженному application PR, спустя окно ожидания (`RETENTION_HOURS`, по умолчанию 24 часа).
-Обрабатываются только теги вида `ci-pr-<number>-<sha>` в namespace тестового репозитория —
-release images не затрагиваются. Без секрета `GHCR_CLEANUP_TOKEN` workflow работает в режиме
-dry-run и только сообщает кандидатов на удаление.
+The [`cleanup-pr-images.yml`](../.github/workflows/cleanup-pr-images.yml) workflow runs
+daily and deletes the versions of the `semaphore-ci` package whose tag corresponds to a closed or
+merged application PR, after a grace period (`RETENTION_HOURS`, 24 hours by default).
+Only tags of the form `ci-pr-<number>-<sha>` in the test repository's namespace are processed —
+release images are not touched. Without the `GHCR_CLEANUP_TOKEN` secret the workflow runs in
+dry-run mode and only reports deletion candidates.
 
-## Локальный запуск
+## Running locally
 
-Резолв без каких-либо побочных эффектов:
+Resolving without any side effects:
 
 ```bash
 APP_LINK_BODY='Application-PR: semaphoreui/semaphore#123' scripts/app-source.sh resolve
 ```
 
-Описание можно передать и файлом — `APP_LINK_BODY_FILE=path`. Для локальных экспериментов проще
-использовать служебные `APP_PR` / `APP_REPOSITORY`:
+The description can also be passed as a file — `APP_LINK_BODY_FILE=path`. For local experiments it is easier
+to use the internal `APP_PR` / `APP_REPOSITORY`:
 
 ```bash
 APP_PR=123 scripts/app-source.sh resolve
 ```
 
-Сборка локального образа без публикации и прогон профиля против него:
+Building a local image without publishing it and running a profile against it:
 
 ```bash
 export APP_PR=123
@@ -233,14 +233,14 @@ test-environment/profile up core-sqlite-local
 test-environment/profile test core-sqlite-local
 ```
 
-`test-environment/profile` берёт image из `APP_IMAGE`, если переменная задана, и из манифеста
-профиля в противном случае. Полезные переменные сборки: `APP_BUILD_PLATFORM` (по умолчанию
-`linux/amd64`), `APP_DOCKERFILE` (по умолчанию `deployment/docker/server/Dockerfile`),
+`test-environment/profile` takes the image from `APP_IMAGE` if the variable is set, and from the profile
+manifest otherwise. Useful build variables: `APP_BUILD_PLATFORM` (defaults to
+`linux/amd64`), `APP_DOCKERFILE` (defaults to `deployment/docker/server/Dockerfile`),
 `APP_BUILD_PUSH`.
 
-## Логирование
+## Logging
 
-Обычный режим:
+Normal mode:
 
 ```text
 Application source: Docker image
@@ -248,7 +248,7 @@ Application image: semaphoreui/semaphore:v2.19.12
 Application build: skipped
 ```
 
-PR-режим с переиспользованием:
+PR mode with reuse:
 
 ```text
 Application source: Pull Request
@@ -260,7 +260,7 @@ Application image already exists
 Application build: skipped
 ```
 
-PR-режим со сборкой:
+PR mode with a build:
 
 ```text
 Application image not found
@@ -268,19 +268,19 @@ Building application...
 Application build: completed
 ```
 
-Режим также попадает в Allure environment: `application.source`, `application.repository`,
+The mode is also recorded in the Allure environment: `application.source`, `application.repository`,
 `application.pull.request`, `semaphore.image`, `semaphore.source.commit`.
 
-## Обработка ошибок
+## Error handling
 
-| Ситуация | Поведение |
+| Situation | Behavior |
 | --- | --- |
-| PR приложения не существует | `Application PR #123 not found in <repo>`, pipeline падает |
-| Нет доступа к репозиторию | `Unable to access application repository <repo>`, pipeline падает |
-| Не удалось определить SHA | `Unable to resolve the HEAD SHA of application PR #123`, pipeline падает |
-| Две строки `Application-PR:` в описании | pipeline падает, выбор одной из них не делается |
-| `Application-PR:` не похож на ссылку на PR | pipeline падает с указанием исходного значения |
-| PR получил новый commit во время сборки | сборка прерывается с явным сообщением о рассинхронизации |
-| Не удалось собрать image | pipeline падает, Docker build logs остаются в выводе шага |
-| Не удалось push-нуть image | pipeline падает после проверки, что image действительно отсутствует в registry |
-| Image недоступен для pull | тег считается отсутствующим, выполняется сборка и push |
+| The application PR does not exist | `Application PR #123 not found in <repo>`, the pipeline fails |
+| No access to the repository | `Unable to access application repository <repo>`, the pipeline fails |
+| The SHA could not be determined | `Unable to resolve the HEAD SHA of application PR #123`, the pipeline fails |
+| Two `Application-PR:` lines in the description | the pipeline fails, no choice between them is made |
+| `Application-PR:` does not look like a PR reference | the pipeline fails, reporting the original value |
+| The PR received a new commit during the build | the build is aborted with an explicit out-of-sync message |
+| The image could not be built | the pipeline fails, the Docker build logs remain in the step output |
+| The image could not be pushed | the pipeline fails after verifying that the image is really missing from the registry |
+| The image is not available for pull | the tag is treated as missing, a build and push are performed |
