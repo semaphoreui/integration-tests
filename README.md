@@ -220,7 +220,11 @@ Matrix jobs use separate GitHub-hosted runners and run in parallel with `fail-fa
 ### Test source and application source
 
 The two settings are independent. `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` /
-`git.fixtures.branch`) still determine only which fixtures and tests to use.
+`git.fixtures.branch`) still determine only which fixtures and tests to use. The fixtures are not
+taken from the checkout — the application clones them by URL — so `CI` sets this pair itself: a pull
+request is tested with its own head branch (for a fork, with the repository of that fork), and a push
+to `main` or a manual run with the branch the run was started on. Locally the defaults from
+`MainConfig` remain in force.
 A separate group `APP_REPOSITORY` / `APP_PR` determines which version of the application to test.
 
 If the application PR is not set, the behaviour does not change: the main repository is not cloned,

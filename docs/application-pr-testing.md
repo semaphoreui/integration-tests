@@ -6,7 +6,7 @@ Two independent settings are kept separate.
 
 | What it determines | Setting | Where it is set |
 | --- | --- | --- |
-| **Which tests to run** | `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` / `git.fixtures.branch`) | [MainConfig.java](../src/main/java/io/bookwright/config/MainConfig.java), stand properties, `-D` parameters |
+| **Which tests to run** | `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` / `git.fixtures.branch`) | [MainConfig.java](../src/main/java/io/bookwright/config/MainConfig.java), stand properties, `-D` parameters; in CI they are set by [ci.yml](../.github/workflows/ci.yml) to the branch of the run |
 | **Which application version to test** | the `Application-PR:` line in the test PR description | PR description; `APP_REPOSITORY` / `APP_PR` as an internal CI mechanism |
 
 The semantics of `TEST_REPOSITORY` / `TEST_BRANCH` have not changed.
