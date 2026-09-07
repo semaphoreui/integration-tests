@@ -1,16 +1,5 @@
 # Testing Pull Requests of the Application Repository
 
-The test repository and the application repository remain independent: no submodules are used, the tests
-are not moved into the application repository, and the application is not moved into the test repository.
-Two independent settings are kept separate.
-
-| What it determines | Setting | Where it is set |
-| --- | --- | --- |
-| **Which tests to run** | `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` / `git.fixtures.branch`) | [MainConfig.java](../src/main/java/io/bookwright/config/MainConfig.java), stand properties, `-D` parameters |
-| **Which application version to test** | the `Application-PR:` line in the test PR description | PR description; `APP_REPOSITORY` / `APP_PR` as an internal CI mechanism |
-
-The semantics of `TEST_REPOSITORY` / `TEST_BRANCH` have not changed.
-
 ## Two modes
 
 ### Normal mode (default)
