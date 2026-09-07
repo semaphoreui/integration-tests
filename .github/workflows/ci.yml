@@ -30,6 +30,15 @@ on:
 permissions:
   contents: read
 
+# The fixtures and test cases are not taken from the checkout: the application clones them from a
+# Git repository by URL. Without this, a run of a pull request would use the defaults of MainConfig
+# (semaphoreui/integration-tests, main) and would never see the changes under review. A pull request
+# is tested with its own head branch, and for a fork with the repository of that fork; a push to
+# main and a manual run use the branch the run was started on.
+env:
+  TEST_REPOSITORY: https://github.com/${{ github.event.pull_request.head.repo.full_name || github.repository }}.git
+  TEST_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+
 concurrency:
   group: ci-${{ github.ref }}-${{ inputs.application_pull_request || 'default' }}
   cancel-in-progress: true
@@ -138,6 +147,11 @@ jobs:
         run: |
           docker version
           docker compose version
+
+      - name: Show the test source
+        run: |
+          printf 'Fixtures repository: %s\n' "$TEST_REPOSITORY"
+          printf 'Fixtures branch: %s\n' "$TEST_BRANCH"
 
       - name: Start profile
         run: test-environment/profile up "$PROFILE"
