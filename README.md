@@ -625,3 +625,36 @@ The mode is also recorded in the Allure environment: `application.source`, `appl
 | The image could not be built | the pipeline fails, the Docker build logs remain in the step output |
 | The image could not be pushed | the pipeline fails after verifying that the image is really missing from the registry |
 | The image is not available for pull | the tag is treated as missing, a build and push are performed |
+
+
+## Local development
+
+The following environment variables can be used to specify a custom test repository and branch:
+
+| Environment Variable | Description                                | Default                                                |
+| -------------------- | ------------------------------------------ | ------------------------------------------------------ |
+| `TEST_REPOSITORY`    | URL or path to the test repository         | `https://github.com/semaphoreui/integration-tests.git` |
+| `TEST_BRANCH`        | Branch containing the test fixtures to use | `main`                                                 |
+
+### Running tests
+
+Set the required environment variables and start the test environment:
+
+```bash
+./test-environment/profile up core-sqlite-local
+```
+
+Then run the tests:
+
+```bash
+./test-environment/profile test core-sqlite-local
+```
+
+### Cleaning up
+
+To stop the environment and remove all resources created for the test environment, run:
+
+```bash
+./test-environment/profile clean core-sqlite-local --yes
+```
+
