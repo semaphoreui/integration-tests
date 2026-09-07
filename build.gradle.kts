@@ -127,6 +127,14 @@ fun Test.configureBookwrightTestRuntime() {
         (System.getProperty(key) ?: System.getenv(key))?.let { systemProperty(key, it) }
     }
     mapOf(
+        "TEST_REPOSITORY" to "git.fixtures.repository",
+        "TEST_BRANCH" to "git.fixtures.branch",
+    ).forEach { (environmentName, configKey) ->
+        (System.getProperty(configKey) ?: System.getenv(environmentName))
+            ?.takeIf(String::isNotBlank)
+            ?.let { systemProperty(configKey, it) }
+    }
+    mapOf(
         "bookwright.test.ssl.trustStore" to "javax.net.ssl.trustStore",
         "bookwright.test.ssl.trustStorePassword" to "javax.net.ssl.trustStorePassword",
     ).forEach { (source, target) ->
