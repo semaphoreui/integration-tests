@@ -1,0 +1,32 @@
+---
+- name: Branch B checkout isolation fixture
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Signal that branch B started after its checkout
+      ansible.builtin.file:
+        path: "/tmp/bookwright-branch-isolation-{{ bookwright_isolation_token }}-branch-b-ready"
+        state: touch
+
+    - name: Wait until branch A has read its marker
+      ansible.builtin.wait_for:
+        path: "/tmp/bookwright-branch-isolation-{{ bookwright_isolation_token }}-branch-a-observed"
+        state: present
+        timeout: 90
+
+    - name: Read the branch-local marker
+      ansible.builtin.command: cat {{ playbook_dir }}/.bookwright-branch-marker
+      register: branch_marker
+      changed_when: false
+
+    - name: Report the marker read by branch B
+      ansible.builtin.debug:
+        msg: "semaphore-bookwright-branch-b-marker-{{ branch_marker.stdout }}"
+
+    - name: Remove branch isolation signals
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/bookwright-branch-isolation-{{ bookwright_isolation_token }}-branch-b-ready"
+        - "/tmp/bookwright-branch-isolation-{{ bookwright_isolation_token }}-branch-a-observed"

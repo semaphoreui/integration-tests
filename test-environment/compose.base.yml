@@ -14,6 +14,18 @@ services:
         git -C /repository add .
         git -C /repository diff --cached --quiet || git -C /repository commit -m "Prepare safe smoke fixture"
         git -C /repository branch -f bookwright-fixture-ref HEAD
+        git -C /repository checkout -B bookwright-branch-isolation-a main
+        cp /source/test-environment/fixtures/ansible/branch-isolation-a.yml /repository/test-environment/fixtures/ansible/branch-isolation.yml
+        printf '%s\n' branch-a > /repository/test-environment/fixtures/ansible/.bookwright-branch-marker
+        git -C /repository add test-environment/fixtures/ansible/branch-isolation.yml test-environment/fixtures/ansible/.bookwright-branch-marker
+        git -C /repository commit -m "Add branch isolation fixture A"
+        git -C /repository checkout main
+        git -C /repository checkout -B bookwright-branch-isolation-b main
+        cp /source/test-environment/fixtures/ansible/branch-isolation-b.yml /repository/test-environment/fixtures/ansible/branch-isolation.yml
+        printf '%s\n' branch-b > /repository/test-environment/fixtures/ansible/.bookwright-branch-marker
+        git -C /repository add test-environment/fixtures/ansible/branch-isolation.yml test-environment/fixtures/ansible/.bookwright-branch-marker
+        git -C /repository commit -m "Add branch isolation fixture B"
+        git -C /repository checkout main
         chown -R 1001:0 /repository
     volumes:
       - fixture-repository:/repository
