@@ -65,9 +65,11 @@ jobs:
           # Playwright installs Ubuntu packages with apt. The hosted runner also enables an
           # unrelated Google Chrome repository whose temporarily inconsistent index can make
           # that apt update fail before any project test starts.
-          if [ -f /etc/apt/sources.list.d/google-chrome.list ]; then
-            sudo mv /etc/apt/sources.list.d/google-chrome.list /tmp/google-chrome.list
-          fi
+          for source in /etc/apt/sources.list.d/*; do
+            if grep -q 'dl.google.com/linux/chrome-stable' "$source"; then
+              sudo mv "$source" "$RUNNER_TEMP/$(basename "$source").disabled"
+            fi
+          done
           ./gradlew --no-daemon playwrightInstallChromium
 
       - name: Show Docker versions
