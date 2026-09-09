@@ -242,18 +242,25 @@ After `semaphore vault rekey --backup`, the lifecycle requires the state `0 rows
 
 ## N-1 → current upgrade
 
-Two isolated profiles verify the upgrade of the release image `v2.19.8` → `v2.19.12` while keeping the same DB:
+Four isolated profiles verify the upgrade of the release image `v2.19.8` → `v2.19.12` while keeping the same DB:
 
 ```bash
 test-environment/profile upgrade-test upgrade-sqlite-local
 test-environment/profile down upgrade-sqlite-local
 test-environment/profile upgrade-test upgrade-postgres-local
+test-environment/profile down upgrade-postgres-local
+test-environment/profile upgrade-test upgrade-mysql-local
+test-environment/profile down upgrade-mysql-local
+test-environment/profile upgrade-test upgrade-mariadb-local
+test-environment/profile down upgrade-mariadb-local
 ```
 
 The command deletes only the volumes of the selected upgrade profile, brings up N-1, creates a linked persisted fixture, and executes a task. Then it recreates only the server on the current image, verifies the persisted project/access key/repository/inventory/template/schedule/task output, re-executes the old template, and runs the regular core suite. Both image references and digests are recorded in the Allure environment.
 
 The `v2.19.8` → `v2.19.12` pair is the current upgrade gate and passed successfully on SQLite and
-PostgreSQL in Linux CI on 2026-09-04. The previous pair `v2.19.7` → `v2.19.8` also read the persisted
+PostgreSQL in Linux CI on 2026-09-04. MySQL 8.4 and MariaDB 10.11 are wired into the same weekly
+workflow, passed locally on 2026-09-09, and remain pending until their first successful Linux run.
+The previous pair `v2.19.7` → `v2.19.8` also read the persisted
 project/access key/repository/inventory/template/schedule/task and re-executed the template on
 both DBMSs on 2026-08-19. The upgrade workflow remains a separate observed gate because it verifies
 the migration of persisted state between release images.
@@ -268,7 +275,7 @@ The profiles are wired into three GitHub Actions workflows:
 |---|---|---|
 | `CI` | pull request and push to `main` | API suite and Chromium UI smoke on `core-sqlite-local` after the framework quality gate |
 | `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation` |
-| `Release upgrade` | Sunday at `03:30 UTC`, manually | `upgrade-sqlite-local`, `upgrade-postgres-local` |
+| `Release upgrade` | Sunday at `03:30 UTC`, manually | `upgrade-sqlite-local`, `upgrade-postgres-local`, `upgrade-mysql-local`, `upgrade-mariadb-local` |
 
 Each matrix profile runs on its own runner, so the shared port `3000` causes no conflicts. After execution the workflow keeps JUnit/HTML/Allure artifacts, adds `profile ps` and a final snapshot of the Compose logs on failure, and then removes only the containers and volumes of the selected profile.
 
@@ -282,7 +289,7 @@ In the manual `Configuration matrix`, the inputs `include_schedule_investigation
 selected run. Their failure, expected until the fix, does not pollute the daily gate but preserves
 Linux diagnostics for confirming the defects.
 
-The raw Allure results of each job are uploaded as a separate artifact. The final reusable workflow downloads them, generates an independent HTML report for each profile, and uploads the combined site as a downloadable artifact. The build runs even after a test failure, including on pull requests, so the diagnostics of a red run can be opened without GitHub Pages. Pages deployment is suspended while the private repository stays on a plan without private Pages.
+The raw Allure results of each job are uploaded as a separate artifact. The final reusable workflow downloads them, generates an independent HTML report for each profile, and uploads the combined site as a downloadable artifact. The build runs even after a test failure, including on pull requests, so the diagnostics of a red run can be opened without GitHub Pages. Successful trusted `main` runs are also published to the public [GitHub Pages history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment runs remain artifact-only.
 
 The `fixture-init` Compose service creates a separate Git repository from `fixtures/ansible` with the `main` and `bookwright-fixture-ref` branches. Initialization is safely repeatable for an existing volume and fails with an error when a Git command fails. The repository is mounted into Semaphore read-only and is used to verify the task lifecycle, branch selection, and a missing ref. `long-running.yml` contains a start marker, a controlled pause, and a completion marker for deterministic stop/force-stop verification.
 

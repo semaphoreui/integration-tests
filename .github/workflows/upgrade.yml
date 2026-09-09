@@ -23,6 +23,8 @@ jobs:
         profile:
           - upgrade-sqlite-local
           - upgrade-postgres-local
+          - upgrade-mysql-local
+          - upgrade-mariadb-local
     env:
       PROFILE: ${{ matrix.profile }}
     steps:

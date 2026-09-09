@@ -1,7 +1,8 @@
 # Semaphore UI Testing Development Plan
 
-**Project:** [semaphoreui/semaphore](https://github.com/semaphoreui/semaphore)  
-**Working format:** analysis of the current state, creation and continuous development of automated testing by a single project owner.
+- **Application:** [semaphoreui/semaphore](https://github.com/semaphoreui/semaphore)
+- **Test project:** [semaphoreui/integration-tests](https://github.com/semaphoreui/integration-tests)
+- **Working format:** analysis of the current state, creation and continuous development of automated testing by a single project owner.
 
 ---
 
@@ -255,7 +256,7 @@ At the start, tests should not block development until their stability is confir
 
 **Result:** a working CI pipeline and a clear process for analyzing failures.
 
-**Current status:** the stage has been implemented. The pull-request workflow runs the framework quality gate, the API baseline, and a short Chromium UI smoke on `core-sqlite-local`; the browser suite verifies password login, launching an API-prepared executable template, and client-side project-name validation without sending a create request. The daily matrix job runs the PostgreSQL, MySQL, MariaDB, persistent runner, SSH, private HTTPS Git, direct OIDC, HTTPS/subpath OIDC, LDAPS, TOTP, and encryption-rotation feature profiles; the weekly and manual release workflow verifies the SQLite/PostgreSQL upgrade. Jobs have timeouts, `fail-fast: false` for matrices, preserve JUnit/HTML/Allure and Compose diagnostics, and cleanup always runs. The full manual configuration matrix on Semaphore `v2.19.12` passed successfully on 2026-09-04: all 11 profiles are green. On the same day, the PR gate with SQLite/UI and both `v2.19.8 → v2.19.12` upgrade profiles passed separately. Manual investigation runs confirm the known schedule, dynamic-runner, and shell-output defects and are not part of the stable gate. After each run, the individual profile Allure reports are assembled by a reusable workflow into a self-contained single-file HTML artifact. GitHub Pages deployment is suspended due to the plan limitation of the private repository.
+**Current status:** the stage has been implemented. The pull-request workflow runs the framework quality gate, the API baseline, and a short Chromium UI smoke on `core-sqlite-local`; the browser suite verifies password login, launching an API-prepared executable template, and client-side project-name validation without sending a create request. The daily matrix job runs the PostgreSQL, MySQL, MariaDB, persistent runner, SSH, private HTTPS Git, direct OIDC, HTTPS/subpath OIDC, LDAPS, TOTP, and encryption-rotation feature profiles. The weekly and manual release workflow contains SQLite, PostgreSQL, MySQL, and MariaDB upgrade profiles; SQLite/PostgreSQL are confirmed, while the newly added MySQL/MariaDB variants await their first Linux run. Jobs have timeouts, `fail-fast: false` for matrices, preserve JUnit/HTML/Allure and Compose diagnostics, and cleanup always runs. The full manual configuration matrix on Semaphore `v2.19.12` passed successfully on 2026-09-04: all 11 profiles are green. On the same day, the PR gate with SQLite/UI and both confirmed `v2.19.8 → v2.19.12` upgrade profiles passed separately. Manual investigation runs confirm the known schedule, dynamic-runner, and shell-output defects and are not part of the stable gate. After each run, the individual profile Allure reports are assembled by a reusable workflow into a self-contained single-file HTML artifact. Successful trusted `main` runs are published to the public [GitHub Pages history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment runs remain artifact-only.
 
 ---
 
@@ -284,6 +285,27 @@ Preliminary directions:
 - load and security checks.
 
 **Result:** a living prioritized backlog for systematic development of the suite by the project owner.
+
+### Current standalone block: upgrade coverage for every Community DBMS
+
+**Risk:** a release can migrate a clean SQLite/PostgreSQL installation correctly while breaking an
+existing MySQL or MariaDB database used by a self-hosted customer.
+
+**Test level:** black-box release upgrade with the published Docker images and preserved database
+volumes.
+
+**Scope:** reuse the stable upgrade fixture and lifecycle for MySQL 8.4 and MariaDB 10.11, add both
+profiles to the weekly/manual release workflow, and publish separate diagnostics and Allure results.
+
+**Dependencies:** Docker Compose, the pinned `v2.19.8` and `v2.19.12` Semaphore images, and the
+existing pinned database images. No application change or Pro subscription is required.
+
+**Completion criteria:** both profiles create and execute the linked fixture on `v2.19.8`, migrate
+the preserved database with `v2.19.12`, verify all relationships and masked secrets, rerun the old
+template, and finish the regular API suite successfully in Linux CI.
+
+**Priority:** high. **Status:** profiles and CI matrix entries implemented; both complete upgrade
+lifecycle runs passed locally on 2026-09-09; first Linux run pending.
 
 ---
 

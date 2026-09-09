@@ -1,0 +1,4 @@
+include:
+  - path:
+      - ../../compose.base.yml
+      - ../core-mariadb-local/mariadb.yml

@@ -4,7 +4,8 @@ Test project for [Semaphore UI](https://github.com/semaphoreui/semaphore), built
 
 The current Semaphore release matrix `v2.19.12` is fully confirmed in Linux CI: 11 configuration
 profiles passed on 2026-09-04. The `v2.19.8 → v2.19.12` upgrade separately passed on SQLite and
-PostgreSQL.
+PostgreSQL. Equivalent MySQL 8.4 and MariaDB 10.11 upgrade profiles are implemented and awaiting
+their first Linux CI confirmation after passing locally on 2026-09-09.
 
 ## Stack
 
@@ -190,18 +191,26 @@ test-environment/profile test feature-schedule-timezone
 
 On `v2.19.8` both scenarios reproduce the defect locally: the active schedule is saved, but no task is created. The profile is not yet included in the CI matrix; the evidence and expected behaviour are in `test-environment/schedule-execution-defect.md`.
 
-Verification of upgrading the published images on a preserved SQLite or PostgreSQL database is launched by a separate command:
+Verification of upgrading the published images on a preserved database is launched by a separate command:
 
 ```bash
 test-environment/profile upgrade-test upgrade-sqlite-local
 test-environment/profile down upgrade-sqlite-local
 test-environment/profile upgrade-test upgrade-postgres-local
+test-environment/profile down upgrade-postgres-local
+test-environment/profile upgrade-test upgrade-mysql-local
+test-environment/profile down upgrade-mysql-local
+test-environment/profile upgrade-test upgrade-mariadb-local
+test-environment/profile down upgrade-mariadb-local
 ```
 
 The current upgrade path is `v2.19.8 → v2.19.12`. It successfully confirmed preservation of resources,
 access keys and task output on SQLite and PostgreSQL in Linux CI on 2026-09-04. The previous pair
 `v2.19.7 → v2.19.8` passed on both DBMSs on 2026-08-19. The upgrade remains a separate observed
 gate: it verifies migration of the preserved state, not just a clean installation.
+MySQL 8.4 and MariaDB 10.11 now use the same lifecycle and persisted fixture; they are considered
+locally confirmed as of 2026-09-09, but not fully confirmed until their first successful Linux
+workflow run.
 The diagnostics are recorded in `test-environment/v2.19.8-regression-report.md`; the historical
 schema defect of the `v2.19.6 → v2.19.7` pair is in `test-environment/upgrade-report.md`.
 
@@ -211,7 +220,7 @@ GitHub Actions are split by cost and purpose:
 
 - `CI` runs for every pull request and push to `main`: it first runs the framework quality gate, then the core API suite and a short Chromium UI smoke on `core-sqlite-local`;
 - `Configuration matrix` runs daily at `01:30 UTC` and manually, and verifies PostgreSQL, MySQL, MariaDB, production-like PostgreSQL with a persistent runner, SSH, private HTTPS Git, direct and HTTPS/subpath OIDC, LDAPS, TOTP and database encryption keyring rotation;
-- `Release upgrade` runs weekly on Sundays at `03:30 UTC` and manually, and verifies the `v2.19.8 → v2.19.12` upgrade on SQLite and PostgreSQL;
+- `Release upgrade` runs weekly on Sundays at `03:30 UTC` and manually, and verifies the `v2.19.8 → v2.19.12` upgrade on SQLite, PostgreSQL, MySQL and MariaDB;
 - `Application PR trigger` accepts `repository_dispatch` from the main repository and launches CI for test PRs explicitly linked to the changed application PR;
 - `Cleanup temporary application images` runs daily at `04:00 UTC` and removes temporary images of closed and merged application PRs.
 
@@ -661,4 +670,3 @@ To stop the environment and remove all resources created for the test environmen
 ```bash
 ./test-environment/profile clean core-sqlite-local --yes
 ```
-
