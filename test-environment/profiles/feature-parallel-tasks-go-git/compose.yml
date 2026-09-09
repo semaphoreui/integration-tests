@@ -1,0 +1,10 @@
+include:
+  - path:
+      - ../../compose.base.yml
+      - ../core-sqlite-local/compose.yml
+      - ../parallel-tasks/compose.yml
+
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_GIT_CLIENT: go_git

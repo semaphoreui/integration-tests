@@ -6,7 +6,6 @@ import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.TaskRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
-import io.bookwright.config.MainConfig;
 import io.bookwright.util.TestData;
 import java.util.List;
 
@@ -24,7 +23,7 @@ public record SemaphoreBranchIsolationFixtures(
     String branchBMarker,
     String successfulTaskStatus) {
 
-  public static SemaphoreBranchIsolationFixtures from(MainConfig config, TestData data) {
+  public static SemaphoreBranchIsolationFixtures from(TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     String token = "bookwright-branch-isolation-" + suffix;
     return new SemaphoreBranchIsolationFixtures(
@@ -32,15 +31,15 @@ public record SemaphoreBranchIsolationFixtures(
         new AccessKey("bookwright-branch-isolation-key-" + suffix, "none"),
         new Repository(
             "bookwright-branch-isolation-repository-" + suffix,
-            config.fixturesRepository(),
-            config.fixturesDefaultBranch()),
+            "file:///repository/parallel-tasks/branch-isolation",
+            "main"),
         new Inventory(
             "bookwright-branch-isolation-inventory-" + suffix,
             "[local]\nlocalhost ansible_connection=local",
             "static"),
         new Template(
             "bookwright-branch-isolation-template-" + suffix,
-            "test-environment/fixtures/ansible/branch-isolation.yml",
+            "branch-isolation.yml",
             "[\"--extra-vars\",\"bookwright_isolation_token=" + token + "\"]"),
         "bookwright-branch-isolation-a",
         "bookwright-branch-isolation-b",

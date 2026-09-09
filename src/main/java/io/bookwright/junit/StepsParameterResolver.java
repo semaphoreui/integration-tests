@@ -117,8 +117,7 @@ public class StepsParameterResolver implements ParameterResolver {
       return SemaphoreBackupFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreBranchIsolationFixtures.class) {
-      return SemaphoreBranchIsolationFixtures.from(
-          io.bookwright.config.Configs.main(), TestDataExtension.getOrCreate(extensionContext));
+      return SemaphoreBranchIsolationFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreBuildDeployFixtures.class) {
       return SemaphoreBuildDeployFixtures.from(

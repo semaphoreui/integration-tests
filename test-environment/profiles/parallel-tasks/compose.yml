@@ -1,0 +1,16 @@
+services:
+  parallel-task-fixture-init:
+    image: semaphoreui/semaphore:v2.19.12
+    user: "0:0"
+    entrypoint: ["/bin/sh", "/fixture/setup.sh"]
+    depends_on:
+      fixture-init:
+        condition: service_completed_successfully
+    volumes:
+      - fixture-repository:/repository
+      - ./profiles/parallel-tasks/fixtures:/fixture:ro
+
+  semaphore:
+    depends_on:
+      parallel-task-fixture-init:
+        condition: service_completed_successfully

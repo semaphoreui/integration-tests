@@ -1,4 +1,4 @@
-package io.bookwright.tests.semaphore;
+package io.bookwright.tests.semaphore.parallel;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,8 +16,10 @@ import org.junit.jupiter.api.parallel.Isolated;
 
 @Api
 @OwnerDanil
-@Feature("Semaphore branch checkout isolation")
-@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "core-sqlite-local")
+@Feature("Semaphore parallel task isolation")
+@EnabledIfSystemProperty(
+    named = "SEMAPHORE_PROFILE",
+    matches = "(feature-parallel-tasks-cmd-git|feature-parallel-tasks-go-git)")
 @Isolated("Coordinates two tasks through the local executor filesystem")
 class BranchCheckoutIsolationApiTest {
 

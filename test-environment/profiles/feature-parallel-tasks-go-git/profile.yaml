@@ -1,0 +1,20 @@
+id: feature-parallel-tasks-go-git
+description: Parallel local tasks with the Go Git client
+compose_file: compose.yml
+compose_project: semaphore-test-feature-parallel-tasks-go-git
+readiness_url: http://localhost:3000/api/ping
+stand: semaphore
+test_class: io.bookwright.tests.semaphore.parallel.*
+semaphore_version: v2.19.12
+semaphore_image: semaphoreui/semaphore:v2.19.12
+source_commit: 012ed06d3eccadaed594c73b93b3d8a2459b576f
+edition: community
+installation: docker-compose
+architecture: native
+database_type: sqlite
+database_image: embedded
+execution_mode: local
+execution_executor: local
+auth: password
+git_client: go_git
+capabilities: task-execution,git-local,parallel-tasks
