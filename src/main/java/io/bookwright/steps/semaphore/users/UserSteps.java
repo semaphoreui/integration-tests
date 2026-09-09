@@ -148,6 +148,15 @@ public class UserSteps {
         () -> Calls.expectStatus(api.removeProjectUser(projectId, userId), 204));
   }
 
+  @Step("Add user {userId} to Semaphore project {projectId} through an isolated session")
+  public void addToProject(SemaphoreSessionApis session, long projectId, long userId, String role) {
+    Calls.expectStatus(
+        session.users().addProjectUser(projectId, new ProjectMemberRequest(userId, role)), 204);
+    teardown.push(
+        "Remove Semaphore user %d from project %d".formatted(userId, projectId),
+        () -> Calls.expectStatus(api.removeProjectUser(projectId, userId), 204));
+  }
+
   @Step("Verify guest can read assigned Semaphore project {projectId}")
   public void verifyProjectReadable(SemaphoreSessionApis session, long projectId) {
     Project project =
