@@ -3,8 +3,4 @@ include:
       - ../../compose.base.yml
       - ../core-sqlite-local/compose.yml
       - ../parallel-tasks/compose.yml
-
-services:
-  semaphore:
-    environment:
-      SEMAPHORE_GIT_CLIENT: cmd_git
+      - cmd-git.yml
