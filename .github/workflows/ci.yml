@@ -141,7 +141,14 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Install Playwright Chromium
-        run: ./gradlew --no-daemon playwrightInstallChromium
+        run: |
+          # Playwright installs Ubuntu packages with apt. The hosted runner also enables an
+          # unrelated Google Chrome repository whose temporarily inconsistent index can make
+          # that apt update fail before any project test starts.
+          if [ -f /etc/apt/sources.list.d/google-chrome.list ]; then
+            sudo mv /etc/apt/sources.list.d/google-chrome.list /tmp/google-chrome.list
+          fi
+          ./gradlew --no-daemon playwrightInstallChromium
 
       - name: Show Docker versions
         run: |
