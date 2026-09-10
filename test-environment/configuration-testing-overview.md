@@ -156,7 +156,7 @@ Database versions must not be taken as "latest" implicitly. Each profile must pi
 
 The five base profiles and ten feature profiles are implemented. `feature-git-https` checks the separate client-side boundary of private Git with real trusted TLS and Basic Auth. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, and `feature-totp-local` provide green positive and negative auth paths without multiplying across the whole DB matrix; the proxy variant additionally pins the HTTPS/subpath/cookie contract, and TOTP the passcode/recovery lifecycle. `feature-encryption-rotation` checks zero-downtime primary switch-over, rekey, and safe removal of the retired key. `feature-schedule-timezone` reproduces missing cron/run-at tasks, `feature-dynamic-runner` a one-off runner that does not terminate after a successful task, and `feature-shell-output` the loss of one of the short process streams after `success`. All three profiles remain manual red reproducers. HA has been investigated and correctly postponed as Enterprise-only instead of an unsafe community imitation.
 
-The CI distribution is also implemented: the API baseline and a short Chromium UI smoke on `core-sqlite-local` are part of the pull-request gate after the framework quality checks; the other four base profiles, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, and `feature-encryption-rotation` run in a daily matrix job; the two release-upgrade profiles run as a separate weekly and manual check. The upgrade workflow is deliberately excluded from the PR gate.
+The CI distribution is also implemented: the API baseline and a short Chromium UI smoke on `core-sqlite-local` are part of the pull-request gate after the framework quality checks; the other four base profiles, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, and `feature-encryption-rotation` run in a daily matrix job. Four release-upgrade profiles run as a separate weekly and manual check: SQLite and PostgreSQL are confirmed, while the new MySQL and MariaDB variants await their first Linux run. The upgrade workflow is deliberately excluded from the PR gate.
 
 ## Which tests to run where
 
@@ -265,10 +265,14 @@ For a regression system it is better to support both profile types: the release 
 2. Move the existing stand to `core-sqlite-local` without changing the tests. Done.
 3. Add PostgreSQL and remote runner. Done: `core-postgres-local` and `prod-postgres-runner` pass the existing core suite; the runner API additionally confirms the default/online/heartbeat contract.
 4. Add a short MySQL/MariaDB DB matrix. Done: the `core-mysql-local` profile on MySQL 8.4 and `core-mariadb-local` on MariaDB 10.11 pass the same core suite after a clean schema migration; the actual image digests end up in Allure.
-5. Implement the N-1 → current upgrade for SQLite and PostgreSQL. Done and updated:
+5. Implement the N-1 → current upgrade for all Community database variants. SQLite and PostgreSQL
+are done and confirmed in Linux CI:
    `upgrade-sqlite-local` and `upgrade-postgres-local` create data on `v2.19.8`, switch
    the server image to `v2.19.12` while preserving the DB, and run the verify/core suite. The current pair passed
    on SQLite and PostgreSQL in Linux CI on 2026-09-04; the previous `v2.19.7 → v2.19.8` pair was also green.
+   The same lifecycle is implemented for `upgrade-mysql-local` and `upgrade-mariadb-local` and
+   added to the weekly workflow. Both passed locally on 2026-09-09 and remain pending until the
+   first successful Linux run.
 6. Add the SSH feature profile. Done: Git clone, Ansible SSH target, wrong key, secret replacement for an existing key ID, and key material protection are checked on two isolated SSH fixtures. `known_hosts` is postponed until a release with the corresponding upstream configuration.
 7. Add real schedule execution. The reproducer is implemented for cron and `run_at`; the missing task on `v2.19.8` is confirmed locally and in Linux CI. The next step is upstream issue/fix verification.
 8. Add the OIDC feature profile. Done: pinned Dex, discovery, browser login, callback, session/logout, return path, provisioning, repeat login, local-email conflict, and provider failure pass locally on `v2.19.8`.

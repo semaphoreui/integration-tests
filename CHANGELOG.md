@@ -8,6 +8,7 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 - Updated release profiles from Semaphore `v2.19.8` to `v2.19.12` and the SQLite/PostgreSQL upgrade path from `v2.19.7 → v2.19.8` to `v2.19.8 → v2.19.12`.
 - Profile suites run test classes sequentially while `v2.19.12` has a concurrent task-output collector race; task concurrency remains covered inside its dedicated scenario.
+- The final post-upgrade API regression suite now follows the same sequential execution rule, preventing the known output collector race from masking migration results.
 
 ### Added
 
@@ -49,7 +50,7 @@ All notable changes to the Semaphore UI test automation project are documented i
 - Reproducer and source-level analysis for project restore accepting duplicate resource names because of an off-by-one validation boundary.
 - GitHub Actions pull-request gate with framework checks and the SQLite core profile.
 - Daily PostgreSQL, MySQL, MariaDB, persistent-runner, SSH, OIDC, LDAPS, TOTP, and encryption-rotation configuration matrix.
-- Weekly and manually triggered SQLite/PostgreSQL release-upgrade verification.
+- Weekly and manually triggered SQLite/PostgreSQL/MySQL/MariaDB release-upgrade verification.
 - CI artifacts containing JUnit, HTML, Allure, and failure diagnostics.
 - Downloadable HTML site with a separate Allure report for every executed profile.
 

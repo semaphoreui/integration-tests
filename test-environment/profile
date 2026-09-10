@@ -566,7 +566,8 @@ case "$action" in
       ./gradlew apiTest \
         -DSTAND="$stand" \
         -DSEMAPHORE_PROFILE="$profile_id" \
-        -DSEMAPHORE_SCHEDULE_TIMEZONE="$selected_schedule_timezone"
+        -DSEMAPHORE_SCHEDULE_TIMEZONE="$selected_schedule_timezone" \
+        -Djunit.jupiter.execution.parallel.enabled=false
     )
     ;;
   encryption-rotation-test)
