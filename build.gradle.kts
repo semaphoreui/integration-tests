@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
 import org.gradle.testing.jacoco.tasks.JacocoReport
@@ -53,6 +54,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-jackson:${Versions.RETROFIT}")
     implementation("com.squareup.okhttp3:okhttp")
     implementation("com.fasterxml.jackson.core:jackson-databind")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     implementation("io.qameta.allure:allure-junit5")
     implementation("io.qameta.allure:allure-assertj")
@@ -181,6 +183,58 @@ tasks.register<Test>("apiTest") {
     group = "verification"
     description = "Runs Semaphore API product scenarios."
     filter { includeTestsMatching("io.bookwright.tests.semaphore.*") }
+}
+
+val apiCoverageObservations = layout.buildDirectory.file("api-coverage/observations.tsv")
+val apiCoverageReport = layout.buildDirectory.file("api-coverage/report.json")
+
+val semaphoreApiCoverageCapture = tasks.register<Test>("semaphoreApiCoverageCapture") {
+    group = "verification"
+    description = "Runs Semaphore API scenarios while recording exercised HTTP operations."
+    filter { includeTestsMatching("io.bookwright.tests.semaphore.*") }
+    outputs.upToDateWhen { false }
+    systemProperty(
+        "bookwright.api.coverage.file",
+        apiCoverageObservations.get().asFile.absolutePath,
+    )
+    systemProperty(
+        "STAND",
+        System.getProperty("STAND") ?: System.getenv("STAND") ?: "semaphore",
+    )
+    doFirst { delete(apiCoverageObservations) }
+}
+
+fun JavaExec.configureSemaphoreApiCoverageReport() {
+    group = "verification"
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass = "io.bookwright.api.coverage.ApiCoverageReporter"
+    systemProperty("api.coverage.observations", apiCoverageObservations.get().asFile.absolutePath)
+    systemProperty("api.coverage.report", apiCoverageReport.get().asFile.absolutePath)
+    systemProperty(
+        "STAND",
+        System.getProperty("STAND") ?: System.getenv("STAND") ?: "semaphore",
+    )
+    listOf("api.base.url", "ui.base.url", "api.coverage.spec").forEach { key ->
+        System.getProperty(key)?.let { systemProperty(key, it) }
+    }
+    mapOf(
+        "bookwright.test.ssl.trustStore" to "javax.net.ssl.trustStore",
+        "bookwright.test.ssl.trustStorePassword" to "javax.net.ssl.trustStorePassword",
+    ).forEach { (source, target) ->
+        System.getProperty(source)?.let { systemProperty(target, it) }
+    }
+}
+
+tasks.register<JavaExec>("semaphoreApiCoverage") {
+    description = "Runs Semaphore API tests and prints documented endpoint coverage."
+    dependsOn(semaphoreApiCoverageCapture)
+    configureSemaphoreApiCoverageReport()
+}
+
+tasks.register<JavaExec>("semaphoreApiCoverageReport") {
+    description = "Prints documented endpoint coverage from the latest recorded API run."
+    dependsOn("testClasses")
+    configureSemaphoreApiCoverageReport()
 }
 
 tasks.register<Test>("externalTest") {
