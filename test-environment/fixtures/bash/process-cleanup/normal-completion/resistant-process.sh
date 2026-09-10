@@ -11,9 +11,7 @@ state_dir=$1
 # > Signals set to SIG_IGN remain ignored, while signals with caught handlers are reset to their default action.
 trap '' TERM HUP
 
-# Publish atomically so the verifier cannot read a partially written PID.
-printf '%s\n' "$$" > "$state_dir/process.tmp"
-mv -- "$state_dir/process.tmp" "$state_dir/process"
+printf '%s\n' "$$" > "$state_dir/child.pid"
 
 # Keep the task's inherited stdout and stderr open after its main process exits.
 exec sleep 120
