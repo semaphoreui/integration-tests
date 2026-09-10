@@ -279,5 +279,11 @@ For a regression system it is better to support both profile types: the release 
 13. Add database encryption keyring rotation. Done: `feature-encryption-rotation` on PostgreSQL creates secrets with the old primary, hot reload switches writes to the new key ID, `vault check` confirms the mixed state, `vault rekey --backup` migrates the ciphertext, after which the retired key is removed and the stored template is executed again.
 14. Add MFA. Done: `feature-totp-local` checks self-enrollment, the challenge after password login, invalid/valid RFC 6238 passcodes, recovery, repeated enrollment, and rejection of an already used recovery code. The TOTP secret and codes are excluded from HTTP and Allure artifacts.
 15. Extend the TOTP browser flow. Done: a separate UI account enables TOTP in Security settings, checks QR/recovery-code rendering, passes the challenge with invalid/valid passcodes, and recovers via the recovery form. Sensitive UI artifacts are not published on failure.
+16. Investigate web-cache safety. Planned as P2: derive a focused profile from the existing NGINX
+    proxy setup, enable an observable shared cache, and use two users to prove that authentication,
+    authenticated API, redirect, and error responses cannot cross the user boundary. Probe common
+    unkeyed headers and query parameters, while keeping immutable static assets cacheable. Promote
+    the work to a P1 defect only if a cross-user response or attacker-controlled cached response is
+    reproduced; otherwise document the required application headers and safe proxy bypass rules.
 
 This way we first protect the typical customer installation and the most expensive failure points, while keeping the environment understandable for a single engineer.

@@ -283,6 +283,34 @@ Preliminary directions:
 - installation and upgrade;
 - load and security checks.
 
+### Planned P2 security block: web-cache safety
+
+Semaphore does not provide a shared HTTP cache, and the documented NGINX configuration does not
+enable one, so Web Cache Poisoning is not currently treated as a confirmed default-installation
+defect. It is nevertheless relevant to the project's self-hosted consumption model: customers can
+place Semaphore behind a CDN or enable `proxy_cache`, while authenticated API responses currently
+do not declare an explicit `Cache-Control: private, no-store` policy. A successful cross-user
+reproduction promotes this work from P2 hardening research to a P1 security defect.
+
+The block will:
+
+1. inventory cache directives on authentication, authenticated API, redirect, error, SPA shell,
+   Swagger, and versioned static-asset responses;
+2. add a focused NGINX shared-cache profile with two isolated users and observable cache status;
+3. verify that one user's API, login, redirect, and error responses cannot be stored and served to
+   another user;
+4. probe common unkeyed inputs (`Host`, `X-Forwarded-Host`, `X-Original-URL`, `X-Rewrite-URL`, and
+   query parameters) without placing secrets in test output;
+5. preserve intentional public caching for immutable static assets;
+6. if a vulnerability is reproduced, record a minimal confidential-safe reproducer and recommend
+   application-level `private, no-store` headers plus proxy-side bypass rules for authenticated and
+   `/api` traffic; otherwise, document the verified boundary and a safe deployment example.
+
+Completion criteria: the direct response-header contract and the two-user proxy scenario are
+automated, no authenticated or sensitive response crosses the user boundary, cacheable public
+assets remain cacheable, and the result is classified as a confirmed defect or a documented
+deployment-hardening requirement based on evidence rather than configuration assumptions.
+
 **Result:** a living prioritized backlog for systematic development of the suite by the project owner.
 
 ---
