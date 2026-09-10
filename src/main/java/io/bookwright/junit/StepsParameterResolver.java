@@ -20,6 +20,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreIntegrationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLoginSecurityFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreOidcFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreProcessCleanupFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreProjectDeletionFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreRunnerRoutingFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreScheduleFixtures;
@@ -73,6 +74,7 @@ public class StepsParameterResolver implements ParameterResolver {
         || type == SemaphoreLdapFixtures.class
         || type == SemaphoreLoginSecurityFixtures.class
         || type == SemaphoreOidcFixtures.class
+        || type == SemaphoreProcessCleanupFixtures.class
         || type == SemaphoreProjectDeletionFixtures.class
         || type == SemaphoreRunnerRoutingFixtures.class
         || type == SemaphoreScheduleFixtures.class
@@ -144,6 +146,10 @@ public class StepsParameterResolver implements ParameterResolver {
     }
     if (type == SemaphoreOidcFixtures.class) {
       return SemaphoreOidcFixtures.standard();
+    }
+    if (type == SemaphoreProcessCleanupFixtures.class) {
+      return SemaphoreProcessCleanupFixtures.from(
+          io.bookwright.config.Configs.main(), TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreProjectDeletionFixtures.class) {
       return SemaphoreProjectDeletionFixtures.from(
