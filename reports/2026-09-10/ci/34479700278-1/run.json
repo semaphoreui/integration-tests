@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/34479700278",
+  "versions": [
+    "v2.19.12"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 64,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 36,
+        "skipped": 28,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 82,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 82,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #18 from semaphoreui/codex/upgrade-mysql-mariadb",
+  "event": "push",
+  "conclusion": "success",
+  "runId": 34479700278,
+  "runAttempt": 1,
+  "runNumber": 63,
+  "createdAt": "2026-09-10T12:57:32Z",
+  "date": "2026-09-10",
+  "headSha": "15f80de89dd01f5f5b9260dc98de4707e3969e81",
+  "shortSha": "15f80de",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/15f80de89dd01f5f5b9260dc98de4707e3969e81"
+}
