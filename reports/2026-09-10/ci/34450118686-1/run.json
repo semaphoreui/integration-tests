@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/34450118686",
+  "versions": [
+    "v2.19.12"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 62,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 34,
+        "skipped": 28,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 73,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 73,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #21 from semaphoreui/codex/plan-web-cache-safety",
+  "event": "push",
+  "conclusion": "success",
+  "runId": 34450118686,
+  "runAttempt": 1,
+  "runNumber": 60,
+  "createdAt": "2026-09-10T07:28:21Z",
+  "date": "2026-09-10",
+  "headSha": "c4d8f94a24b2ec9466b2cb5c9510ec7872f9eec6",
+  "shortSha": "c4d8f94",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/c4d8f94a24b2ec9466b2cb5c9510ec7872f9eec6"
+}
