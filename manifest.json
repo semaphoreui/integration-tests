@@ -4,6 +4,60 @@
     {
       "schemaVersion": 1,
       "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/34455127950",
+      "versions": [
+        "v2.19.12"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "v2.19.12",
+          "previousVersion": "",
+          "versionLabel": "v2.19.12",
+          "tests": 62,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 34,
+            "skipped": 28,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 82,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 82,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "Merge pull request #20 from semaphoreui/codex/api-coverage-mvp",
+      "event": "push",
+      "conclusion": "success",
+      "runId": 34455127950,
+      "runAttempt": 1,
+      "runNumber": 61,
+      "createdAt": "2026-09-10T08:26:00Z",
+      "date": "2026-09-10",
+      "headSha": "d28258ff35a1892112ffe3555f9d9eb8b36eccc3",
+      "shortSha": "d28258f",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/d28258ff35a1892112ffe3555f9d9eb8b36eccc3",
+      "path": "reports/2026-09-10/ci/34455127950-1"
+    },
+    {
+      "schemaVersion": 1,
+      "title": "Semaphore CI",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/34450118686",
       "versions": [
         "v2.19.12"
