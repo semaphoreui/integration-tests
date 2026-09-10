@@ -34,19 +34,61 @@ public record SemaphoreProcessCleanupFixtures(
             "[local]\nlocalhost ansible_connection=local",
             "static"),
         new Templates(
-            new Template(
-                "bookwright-process-cleanup-main-" + suffix,
-                "test-environment/fixtures/bash/process-cleanup/main.sh",
-                false),
-            new Template(
-                "bookwright-process-cleanup-verifier-" + suffix,
-                "test-environment/fixtures/bash/process-cleanup/verify.sh",
-                true)),
+            new Scenario(
+                new Template(
+                    "bookwright-process-cleanup-normal-main-" + suffix,
+                    "test-environment/fixtures/bash/process-cleanup/normal-completion/main.sh",
+                    false),
+                new Template(
+                    "bookwright-process-cleanup-normal-verifier-" + suffix,
+                    "test-environment/fixtures/bash/process-cleanup/normal-completion/verify.sh",
+                    true)),
+            new Scenario(
+                new Template(
+                    "bookwright-process-cleanup-graceful-main-" + suffix,
+                    "test-environment/fixtures/bash/process-cleanup/graceful-stop/main.sh",
+                    false),
+                new Template(
+                    "bookwright-process-cleanup-graceful-verifier-" + suffix,
+                    "test-environment/fixtures/bash/process-cleanup/graceful-stop/verify.sh",
+                    true)),
+            new Scenario(
+                new Template(
+                    "bookwright-process-cleanup-resistant-main-" + suffix,
+                    "test-environment/fixtures/bash/process-cleanup/resistant-stop/main.sh",
+                    false),
+                new Template(
+                    "bookwright-process-cleanup-resistant-verifier-" + suffix,
+                    "test-environment/fixtures/bash/process-cleanup/resistant-stop/verify.sh",
+                    true)),
+            new Scenario(
+                new Template(
+                    "bookwright-process-cleanup-escaped-main-" + suffix,
+                    "test-environment/fixtures/bash/process-cleanup/escaped-process-group/main.sh",
+                    false),
+                new Template(
+                    "bookwright-process-cleanup-escaped-verifier-" + suffix,
+                    "test-environment/fixtures/bash/process-cleanup/escaped-process-group/verify.sh",
+                    true))),
         new Expectations(
             "success",
+            "stopped",
             "semaphore-process-cleanup-stdout-marker",
             "semaphore-process-cleanup-stderr-marker",
-            "semaphore-process-cleanup-child-gone",
+            "semaphore-resistant-process-gone",
+            "semaphore-graceful-stop-descendants-gone",
+            "semaphore-process-cleanup-term-ready",
+            "semaphore-process-cleanup-main-term",
+            "semaphore-process-cleanup-child-term",
+            "semaphore-resistant-stop-ready",
+            "semaphore-resistant-stop-main-term",
+            "semaphore-resistant-stop-child-term",
+            "semaphore-resistant-stop-processes-gone",
+            "semaphore-escaped-process-ready",
+            "semaphore-escaped-process-alive",
+            Duration.ofSeconds(30),
+            Duration.ofSeconds(12),
+            Duration.ofSeconds(12),
             Duration.ofSeconds(30)));
   }
 
@@ -93,12 +135,32 @@ public record SemaphoreProcessCleanupFixtures(
     }
   }
 
-  public record Templates(Template main, Template verifier) {}
+  public record Templates(
+      Scenario normalCompletion,
+      Scenario gracefulStop,
+      Scenario resistantStop,
+      Scenario escapedProcessGroup) {}
+
+  public record Scenario(Template main, Template verifier) {}
 
   public record Expectations(
       String successfulTaskStatus,
+      String stoppedTaskStatus,
       String stdoutMarker,
       String stderrMarker,
-      String childGoneMarker,
-      Duration maximumCompletionTime) {}
+      String resistantProcessGoneMarker,
+      String gracefulDescendantsGoneMarker,
+      String termReadyMarker,
+      String mainTermMarker,
+      String childTermMarker,
+      String resistantStopReadyMarker,
+      String resistantStopMainTermMarker,
+      String resistantStopChildTermMarker,
+      String resistantStopProcessesGoneMarker,
+      String escapedProcessReadyMarker,
+      String escapedProcessAliveMarker,
+      Duration maximumCompletionTime,
+      Duration maximumGracefulStopTime,
+      Duration minimumEscalationTime,
+      Duration maximumEscalationTime) {}
 }

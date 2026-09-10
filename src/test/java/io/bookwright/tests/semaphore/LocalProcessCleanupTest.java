@@ -26,7 +26,7 @@ class LocalProcessCleanupTest {
   @DisplayName("Normal task completion cleans up a background descendant")
   void normalCompletionCleansUpBackgroundDescendant(
       ApiSteps api, SemaphoreProcessCleanupFixtures fixtures) {
-    var templates = createTemplates(api, fixtures);
+    var templates = createTemplates(api, fixtures, fixtures.templates().normalCompletion());
 
     long startedAt = System.nanoTime();
     var completedTask =
@@ -35,26 +35,120 @@ class LocalProcessCleanupTest {
     var mainOutput =
         api.semaphore().tasks().getTaskOutputText(templates.main().projectId(), completedTask.id());
 
-    var verificationTask =
-        api.semaphore()
-            .tasks()
-            .startAndWait(
-                templates.verifier().projectId(),
-                fixtures.verificationRequest(templates.verifier().id(), completedTask.id()));
-    var verificationOutput =
-        api.semaphore()
-            .tasks()
-            .getTaskOutputText(templates.verifier().projectId(), verificationTask.id());
+    var verificationOutput = verifyCleanup(api, fixtures, templates, completedTask.id());
 
     assertThat(completedTask.status()).isEqualTo(fixtures.expectations().successfulTaskStatus());
     assertThat(elapsed).isLessThan(fixtures.expectations().maximumCompletionTime());
     assertThat(mainOutput)
         .contains(fixtures.expectations().stdoutMarker())
         .contains(fixtures.expectations().stderrMarker());
-    assertThat(verificationOutput).contains(fixtures.expectations().childGoneMarker());
+    assertThat(verificationOutput).contains(fixtures.expectations().resistantProcessGoneMarker());
   }
 
-  private CreatedTemplates createTemplates(ApiSteps api, SemaphoreProcessCleanupFixtures fixtures) {
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Graceful task stop sends SIGTERM to the process group")
+  void gracefulStopSendsTermToProcessGroup(ApiSteps api, SemaphoreProcessCleanupFixtures fixtures) {
+    var templates = createTemplates(api, fixtures, fixtures.templates().gracefulStop());
+    var task =
+        api.semaphore().tasks().startTask(templates.main().projectId(), templates.main().id());
+    api.semaphore()
+        .tasks()
+        .waitUntilTaskOutputContains(
+            templates.main().projectId(), task.id(), fixtures.expectations().termReadyMarker());
+
+    long stoppedAt = System.nanoTime();
+    var stoppedTask =
+        api.semaphore().tasks().stopAndWait(templates.main().projectId(), task.id(), false);
+    var stopElapsed = Duration.ofNanos(System.nanoTime() - stoppedAt);
+    var taskOutput =
+        api.semaphore().tasks().getTaskOutputText(templates.main().projectId(), stoppedTask.id());
+    var verificationOutput = verifyCleanup(api, fixtures, templates, stoppedTask.id());
+
+    assertThat(stoppedTask.status()).isEqualTo(fixtures.expectations().stoppedTaskStatus());
+    assertThat(stopElapsed).isLessThan(fixtures.expectations().maximumGracefulStopTime());
+    assertThat(taskOutput)
+        .contains(fixtures.expectations().mainTermMarker())
+        .contains(fixtures.expectations().childTermMarker());
+    assertThat(verificationOutput)
+        .contains(fixtures.expectations().gracefulDescendantsGoneMarker());
+  }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Resistant process group is killed after the grace period")
+  void resistantProcessGroupIsKilledAfterGracePeriod(
+      ApiSteps api, SemaphoreProcessCleanupFixtures fixtures) {
+    var templates = createTemplates(api, fixtures, fixtures.templates().resistantStop());
+    var task =
+        api.semaphore().tasks().startTask(templates.main().projectId(), templates.main().id());
+    api.semaphore()
+        .tasks()
+        .waitUntilTaskOutputContains(
+            templates.main().projectId(),
+            task.id(),
+            fixtures.expectations().resistantStopReadyMarker());
+
+    long stoppedAt = System.nanoTime();
+    var stoppedTask =
+        api.semaphore().tasks().stopAndWait(templates.main().projectId(), task.id(), false);
+    var stopElapsed = Duration.ofNanos(System.nanoTime() - stoppedAt);
+    var taskOutput =
+        api.semaphore().tasks().getTaskOutputText(templates.main().projectId(), stoppedTask.id());
+    var verificationOutput = verifyCleanup(api, fixtures, templates, stoppedTask.id());
+
+    assertThat(stoppedTask.status()).isEqualTo(fixtures.expectations().stoppedTaskStatus());
+    assertThat(stopElapsed)
+        .isGreaterThanOrEqualTo(fixtures.expectations().minimumEscalationTime())
+        .isLessThan(fixtures.expectations().maximumEscalationTime());
+    assertThat(taskOutput)
+        .contains(fixtures.expectations().resistantStopMainTermMarker())
+        .contains(fixtures.expectations().resistantStopChildTermMarker());
+    assertThat(verificationOutput)
+        .contains(fixtures.expectations().resistantStopProcessesGoneMarker());
+  }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Descendant can escape cleanup by changing its process group")
+  void descendantCanEscapeCleanupByChangingProcessGroup(
+      ApiSteps api, SemaphoreProcessCleanupFixtures fixtures) {
+    var templates = createTemplates(api, fixtures, fixtures.templates().escapedProcessGroup());
+
+    long startedAt = System.nanoTime();
+    var completedTask =
+        api.semaphore().tasks().startAndWait(templates.main().projectId(), templates.main().id());
+    var elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
+    var taskOutput =
+        api.semaphore().tasks().getTaskOutputText(templates.main().projectId(), completedTask.id());
+    var verificationOutput = verifyCleanup(api, fixtures, templates, completedTask.id());
+
+    assertThat(completedTask.status()).isEqualTo(fixtures.expectations().successfulTaskStatus());
+    assertThat(elapsed).isLessThan(fixtures.expectations().maximumCompletionTime());
+    assertThat(taskOutput).contains(fixtures.expectations().escapedProcessReadyMarker());
+    assertThat(verificationOutput).contains(fixtures.expectations().escapedProcessAliveMarker());
+  }
+
+  private String verifyCleanup(
+      ApiSteps api,
+      SemaphoreProcessCleanupFixtures fixtures,
+      CreatedTemplates templates,
+      long completedTaskId) {
+    var verificationTask =
+        api.semaphore()
+            .tasks()
+            .startAndWait(
+                templates.verifier().projectId(),
+                fixtures.verificationRequest(templates.verifier().id(), completedTaskId));
+    return api.semaphore()
+        .tasks()
+        .getTaskOutputText(templates.verifier().projectId(), verificationTask.id());
+  }
+
+  private CreatedTemplates createTemplates(
+      ApiSteps api,
+      SemaphoreProcessCleanupFixtures fixtures,
+      SemaphoreProcessCleanupFixtures.Scenario scenario) {
     var project = api.semaphore().projects().createProject(fixtures.project());
     var key =
         api.semaphore()
@@ -73,16 +167,13 @@ class LocalProcessCleanupTest {
             .templates()
             .create(
                 project.id(),
-                fixtures.templates().main().request(project.id(), repository.id(), inventory.id()));
+                scenario.main().request(project.id(), repository.id(), inventory.id()));
     var verifier =
         api.semaphore()
             .templates()
             .create(
                 project.id(),
-                fixtures
-                    .templates()
-                    .verifier()
-                    .request(project.id(), repository.id(), inventory.id()));
+                scenario.verifier().request(project.id(), repository.id(), inventory.id()));
     return new CreatedTemplates(main, verifier);
   }
 
