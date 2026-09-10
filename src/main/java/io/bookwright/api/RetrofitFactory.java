@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.bookwright.api.coverage.ApiCoverageInterceptor;
+import java.nio.file.Path;
 import java.time.Duration;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
@@ -49,6 +51,10 @@ public final class RetrofitFactory {
                       .newBuilder()
                       .header("Authorization", "Bearer " + bearerToken)
                       .build()));
+    }
+    String coverageOutput = System.getProperty(ApiCoverageInterceptor.OUTPUT_PROPERTY);
+    if (coverageOutput != null && !coverageOutput.isBlank()) {
+      client.addInterceptor(new ApiCoverageInterceptor(Path.of(coverageOutput)));
     }
     client.addInterceptor(new SafeHttpReportingInterceptor());
 
