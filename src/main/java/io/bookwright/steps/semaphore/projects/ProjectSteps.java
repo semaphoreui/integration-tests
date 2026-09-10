@@ -92,6 +92,19 @@ public class ProjectSteps {
     return getProject(projectId);
   }
 
+  @Step("Update Semaphore project {projectId} through an isolated session")
+  public Project updateProject(
+      SemaphoreSessionApis session, long projectId, ProjectUpdateRequest request) {
+    Calls.expectStatus(session.projects().updateProject(projectId, request), 204);
+    return Calls.body(session.projects().getProject(projectId), 200, "updated project");
+  }
+
+  @Step("Verify isolated user cannot update Semaphore project {projectId}")
+  public void verifyCannotUpdate(
+      SemaphoreSessionApis session, long projectId, ProjectUpdateRequest request) {
+    Calls.expectStatus(session.projects().updateProject(projectId, request), 403);
+  }
+
   @Step("Get current role in Semaphore project {projectId}")
   public ProjectRole getProjectRole(long projectId) {
     return Calls.body(api.getProjectRole(projectId), 200, "project role");

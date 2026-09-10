@@ -81,6 +81,11 @@ public class TaskSteps {
     return waitUntilTaskSucceeds(projectId, task.id());
   }
 
+  @Step("Verify isolated user cannot start Semaphore task from template {templateId}")
+  public void verifyCannotStart(SemaphoreSessionApis session, long projectId, long templateId) {
+    Calls.expectStatus(session.tasks().startTask(projectId, new TaskRequest(templateId)), 403);
+  }
+
   @Step("Start Semaphore task from template {templateId} and wait for failure")
   public Task startAndWaitForFailure(long projectId, long templateId) {
     return waitUntilTaskFails(projectId, startTask(projectId, templateId).id());

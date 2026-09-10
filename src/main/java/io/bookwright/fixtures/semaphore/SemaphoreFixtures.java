@@ -4,7 +4,9 @@ import io.bookwright.api.model.semaphore.AccessKeyRequest;
 import io.bookwright.api.model.semaphore.InventoryRequest;
 import io.bookwright.api.model.semaphore.LoginPasswordRequest;
 import io.bookwright.api.model.semaphore.LoginRequest;
+import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.ProjectRequest;
+import io.bookwright.api.model.semaphore.ProjectUpdateRequest;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
 import io.bookwright.api.model.semaphore.ScheduleRequest;
 import io.bookwright.api.model.semaphore.SemaphoreTestUser;
@@ -75,9 +77,8 @@ public record SemaphoreFixtures(
                 "ansible",
                 "")),
         new Schedule("bookwright-nightly-schedule-" + suffix, "0 0 * * *", false, ""),
-        Rbac.standard(),
+        Rbac.standard(suffix),
         new Expectations(
-            "owner",
             "success",
             "error",
             "stopped",
@@ -88,7 +89,16 @@ public record SemaphoreFixtures(
   }
 
   public record Projects(
-      ProjectRequest primary, ProjectRequest hidden, ProjectRequest secrets, ProjectRequest git) {}
+      ProjectRequest primary, ProjectRequest hidden, ProjectRequest secrets, ProjectRequest git) {
+
+    public ProjectUpdateRequest updated(Project project) {
+      return new ProjectUpdateRequest(
+          project.id(),
+          project.name() + "-updated",
+          !project.alert(),
+          project.maxParallelTasks() + 1);
+    }
+  }
 
   public record AccessKey(String name, String type) {
     public AccessKeyRequest request(long projectId) {
@@ -145,26 +155,41 @@ public record SemaphoreFixtures(
 
   public record Rbac(
       UserRequest userRequest,
+      UserRequest memberRequest,
       String password,
-      String guestRole,
+      String ownerRole,
+      long ownerPermissions,
       String managerRole,
       long managerPermissions,
       String taskRunnerRole,
       long taskRunnerPermissions,
+      String guestRole,
+      long guestPermissions,
       AccessKey forbiddenAccessKey) {
 
-    private static Rbac standard() {
+    private static Rbac standard(String suffix) {
       String username = "bookwright-rbac-guest";
       String password = "Bookwright-test-password-42!";
       return new Rbac(
           new UserRequest(
               "Bookwright Guest", username, username + "@localhost", password, false, false, false),
+          new UserRequest(
+              "Bookwright RBAC Member",
+              "bookwright-rbac-member-" + suffix,
+              "bookwright-rbac-member-" + suffix + "@localhost",
+              password,
+              false,
+              false,
+              false),
           password,
-          "guest",
+          "owner",
+          15,
           "manager",
           5,
           "task_runner",
           1,
+          "guest",
+          0,
           new AccessKey("forbidden-guest-key", "none"));
     }
 
@@ -178,13 +203,12 @@ public record SemaphoreFixtures(
 
     @Override
     public String toString() {
-      return "Rbac[user=%s, password=[REDACTED], roles=%s/%s/%s]"
-          .formatted(userRequest.username(), guestRole, managerRole, taskRunnerRole);
+      return "Rbac[user=%s, password=[REDACTED], roles=%s/%s/%s/%s]"
+          .formatted(userRequest.username(), ownerRole, managerRole, taskRunnerRole, guestRole);
     }
   }
 
   public record Expectations(
-      String ownerRole,
       String successfulTaskStatus,
       String failedTaskStatus,
       String stoppedTaskStatus,

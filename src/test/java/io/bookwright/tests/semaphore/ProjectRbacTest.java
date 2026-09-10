@@ -19,33 +19,46 @@ import org.junit.jupiter.api.Test;
 class ProjectRbacTest {
 
   @Test
-  @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_RBAC_USER_EXISTS})
-  @DisplayName("Manager can manage resources and tasks but not project members")
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_RBAC_USER_EXISTS
+  })
+  @DisplayName("Owner can update the project and manage project members")
+  void ownerPermissionsMatchRoleContract(
+      ApiSteps api, TestStore store, SemaphoreFixtures fixtures) {
+    var project = store.semaphoreProject();
+    var account = store.semaphoreRbacUser();
+    var member = api.semaphore().users().createDisposable(fixtures.rbac().memberRequest());
+    var updateRequest = fixtures.projects().updated(project);
+    api.semaphore()
+        .users()
+        .addToProject(project.id(), account.user().id(), fixtures.rbac().ownerRole());
+    var session = api.semaphore().auth().loginAs(account);
+    var role = api.semaphore().projects().getProjectRole(session, project.id());
+    var updated = api.semaphore().projects().updateProject(session, project.id(), updateRequest);
+    api.semaphore()
+        .users()
+        .addToProject(session, project.id(), member.id(), fixtures.rbac().guestRole());
+
+    assertThat(role.role()).isEqualTo(fixtures.rbac().ownerRole());
+    assertThat(role.permissions()).isEqualTo(fixtures.rbac().ownerPermissions());
+    assertThat(updated.name()).isEqualTo(updateRequest.name());
+    assertThat(updated.alert()).isEqualTo(updateRequest.alert());
+    assertThat(updated.maxParallelTasks()).isEqualTo(updateRequest.maxParallelTasks());
+  }
+
+  @Test
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS,
+    Precondition.SEMAPHORE_RBAC_USER_EXISTS
+  })
+  @DisplayName("Manager can manage resources and tasks but cannot update the project or members")
   void managerPermissionsMatchRoleContract(
       ApiSteps api, TestStore store, SemaphoreFixtures fixtures) {
-    var project = api.semaphore().projects().createProject(fixtures.projects().primary());
-    var key =
-        api.semaphore()
-            .accessKeys()
-            .create(project.id(), fixtures.accessKey().request(project.id()));
-    var repository =
-        api.semaphore()
-            .repositories()
-            .create(
-                project.id(), fixtures.repositories().primary().request(project.id(), key.id()));
-    var inventory =
-        api.semaphore()
-            .inventories()
-            .create(project.id(), fixtures.inventory().request(project.id(), key.id()));
-    var template =
-        api.semaphore()
-            .templates()
-            .create(
-                project.id(),
-                fixtures
-                    .templates()
-                    .primary()
-                    .request(project.id(), repository.id(), inventory.id()));
+    var project = store.semaphoreProject();
     var account = store.semaphoreRbacUser();
     api.semaphore()
         .users()
@@ -57,12 +70,16 @@ class ProjectRbacTest {
             .accessKeys()
             .create(
                 session, project.id(), fixtures.rbac().forbiddenAccessKey().request(project.id()));
-    var completedTask = api.semaphore().tasks().startAndWait(session, project.id(), template.id());
+    var completedTask =
+        api.semaphore().tasks().startAndWait(session, project.id(), store.semaphoreTemplate().id());
 
     assertThat(role.role()).isEqualTo(fixtures.rbac().managerRole());
     assertThat(role.permissions()).isEqualTo(fixtures.rbac().managerPermissions());
     assertThat(managerKey.projectId()).isEqualTo(project.id());
     assertThat(completedTask.status()).isEqualTo(fixtures.expectations().successfulTaskStatus());
+    api.semaphore()
+        .projects()
+        .verifyCannotUpdate(session, project.id(), fixtures.projects().updated(project));
     api.semaphore().projects().verifyCannotDelete(session, project.id());
     api.semaphore()
         .users()
@@ -70,40 +87,24 @@ class ProjectRbacTest {
   }
 
   @Test
-  @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_RBAC_USER_EXISTS})
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS,
+    Precondition.SEMAPHORE_RBAC_USER_EXISTS
+  })
   @DisplayName("Task runner can start tasks but cannot manage project resources")
   void taskRunnerPermissionsMatchRoleContract(
       ApiSteps api, TestStore store, SemaphoreFixtures fixtures) {
-    var project = api.semaphore().projects().createProject(fixtures.projects().primary());
-    var key =
-        api.semaphore()
-            .accessKeys()
-            .create(project.id(), fixtures.accessKey().request(project.id()));
-    var repository =
-        api.semaphore()
-            .repositories()
-            .create(
-                project.id(), fixtures.repositories().primary().request(project.id(), key.id()));
-    var inventory =
-        api.semaphore()
-            .inventories()
-            .create(project.id(), fixtures.inventory().request(project.id(), key.id()));
-    var template =
-        api.semaphore()
-            .templates()
-            .create(
-                project.id(),
-                fixtures
-                    .templates()
-                    .primary()
-                    .request(project.id(), repository.id(), inventory.id()));
+    var project = store.semaphoreProject();
     var account = store.semaphoreRbacUser();
     api.semaphore()
         .users()
         .addToProject(project.id(), account.user().id(), fixtures.rbac().taskRunnerRole());
     var session = api.semaphore().auth().loginAs(account);
     var role = api.semaphore().projects().getProjectRole(session, project.id());
-    var completedTask = api.semaphore().tasks().startAndWait(session, project.id(), template.id());
+    var completedTask =
+        api.semaphore().tasks().startAndWait(session, project.id(), store.semaphoreTemplate().id());
 
     assertThat(role.role()).isEqualTo(fixtures.rbac().taskRunnerRole());
     assertThat(role.permissions()).isEqualTo(fixtures.rbac().taskRunnerPermissions());
@@ -112,6 +113,46 @@ class ProjectRbacTest {
         .accessKeys()
         .verifyCannotCreate(
             session, project.id(), fixtures.rbac().forbiddenAccessKey().request(project.id()));
+    api.semaphore()
+        .projects()
+        .verifyCannotUpdate(session, project.id(), fixtures.projects().updated(project));
+    api.semaphore().projects().verifyCannotDelete(session, project.id());
+    api.semaphore()
+        .users()
+        .verifyCannotRemoveFromProject(session, project.id(), account.user().id());
+  }
+
+  @Test
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS,
+    Precondition.SEMAPHORE_RBAC_USER_EXISTS
+  })
+  @DisplayName("Guest can read the project but cannot change it or start tasks")
+  void guestPermissionsMatchRoleContract(
+      ApiSteps api, TestStore store, SemaphoreFixtures fixtures) {
+    var project = store.semaphoreProject();
+    var account = store.semaphoreRbacUser();
+    api.semaphore()
+        .users()
+        .addToProject(project.id(), account.user().id(), fixtures.rbac().guestRole());
+    var session = api.semaphore().auth().loginAs(account);
+    var role = api.semaphore().projects().getProjectRole(session, project.id());
+
+    assertThat(role.role()).isEqualTo(fixtures.rbac().guestRole());
+    assertThat(role.permissions()).isEqualTo(fixtures.rbac().guestPermissions());
+    api.semaphore().users().verifyProjectReadable(session, project.id());
+    api.semaphore()
+        .tasks()
+        .verifyCannotStart(session, project.id(), store.semaphoreTemplate().id());
+    api.semaphore()
+        .accessKeys()
+        .verifyCannotCreate(
+            session, project.id(), fixtures.rbac().forbiddenAccessKey().request(project.id()));
+    api.semaphore()
+        .projects()
+        .verifyCannotUpdate(session, project.id(), fixtures.projects().updated(project));
     api.semaphore().projects().verifyCannotDelete(session, project.id());
     api.semaphore()
         .users()

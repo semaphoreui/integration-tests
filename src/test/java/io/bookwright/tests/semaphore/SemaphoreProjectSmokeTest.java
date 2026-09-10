@@ -76,7 +76,7 @@ class SemaphoreProjectSmokeTest {
     assertThat(created.id()).isPositive();
     assertThat(saved.id()).isEqualTo(created.id());
     assertThat(saved.name()).isEqualTo(created.name());
-    assertThat(role.role()).isEqualTo(fixtures.expectations().ownerRole());
+    assertThat(role.role()).isEqualTo(fixtures.rbac().ownerRole());
     assertThat(key.projectId()).isEqualTo(created.id());
     assertThat(repository.sshKeyId()).isEqualTo(key.id());
     assertThat(inventory.sshKeyId()).isEqualTo(key.id());
