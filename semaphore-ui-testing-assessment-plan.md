@@ -344,21 +344,24 @@ execution.
 
 **Test level:** manual black-box API check against a user-managed Semaphore instance.
 
-**Scope:** retain the strictly read-only `externalTest`; add a separately tagged
-`externalManagedTest` that requires an explicit mutation opt-in and references one pre-created
-project plus two pre-created task templates. Submit both tasks before waiting, verify success and
-distinct output markers, and do not create, modify, or delete persistent fixture resources.
+**Scope:** retain the strictly read-only `externalTest`; add a separately tagged and explicitly
+enabled managed path. An idempotent setup restores one bundled project backup by a stable name only
+when it is absent. The test resolves all fixture resources by name, validates their links and Git
+source, submits both tasks before waiting, and verifies success and distinct output markers.
 
-**Dependencies:** operator-provided URL and credentials, positive project/template IDs, two safe
-non-secret markers, and preconfigured templates whose Git and execution dependencies are already
-available to the external stand. CI and automated fixture provisioning are outside the MVP.
+**Dependencies:** operator-provided URL and credentials, explicit mutation opt-in, outbound access
+from the stand to the public integration-tests repository or an operator-provided mirror, and a
+local Ansible execution target. CI execution remains outside this manual block.
 
-**Completion criteria:** the managed suite cannot be selected by the read-only launcher or regular
-CI; it fails before requests without exact `EXTERNAL_MUTATIONS_ALLOWED=true` and complete fixture
-references; a configured run starts both templates, waits for both successes, verifies both output
-markers, preserves task history, and leaves the pre-created project resources untouched.
+**Completion criteria:** the managed suite cannot be selected by the read-only launcher, regular
+tests, or CI; it fails before requests without exact `EXTERNAL_MUTATIONS_ALLOWED=true`; the first
+run creates the dedicated fixture exactly once without secrets, subsequent runs reuse it by stable
+names, configuration drift fails before task launch, and both retained tasks succeed with their
+expected output markers.
 
-**Priority:** high. **Status:** MVP implemented; first run on a user-managed stand pending.
+**Priority:** high. **Status:** implementation complete. The first setup and a repeated idempotent
+run both passed end-to-end against the local SQLite stand on 2026-09-11; the first run on a
+user-managed stand is pending.
 
 ---
 

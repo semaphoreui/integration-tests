@@ -20,44 +20,42 @@ class ExternalManagedConfigTest {
     assertThatThrownBy(
             () ->
                 SemaphoreExternalManagedFixtures.from(
-                    config(
-                        "EXTERNAL_MUTATIONS_ALLOWED",
-                        "false",
-                        "EXTERNAL_MANAGED_PROJECT_ID",
-                        "1",
-                        "EXTERNAL_MANAGED_TEMPLATE_A_ID",
-                        "2",
-                        "EXTERNAL_MANAGED_TEMPLATE_B_ID",
-                        "3",
-                        "EXTERNAL_MANAGED_MARKER_A",
-                        "marker-a",
-                        "EXTERNAL_MANAGED_MARKER_B",
-                        "marker-b")))
+                    config("EXTERNAL_MUTATIONS_ALLOWED", "false")))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("EXTERNAL_MUTATIONS_ALLOWED=true");
   }
 
   @Test
-  void acceptsExplicitAndDistinctManagedFixtureReferences() {
+  void providesStableNamesAndACompleteDefaultBackup() {
+    var fixture =
+        SemaphoreExternalManagedFixtures.from(config("EXTERNAL_MUTATIONS_ALLOWED", "true"));
+    var backup = fixture.projectBackup();
+
+    assertThat(fixture.projectName()).isEqualTo("bookwright-external-managed");
+    assertThat(fixture.templateA().name()).isNotEqualTo(fixture.templateB().name());
+    assertThat(backup.at("/meta/name").asText()).isEqualTo(fixture.projectName());
+    assertThat(backup.at("/repositories/0/git_url").asText())
+        .isEqualTo("https://github.com/semaphoreui/integration-tests.git");
+    assertThat(backup.at("/repositories/0/git_branch").asText()).isEqualTo("main");
+    assertThat(backup.at("/templates").size()).isEqualTo(2);
+  }
+
+  @Test
+  void appliesExplicitFixtureRepositoryAndBranchToTheBackup() {
     var fixture =
         SemaphoreExternalManagedFixtures.from(
             config(
                 "EXTERNAL_MUTATIONS_ALLOWED",
                 "true",
-                "EXTERNAL_MANAGED_PROJECT_ID",
-                "11",
-                "EXTERNAL_MANAGED_TEMPLATE_A_ID",
-                "21",
-                "EXTERNAL_MANAGED_TEMPLATE_B_ID",
-                "22",
-                "EXTERNAL_MANAGED_MARKER_A",
-                "marker-a",
-                "EXTERNAL_MANAGED_MARKER_B",
-                "marker-b"));
+                "EXTERNAL_MANAGED_FIXTURE_REPOSITORY",
+                "https://git.example.test/fixtures.git",
+                "EXTERNAL_MANAGED_FIXTURE_BRANCH",
+                "release-fixtures"));
 
-    assertThat(fixture.projectId()).isEqualTo(11);
-    assertThat(fixture.templateA().id()).isEqualTo(21);
-    assertThat(fixture.templateB().id()).isEqualTo(22);
+    assertThat(fixture.projectBackup().at("/repositories/0/git_url").asText())
+        .isEqualTo("https://git.example.test/fixtures.git");
+    assertThat(fixture.projectBackup().at("/repositories/0/git_branch").asText())
+        .isEqualTo("release-fixtures");
   }
 
   private ExternalManagedConfig config(String... entries) {

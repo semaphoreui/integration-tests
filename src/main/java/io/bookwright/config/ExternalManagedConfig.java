@@ -2,7 +2,7 @@ package io.bookwright.config;
 
 import org.aeonbits.owner.Config;
 
-/** Explicit opt-in and pre-created resource identifiers for managed external checks. */
+/** Explicit opt-in and Git source for persistent managed-external fixtures. */
 @Config.LoadPolicy(Config.LoadType.MERGE)
 @Config.Sources({"system:properties", "system:env"})
 public interface ExternalManagedConfig extends Config {
@@ -11,18 +11,11 @@ public interface ExternalManagedConfig extends Config {
   @DefaultValue("false")
   boolean mutationsAllowed();
 
-  @Key("EXTERNAL_MANAGED_PROJECT_ID")
-  long projectId();
+  @Key("EXTERNAL_MANAGED_FIXTURE_REPOSITORY")
+  @DefaultValue("https://github.com/semaphoreui/integration-tests.git")
+  String fixtureRepository();
 
-  @Key("EXTERNAL_MANAGED_TEMPLATE_A_ID")
-  long templateAId();
-
-  @Key("EXTERNAL_MANAGED_TEMPLATE_B_ID")
-  long templateBId();
-
-  @Key("EXTERNAL_MANAGED_MARKER_A")
-  String markerA();
-
-  @Key("EXTERNAL_MANAGED_MARKER_B")
-  String markerB();
+  @Key("EXTERNAL_MANAGED_FIXTURE_BRANCH")
+  @DefaultValue("main")
+  String fixtureBranch();
 }

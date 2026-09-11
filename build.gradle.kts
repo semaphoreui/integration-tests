@@ -161,7 +161,7 @@ tasks.test {
         val includeTags = System.getProperty("includeTags")
         val excludeTags = System.getProperty("excludeTags")
         if (includeTags.isNullOrBlank()) {
-            excludeTags("external", "external-managed")
+            excludeTags("external", "external-managed", "external-managed-setup")
         } else {
             includeTags(*includeTags.split(",").toTypedArray())
         }
@@ -286,14 +286,7 @@ tasks.register<Test>("externalTest") {
     }
 }
 
-tasks.register<Test>("externalManagedTest") {
-    group = "verification"
-    description = "Runs explicitly enabled task checks against a preconfigured external instance."
-    useJUnitPlatform { includeTags("external-managed") }
-    filter { includeTestsMatching("io.bookwright.tests.external.*") }
-    systemProperty("STAND", "external")
-    maxParallelForks = 1
-
+fun Test.configureManagedExternalTest() {
     val externalConnectionConfig =
         mapOf(
             "API_BASE_URL" to "api.base.url",
@@ -303,19 +296,23 @@ tasks.register<Test>("externalManagedTest") {
     val managedConfig =
         listOf(
             "EXTERNAL_MUTATIONS_ALLOWED",
-            "EXTERNAL_MANAGED_PROJECT_ID",
-            "EXTERNAL_MANAGED_TEMPLATE_A_ID",
-            "EXTERNAL_MANAGED_TEMPLATE_B_ID",
-            "EXTERNAL_MANAGED_MARKER_A",
-            "EXTERNAL_MANAGED_MARKER_B",
+        )
+    val managedOverrides =
+        listOf(
+            "EXTERNAL_MANAGED_FIXTURE_REPOSITORY",
+            "EXTERNAL_MANAGED_FIXTURE_BRANCH",
         )
 
+    group = "verification"
+    filter { includeTestsMatching("io.bookwright.tests.external.*") }
+    systemProperty("STAND", "external")
+    maxParallelForks = 1
     externalConnectionConfig.forEach { (environmentName, configKey) ->
         System.getenv(environmentName)
             ?.takeIf(String::isNotBlank)
             ?.let { value -> environment(configKey, value) }
     }
-    managedConfig.forEach { key ->
+    (managedConfig + managedOverrides).forEach { key ->
         System.getProperty(key)?.let { value -> systemProperty(key, value) }
     }
 
@@ -336,7 +333,7 @@ tasks.register<Test>("externalManagedTest") {
                 }
             val requiredManaged = missingManaged.map { key -> "$key or -D$key" }
             throw GradleException(
-                "externalManagedTest requires " +
+                "$name requires " +
                     (requiredConnection + requiredManaged).joinToString(),
             )
         }
@@ -346,7 +343,7 @@ tasks.register<Test>("externalManagedTest") {
                 ?: System.getenv("EXTERNAL_MUTATIONS_ALLOWED")
         if (mutationsAllowed != "true") {
             throw GradleException(
-                "externalManagedTest changes the target stand; set EXTERNAL_MUTATIONS_ALLOWED=true explicitly",
+                "$name changes the target stand; set EXTERNAL_MUTATIONS_ALLOWED=true explicitly",
             )
         }
 
@@ -357,6 +354,20 @@ tasks.register<Test>("externalManagedTest") {
             )
         }
     }
+}
+
+val externalManagedSetup =
+    tasks.register<Test>("externalManagedSetup") {
+        description = "Creates the persistent managed-external project fixture when it is absent."
+        useJUnitPlatform { includeTags("external-managed-setup") }
+        configureManagedExternalTest()
+    }
+
+tasks.register<Test>("externalManagedTest") {
+    description = "Runs task checks against the persistent managed-external project fixture."
+    useJUnitPlatform { includeTags("external-managed") }
+    configureManagedExternalTest()
+    mustRunAfter(externalManagedSetup)
 }
 
 tasks.register<Test>("upgradeTest") {

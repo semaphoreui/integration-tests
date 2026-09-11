@@ -1,0 +1,87 @@
+{
+  "environments": [],
+  "integration_aliases": [],
+  "integrations": [],
+  "inventories": [
+    {
+      "inventory": "[local]\nlocalhost ansible_connection=local",
+      "name": "bookwright-external-managed-inventory",
+      "ssh_key": "bookwright-external-managed-key",
+      "type": "static"
+    }
+  ],
+  "keys": [
+    {
+      "name": "bookwright-external-managed-key",
+      "owner": "",
+      "synchronized": false,
+      "type": "none"
+    }
+  ],
+  "meta": {
+    "alert": false,
+    "max_parallel_tasks": 2,
+    "name": "bookwright-external-managed",
+    "type": ""
+  },
+  "repositories": [
+    {
+      "git_branch": "main",
+      "git_url": "https://github.com/semaphoreui/integration-tests.git",
+      "name": "bookwright-external-managed-repository",
+      "ssh_key": "bookwright-external-managed-key"
+    }
+  ],
+  "roles": [],
+  "runners": [],
+  "schedules": [],
+  "secret_storages": [],
+  "templates": [
+    {
+      "allow_override_args_in_task": false,
+      "allow_override_branch_in_task": false,
+      "allow_parallel_tasks": true,
+      "app": "ansible",
+      "autorun": false,
+      "environments": [],
+      "inventory": "bookwright-external-managed-inventory",
+      "name": "bookwright-external-managed-a",
+      "playbook": "test-environment/fixtures/ansible/external-managed-a.yml",
+      "repository": "bookwright-external-managed-repository",
+      "roles": [],
+      "suppress_success_alerts": false,
+      "survey_vars": [],
+      "task_params": {},
+      "type": "",
+      "vaults": []
+    },
+    {
+      "allow_override_args_in_task": false,
+      "allow_override_branch_in_task": false,
+      "allow_parallel_tasks": true,
+      "app": "ansible",
+      "autorun": false,
+      "environments": [],
+      "inventory": "bookwright-external-managed-inventory",
+      "name": "bookwright-external-managed-b",
+      "playbook": "test-environment/fixtures/ansible/external-managed-b.yml",
+      "repository": "bookwright-external-managed-repository",
+      "roles": [],
+      "suppress_success_alerts": false,
+      "survey_vars": [],
+      "task_params": {},
+      "type": "",
+      "vaults": []
+    }
+  ],
+  "views": [
+    {
+      "hidden": false,
+      "position": 0,
+      "sort_reverse": false,
+      "title": "All",
+      "type": "all"
+    }
+  ],
+  "workflows": []
+}

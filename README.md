@@ -365,36 +365,47 @@ is never invoked by the external environment launcher.
 
 ## Managed checks of an external Semaphore
 
-`externalManagedTest` is a separate, manual-only suite for a stand where task execution is
-explicitly allowed. It is not selected by `externalTest`, the regular `test` task, or CI. The MVP
-does not create or modify projects, repositories, inventories, keys, or templates: an operator
-pre-creates one project and two executable task templates and supplies their IDs. Both tasks are
-submitted before either is awaited, then their successful completion and distinct output markers
-are verified.
+The managed external launcher is a separate, manual-only path for a stand where creation of a
+dedicated test project and task execution are explicitly allowed. It is not selected by
+`externalTest`, the regular `test` task, or CI. The launcher first runs `externalManagedSetup`,
+which idempotently restores the bundled `bookwright-external-managed` project only when it is
+absent. It then runs `externalManagedTest`, resolves the project, repository, inventory, and two
+templates by stable names, validates their links and Git source, submits both tasks before either
+is awaited, and verifies their successful completion and distinct output markers.
 
-The task records are deliberately preserved on the stand. This avoids deleting a still-running
-task after a timeout and leaves an audit trail for the operator. Use non-secret marker strings; they
-are visible in task output and the Allure report.
+The fixture uses a `none` access key, a localhost inventory, and the two safe playbooks committed in
+this repository. By default the external stand clones the public
+`https://github.com/semaphoreui/integration-tests.git` repository at `main`. The project and task
+records are deliberately preserved. This avoids deleting a still-running task after a timeout,
+leaves an audit trail, and lets repeated runs reuse the same fixture without accumulating duplicate
+projects. Existing resources are never overwritten or deleted; configuration drift produces an
+actionable preflight failure before either task is launched.
 
 ```bash
 export API_BASE_URL=https://semaphore.example.test/api/
 export API_USERNAME=qa-task-runner
 export API_PASSWORD='set-from-secret-storage'
 export EXTERNAL_MUTATIONS_ALLOWED=true
-export EXTERNAL_MANAGED_PROJECT_ID=17
-export EXTERNAL_MANAGED_TEMPLATE_A_ID=31
-export EXTERNAL_MANAGED_TEMPLATE_B_ID=32
-export EXTERNAL_MANAGED_MARKER_A=external-fixture-a-ok
-export EXTERNAL_MANAGED_MARKER_B=external-fixture-b-ok
 scripts/run-external-managed-tests.sh
 ```
 
-The project must allow both templates to execute concurrently if the fixture is intended to prove
-parallel execution. To make overlap observable, the two playbooks should coordinate through a
-stand-specific rendezvous and emit their configured markers only after both have started. The
-launcher rejects missing values, a base URL without the `/api/` suffix, mutation opt-in other than
-the exact value `true`, non-positive IDs, duplicate template IDs, and duplicate markers before a
-request is sent.
+The first run needs a Semaphore administrator because project restore is an administrative API.
+Once the fixture exists, a user who can list its resources and start its templates is sufficient.
+The launcher rejects missing credentials, a base URL without the `/api/` suffix, and mutation
+opt-in other than the exact value `true` before a request is sent.
+
+For a test branch or an internal Git mirror, override the fixture source before the first setup:
+
+```bash
+export EXTERNAL_MANAGED_FIXTURE_REPOSITORY=https://git.example.test/qa/integration-tests.git
+export EXTERNAL_MANAGED_FIXTURE_BRANCH=reviewed-fixtures
+scripts/run-external-managed-tests.sh
+```
+
+If a project with the stable name already exists, setup leaves it untouched and the preflight
+requires its repository URL, branch, inventory, template links, and playbook paths to match the
+requested fixture source. Delete or rename that dedicated project manually before rerunning setup
+when its source intentionally changes.
 
 ## [Testing Pull Requests of the Application Repository](docs/application-pr-testing.md)
 

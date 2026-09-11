@@ -13,6 +13,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreFixtures.SecretAccessKey;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
+import java.util.List;
 
 public class BackupSteps {
 
@@ -49,6 +50,25 @@ public class BackupSteps {
         "Delete restored Semaphore project " + restored.id(),
         () -> Calls.expectStatus(projectsApi.deleteProject(restored.id()), 204));
     return restored;
+  }
+
+  @Step("Restore persistent Semaphore project {projectName} when it is absent")
+  public Project restoreProjectIfMissing(JsonNode backup, String projectName) {
+    List<Project> projects = Calls.body(projectsApi.getProjects(), 200, "projects before restore");
+    List<Project> matching =
+        projects.stream().filter(project -> projectName.equals(project.name())).toList();
+    if (matching.size() > 1) {
+      throw new IllegalStateException(
+          "Expected one persistent Semaphore project named '%s', found IDs %s"
+              .formatted(projectName, matching.stream().map(Project::id).toList()));
+    }
+    if (matching.size() == 1) {
+      return matching.getFirst();
+    }
+    return Calls.body(
+        api.restoreProject(withProjectName(backup, projectName)),
+        200,
+        "persistently restored project");
   }
 
   @Step("Verify non-admin user cannot restore Semaphore project backup")

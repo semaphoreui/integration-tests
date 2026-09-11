@@ -1,0 +1,12 @@
+---
+- name: External managed fixture A
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Keep the task observable briefly
+      ansible.builtin.pause:
+        seconds: 3
+
+    - name: Emit the external fixture A marker
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-external-managed-a-ok

@@ -21,24 +21,27 @@ class ExternalSemaphoreManagedTest {
   @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
   @DisplayName("External stand executes two preconfigured task templates")
   void preconfiguredTemplatesExecute(ApiSteps api, SemaphoreExternalManagedFixtures fixtures) {
-    var taskA =
-        api.semaphore()
-            .tasks()
-            .startTaskAndKeepHistory(fixtures.projectId(), fixtures.templateA().id());
-    var taskB =
-        api.semaphore()
-            .tasks()
-            .startTaskAndKeepHistory(fixtures.projectId(), fixtures.templateB().id());
+    var project = api.semaphore().projects().requireByName(fixtures.projectName());
+    var repository =
+        api.semaphore().repositories().requireByName(project.id(), fixtures.repositoryName());
+    var inventory =
+        api.semaphore().inventories().requireByName(project.id(), fixtures.inventoryName());
+    var templateA =
+        api.semaphore().templates().requireByName(project.id(), fixtures.templateA().name());
+    var templateB =
+        api.semaphore().templates().requireByName(project.id(), fixtures.templateB().name());
+    fixtures.validate(project, repository, inventory, templateA, templateB);
 
-    api.semaphore().tasks().waitUntilTaskSucceeds(fixtures.projectId(), taskA.id());
-    api.semaphore().tasks().waitUntilTaskSucceeds(fixtures.projectId(), taskB.id());
+    var taskA = api.semaphore().tasks().startTaskAndKeepHistory(project.id(), templateA.id());
+    var taskB = api.semaphore().tasks().startTaskAndKeepHistory(project.id(), templateB.id());
+
+    api.semaphore().tasks().waitUntilTaskSucceeds(project.id(), taskA.id());
+    api.semaphore().tasks().waitUntilTaskSucceeds(project.id(), taskB.id());
     api.semaphore()
         .tasks()
-        .waitUntilTaskOutputContains(
-            fixtures.projectId(), taskA.id(), fixtures.templateA().marker());
+        .waitUntilTaskOutputContains(project.id(), taskA.id(), fixtures.templateA().marker());
     api.semaphore()
         .tasks()
-        .waitUntilTaskOutputContains(
-            fixtures.projectId(), taskB.id(), fixtures.templateB().marker());
+        .waitUntilTaskOutputContains(project.id(), taskB.id(), fixtures.templateB().marker());
   }
 }
