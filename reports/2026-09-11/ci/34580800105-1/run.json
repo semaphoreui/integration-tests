@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/34580800105",
+  "versions": [
+    "v2.19.12"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 65,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 36,
+        "skipped": 29,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 82,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 82,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #17 from semaphoreui/feat/add-concurent-task-branc…",
+  "event": "push",
+  "conclusion": "success",
+  "runId": 34580800105,
+  "runAttempt": 1,
+  "runNumber": 65,
+  "createdAt": "2026-09-11T08:46:03Z",
+  "date": "2026-09-11",
+  "headSha": "d396bdfe4a8161628521501c48500ccb4530726d",
+  "shortSha": "d396bdf",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/d396bdfe4a8161628521501c48500ccb4530726d"
+}
