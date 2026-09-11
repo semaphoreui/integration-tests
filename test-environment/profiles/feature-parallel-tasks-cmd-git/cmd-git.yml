@@ -1,0 +1,4 @@
+services:
+  semaphore:
+    environment:
+      SEMAPHORE_GIT_CLIENT: cmd_git

@@ -10,6 +10,7 @@ import io.bookwright.fixtures.database.HotelDatabaseFixtures;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreBackupFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreBranchIsolationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreBuildDeployFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreConcurrencyFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreEncryptionRotationFixtures;
@@ -64,6 +65,7 @@ public class StepsParameterResolver implements ParameterResolver {
         || type == HotelDatabaseFixtures.class
         || type == SemaphoreEncryptionRotationFixtures.class
         || type == SemaphoreBackupFixtures.class
+        || type == SemaphoreBranchIsolationFixtures.class
         || type == SemaphoreBuildDeployFixtures.class
         || type == SemaphoreConcurrencyFixtures.class
         || type == SemaphoreFixtures.class
@@ -113,6 +115,9 @@ public class StepsParameterResolver implements ParameterResolver {
     }
     if (type == SemaphoreBackupFixtures.class) {
       return SemaphoreBackupFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
+    if (type == SemaphoreBranchIsolationFixtures.class) {
+      return SemaphoreBranchIsolationFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == SemaphoreBuildDeployFixtures.class) {
       return SemaphoreBuildDeployFixtures.from(

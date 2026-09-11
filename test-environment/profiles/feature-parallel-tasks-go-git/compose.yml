@@ -1,0 +1,6 @@
+include:
+  - path:
+      - ../../compose.base.yml
+      - ../core-sqlite-local/compose.yml
+      - ../parallel-tasks/compose.yml
+      - go-git.yml

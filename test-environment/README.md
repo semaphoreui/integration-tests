@@ -4,7 +4,7 @@ The `core-sqlite-local` profile: a minimal Semaphore UI `v2.19.12` stand with SQ
 
 The profile manifest lives in `profiles/<profile>/profile.yaml`. It pins the Semaphore version, installation method, DBMS, execution mode, and capabilities. The lifecycle command reads the manifest, uses a stable Compose project name, and records the actual configuration and image digests in `build/allure-results/environment.properties`.
 
-Five baseline profiles and ten feature profiles are available:
+Five baseline profiles and twelve feature profiles are available:
 
 | Profile | DBMS | Purpose |
 |---|---|---|
@@ -15,6 +15,8 @@ Five baseline profiles and ten feature profiles are available:
 | `prod-postgres-runner` | PostgreSQL 14.3 | production-like server → DB → persistent remote runner |
 | `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target, and key material protection |
 | `feature-git-https` | SQLite | private Git over HTTPS, Basic Auth, trusted self-signed CA, and credentials protection |
+| `feature-parallel-tasks-cmd-git` | SQLite | parallel task isolation with the command-line Git client |
+| `feature-parallel-tasks-go-git` | SQLite | parallel task isolation with the Go Git client |
 | `feature-oidc-local` | SQLite | browser login via Dex, session/logout, provisioning, and negative account/provider scenarios |
 | `feature-proxy-oidc` | PostgreSQL 14.3 | OIDC via NGINX, HTTPS, and non-root public path `/semaphore` |
 | `feature-ldap-tls` | SQLite | LDAPS bind/search, user provisioning/reuse, logout, and negative credential/account scenarios |

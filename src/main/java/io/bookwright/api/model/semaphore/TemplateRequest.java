@@ -20,7 +20,47 @@ public record TemplateRequest(
     @JsonProperty("allow_parallel_tasks") boolean allowParallelTasks,
     @JsonProperty("start_version") String startVersion,
     @JsonProperty("build_template_id") Long buildTemplateId,
-    boolean autorun) {
+    boolean autorun,
+    @JsonProperty("allow_override_branch_in_task") boolean allowOverrideBranchInTask) {
+
+  public TemplateRequest(
+      String name,
+      long projectId,
+      long inventoryId,
+      long repositoryId,
+      long environmentId,
+      String playbook,
+      String app,
+      String type,
+      String arguments,
+      boolean allowOverrideArgsInTask,
+      List<SurveyVariable> surveyVariables,
+      TemplateParameters taskParameters,
+      String runnerTag,
+      boolean allowParallelTasks,
+      String startVersion,
+      Long buildTemplateId,
+      boolean autorun) {
+    this(
+        name,
+        projectId,
+        inventoryId,
+        repositoryId,
+        environmentId,
+        playbook,
+        app,
+        type,
+        arguments,
+        allowOverrideArgsInTask,
+        surveyVariables,
+        taskParameters,
+        runnerTag,
+        allowParallelTasks,
+        startVersion,
+        buildTemplateId,
+        autorun,
+        false);
+  }
 
   public TemplateRequest(
       String name,
@@ -54,6 +94,7 @@ public record TemplateRequest(
         allowParallelTasks,
         null,
         null,
+        false,
         false);
   }
 
@@ -83,6 +124,7 @@ public record TemplateRequest(
         false,
         null,
         null,
+        false,
         false);
   }
 }
