@@ -160,7 +160,11 @@ tasks.test {
     useJUnitPlatform {
         val includeTags = System.getProperty("includeTags")
         val excludeTags = System.getProperty("excludeTags")
-        if (!includeTags.isNullOrBlank()) includeTags(*includeTags.split(",").toTypedArray())
+        if (includeTags.isNullOrBlank()) {
+            excludeTags("external", "external-managed")
+        } else {
+            includeTags(*includeTags.split(",").toTypedArray())
+        }
         if (!excludeTags.isNullOrBlank()) excludeTags(*excludeTags.split(",").toTypedArray())
     }
 }
@@ -270,6 +274,79 @@ tasks.register<Test>("externalTest") {
                     missing.entries.joinToString { (environmentName, configKey) ->
                         "$environmentName or -D$configKey"
                     },
+            )
+        }
+
+        val baseUrl = System.getProperty("api.base.url") ?: System.getenv("API_BASE_URL")
+        if (baseUrl == null || !baseUrl.matches(Regex("https?://.+/api/"))) {
+            throw GradleException(
+                "External API base URL must use http(s) and end with /api/: $baseUrl",
+            )
+        }
+    }
+}
+
+tasks.register<Test>("externalManagedTest") {
+    group = "verification"
+    description = "Runs explicitly enabled task checks against a preconfigured external instance."
+    useJUnitPlatform { includeTags("external-managed") }
+    filter { includeTestsMatching("io.bookwright.tests.external.*") }
+    systemProperty("STAND", "external")
+    maxParallelForks = 1
+
+    val externalConnectionConfig =
+        mapOf(
+            "API_BASE_URL" to "api.base.url",
+            "API_USERNAME" to "api.username",
+            "API_PASSWORD" to "api.password",
+        )
+    val managedConfig =
+        listOf(
+            "EXTERNAL_MUTATIONS_ALLOWED",
+            "EXTERNAL_MANAGED_PROJECT_ID",
+            "EXTERNAL_MANAGED_TEMPLATE_A_ID",
+            "EXTERNAL_MANAGED_TEMPLATE_B_ID",
+            "EXTERNAL_MANAGED_MARKER_A",
+            "EXTERNAL_MANAGED_MARKER_B",
+        )
+
+    externalConnectionConfig.forEach { (environmentName, configKey) ->
+        System.getenv(environmentName)
+            ?.takeIf(String::isNotBlank)
+            ?.let { value -> environment(configKey, value) }
+    }
+    managedConfig.forEach { key ->
+        System.getProperty(key)?.let { value -> systemProperty(key, value) }
+    }
+
+    doFirst {
+        val missingConnection =
+            externalConnectionConfig.filter { (environmentName, configKey) ->
+                System.getenv(environmentName).isNullOrBlank() &&
+                    System.getProperty(configKey).isNullOrBlank()
+            }
+        val missingManaged =
+            managedConfig.filter { key ->
+                System.getenv(key).isNullOrBlank() && System.getProperty(key).isNullOrBlank()
+            }
+        if (missingConnection.isNotEmpty() || missingManaged.isNotEmpty()) {
+            val requiredConnection =
+                missingConnection.entries.map { (environmentName, configKey) ->
+                    "$environmentName or -D$configKey"
+                }
+            val requiredManaged = missingManaged.map { key -> "$key or -D$key" }
+            throw GradleException(
+                "externalManagedTest requires " +
+                    (requiredConnection + requiredManaged).joinToString(),
+            )
+        }
+
+        val mutationsAllowed =
+            System.getProperty("EXTERNAL_MUTATIONS_ALLOWED")
+                ?: System.getenv("EXTERNAL_MUTATIONS_ALLOWED")
+        if (mutationsAllowed != "true") {
+            throw GradleException(
+                "externalManagedTest changes the target stand; set EXTERNAL_MUTATIONS_ALLOWED=true explicitly",
             )
         }
 

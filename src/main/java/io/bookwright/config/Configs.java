@@ -26,6 +26,10 @@ public final class Configs {
     return ConfigCache.getOrCreate(MainConfig.class);
   }
 
+  public static ExternalManagedConfig externalManaged() {
+    return ConfigCache.getOrCreate(ExternalManagedConfig.class);
+  }
+
   public static DbConfig db() {
     return ConfigCache.getOrCreate(DbConfig.class);
   }

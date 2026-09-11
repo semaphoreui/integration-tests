@@ -41,6 +41,12 @@ public class TaskSteps {
     return task;
   }
 
+  @Step("Start Semaphore task from template {templateId} and preserve its history")
+  public Task startTaskAndKeepHistory(long projectId, long templateId) {
+    return Calls.body(
+        api.startTask(projectId, new TaskRequest(templateId)), 201, "started retained task");
+  }
+
   @Step("Find successful persisted task for Semaphore template {templateId}")
   public Task requireSuccessfulForTemplate(long projectId, long templateId) {
     List<Task> tasks = Calls.body(api.getTasks(projectId), 200, "tasks");

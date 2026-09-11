@@ -14,6 +14,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreBranchIsolationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreBuildDeployFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreConcurrencyFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreEncryptionRotationFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreExternalManagedFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFileInventoryFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHttpsGitFixtures;
@@ -64,6 +65,7 @@ public class StepsParameterResolver implements ParameterResolver {
         || type == LocalUserFixtures.class
         || type == HotelDatabaseFixtures.class
         || type == SemaphoreEncryptionRotationFixtures.class
+        || type == SemaphoreExternalManagedFixtures.class
         || type == SemaphoreBackupFixtures.class
         || type == SemaphoreBranchIsolationFixtures.class
         || type == SemaphoreBuildDeployFixtures.class
@@ -112,6 +114,9 @@ public class StepsParameterResolver implements ParameterResolver {
     }
     if (type == SemaphoreEncryptionRotationFixtures.class) {
       return SemaphoreEncryptionRotationFixtures.from(io.bookwright.config.Configs.main());
+    }
+    if (type == SemaphoreExternalManagedFixtures.class) {
+      return SemaphoreExternalManagedFixtures.from(io.bookwright.config.Configs.externalManaged());
     }
     if (type == SemaphoreBackupFixtures.class) {
       return SemaphoreBackupFixtures.from(TestDataExtension.getOrCreate(extensionContext));

@@ -363,6 +363,39 @@ Additional Gradle arguments are passed after the script name. For self-signed TL
 `-Dbookwright.test.ssl.trustStorePassword=...` can be passed. The regular `apiTest` remains the local full suite and
 is never invoked by the external environment launcher.
 
+## Managed checks of an external Semaphore
+
+`externalManagedTest` is a separate, manual-only suite for a stand where task execution is
+explicitly allowed. It is not selected by `externalTest`, the regular `test` task, or CI. The MVP
+does not create or modify projects, repositories, inventories, keys, or templates: an operator
+pre-creates one project and two executable task templates and supplies their IDs. Both tasks are
+submitted before either is awaited, then their successful completion and distinct output markers
+are verified.
+
+The task records are deliberately preserved on the stand. This avoids deleting a still-running
+task after a timeout and leaves an audit trail for the operator. Use non-secret marker strings; they
+are visible in task output and the Allure report.
+
+```bash
+export API_BASE_URL=https://semaphore.example.test/api/
+export API_USERNAME=qa-task-runner
+export API_PASSWORD='set-from-secret-storage'
+export EXTERNAL_MUTATIONS_ALLOWED=true
+export EXTERNAL_MANAGED_PROJECT_ID=17
+export EXTERNAL_MANAGED_TEMPLATE_A_ID=31
+export EXTERNAL_MANAGED_TEMPLATE_B_ID=32
+export EXTERNAL_MANAGED_MARKER_A=external-fixture-a-ok
+export EXTERNAL_MANAGED_MARKER_B=external-fixture-b-ok
+scripts/run-external-managed-tests.sh
+```
+
+The project must allow both templates to execute concurrently if the fixture is intended to prove
+parallel execution. To make overlap observable, the two playbooks should coordinate through a
+stand-specific rendezvous and emit their configured markers only after both have started. The
+launcher rejects missing values, a base URL without the `/api/` suffix, mutation opt-in other than
+the exact value `true`, non-positive IDs, duplicate template IDs, and duplicate markers before a
+request is sent.
+
 ## [Testing Pull Requests of the Application Repository](docs/application-pr-testing.md)
 
 ## Two modes

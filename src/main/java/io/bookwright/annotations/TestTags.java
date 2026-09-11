@@ -11,6 +11,7 @@ public final class TestTags {
   public static final String UI = "ui";
   public static final String DB = "db";
   public static final String EXTERNAL = "external";
+  public static final String EXTERNAL_MANAGED = "external-managed";
 
   private TestTags() {}
 }

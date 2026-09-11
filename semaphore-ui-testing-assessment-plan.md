@@ -110,7 +110,8 @@ I bring up Semaphore locally and record a reproducible path from cloning the rep
 **Current status:** release profiles have been moved to `v2.19.12`
 (`012ed06d3eccadaed594c73b93b3d8a2459b576f`), and the upgrade path to
 `v2.19.8 → v2.19.12`. The new Linux baseline was fully confirmed on 2026-09-04: all 11
-configuration matrix profiles are green, as are the PR gate with SQLite/UI and the SQLite/PostgreSQL upgrade profiles. At the same time,
+configuration matrix profiles are green, as are the PR gate with SQLite/UI and all four Community
+database upgrade profiles (the MySQL/MariaDB Linux runs were confirmed on 2026-09-11). At the same time,
 Linux CI confirmed that `v2.19.12` loses one of the short `stdout`/`stderr` streams after the terminal `success`;
 the strict `feature-shell-output` keeps the reproduction separate from the stable gate. `feature-schedule-timezone` reproduces
 the absence of tasks for an active cron/`run_at`, and `feature-dynamic-runner` reproduces a one-off
@@ -256,7 +257,7 @@ At the start, tests should not block development until their stability is confir
 
 **Result:** a working CI pipeline and a clear process for analyzing failures.
 
-**Current status:** the stage has been implemented. The pull-request workflow runs the framework quality gate, the API baseline, and a short Chromium UI smoke on `core-sqlite-local`; the browser suite verifies password login, launching an API-prepared executable template, and client-side project-name validation without sending a create request. The daily matrix job runs the PostgreSQL, MySQL, MariaDB, persistent runner, SSH, private HTTPS Git, direct OIDC, HTTPS/subpath OIDC, LDAPS, TOTP, and encryption-rotation feature profiles. The weekly and manual release workflow contains SQLite, PostgreSQL, MySQL, and MariaDB upgrade profiles; SQLite/PostgreSQL are confirmed, while the newly added MySQL/MariaDB variants await their first Linux run. Jobs have timeouts, `fail-fast: false` for matrices, preserve JUnit/HTML/Allure and Compose diagnostics, and cleanup always runs. The full manual configuration matrix on Semaphore `v2.19.12` passed successfully on 2026-09-04: all 11 profiles are green. On the same day, the PR gate with SQLite/UI and both confirmed `v2.19.8 → v2.19.12` upgrade profiles passed separately. Manual investigation runs confirm the known schedule, dynamic-runner, and shell-output defects and are not part of the stable gate. After each run, the individual profile Allure reports are assembled by a reusable workflow into a self-contained single-file HTML artifact. Successful trusted `main` runs are published to the public [GitHub Pages history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment runs remain artifact-only.
+**Current status:** the stage has been implemented. The pull-request workflow runs the framework quality gate, the API baseline, and a short Chromium UI smoke on `core-sqlite-local`; the browser suite verifies password login, launching an API-prepared executable template, and client-side project-name validation without sending a create request. The daily matrix job runs the PostgreSQL, MySQL, MariaDB, persistent runner, SSH, private HTTPS Git, direct OIDC, HTTPS/subpath OIDC, LDAPS, TOTP, and encryption-rotation feature profiles. The weekly and manual release workflow contains SQLite, PostgreSQL, MySQL, and MariaDB upgrade profiles; all four completed their Linux lifecycle successfully on 2026-09-11. Jobs have timeouts, `fail-fast: false` for matrices, preserve JUnit/HTML/Allure and Compose diagnostics, and cleanup always runs. The full manual configuration matrix on Semaphore `v2.19.12` also passed on 2026-09-11: all 11 profiles are green. Manual investigation runs confirm the known schedule, dynamic-runner, and shell-output defects and are not part of the stable gate. After each run, the individual profile Allure reports are assembled by a reusable workflow into a self-contained single-file HTML artifact. Successful trusted `main` runs are published to the public [GitHub Pages history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment runs remain artifact-only.
 
 ---
 
@@ -314,7 +315,7 @@ deployment-hardening requirement based on evidence rather than configuration ass
 
 **Result:** a living prioritized backlog for systematic development of the suite by the project owner.
 
-### Current standalone block: upgrade coverage for every Community DBMS
+### Completed standalone block: upgrade coverage for every Community DBMS
 
 **Risk:** a release can migrate a clean SQLite/PostgreSQL installation correctly while breaking an
 existing MySQL or MariaDB database used by a self-hosted customer.
@@ -332,8 +333,32 @@ existing pinned database images. No application change or Pro subscription is re
 the preserved database with `v2.19.12`, verify all relationships and masked secrets, rerun the old
 template, and finish the regular API suite successfully in Linux CI.
 
-**Priority:** high. **Status:** profiles and CI matrix entries implemented; both complete upgrade
-lifecycle runs passed locally on 2026-09-09; first Linux run pending.
+**Priority:** high. **Status:** complete. Profiles and CI matrix entries are implemented; both
+complete upgrade lifecycle runs passed locally on 2026-09-09 and in Linux CI on 2026-09-11.
+
+### Current standalone block: controlled task execution on an external stand
+
+**Risk:** the local Compose matrix can stay green while a customer's real installation differs in
+networking, permissions, Git access, runner setup, or other infrastructure that affects task
+execution.
+
+**Test level:** manual black-box API check against a user-managed Semaphore instance.
+
+**Scope:** retain the strictly read-only `externalTest`; add a separately tagged
+`externalManagedTest` that requires an explicit mutation opt-in and references one pre-created
+project plus two pre-created task templates. Submit both tasks before waiting, verify success and
+distinct output markers, and do not create, modify, or delete persistent fixture resources.
+
+**Dependencies:** operator-provided URL and credentials, positive project/template IDs, two safe
+non-secret markers, and preconfigured templates whose Git and execution dependencies are already
+available to the external stand. CI and automated fixture provisioning are outside the MVP.
+
+**Completion criteria:** the managed suite cannot be selected by the read-only launcher or regular
+CI; it fails before requests without exact `EXTERNAL_MUTATIONS_ALLOWED=true` and complete fixture
+references; a configured run starts both templates, waits for both successes, verifies both output
+markers, preserves task history, and leaves the pre-created project resources untouched.
+
+**Priority:** high. **Status:** MVP implemented; first run on a user-managed stand pending.
 
 ---
 
