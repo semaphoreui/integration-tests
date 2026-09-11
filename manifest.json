@@ -4,6 +4,60 @@
     {
       "schemaVersion": 1,
       "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/34583388199",
+      "versions": [
+        "v2.19.12"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "v2.19.12",
+          "previousVersion": "",
+          "versionLabel": "v2.19.12",
+          "tests": 65,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 36,
+            "skipped": 29,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 82,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 82,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "Merge pull request #23 from semaphoreui/codex/fix-ssh-fixture-playboo…",
+      "event": "push",
+      "conclusion": "success",
+      "runId": 34583388199,
+      "runAttempt": 1,
+      "runNumber": 68,
+      "createdAt": "2026-09-11T09:16:49Z",
+      "date": "2026-09-11",
+      "headSha": "da052e8b96b6060776ab410d1823509820b1034f",
+      "shortSha": "da052e8",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f",
+      "path": "reports/2026-09-11/ci/34583388199-1"
+    },
+    {
+      "schemaVersion": 1,
+      "title": "Semaphore CI",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/34580800105",
       "versions": [
         "v2.19.12"
