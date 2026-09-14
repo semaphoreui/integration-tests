@@ -60,7 +60,7 @@ class FixtureArchitectureTest {
           "bookwright-rbac-guest",
           "Bookwright-test-password-42!",
           "bookwright-no-user-",
-          "file:///fixtures/ansible",
+          "http://fixture-git/fixtures.git",
           "semaphore-bookwright-smoke-ok",
           "forbidden-guest-key",
           "localhost ansible_connection=local",

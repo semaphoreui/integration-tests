@@ -121,7 +121,7 @@ test-environment/profile test prod-postgres-runner
 
 On first start the runner registers via a test global registration token and stores the issued long-lived token in `runner-data`. Auto-registration creates a global runner with `is_default=false`, and tasks without a runner tag only select default runners. Therefore the one-shot `runner-configure` logs in via the admin API after registration, sets `is_default=true`, and the lifecycle does not declare the profile ready until this configuration completes successfully.
 
-The Git fixture is mounted at the same path `/fixtures/ansible` in both the server and the runner. Otherwise the local repository would be available to the server but missing from the actual task execution environment.
+The Git fixture is not mounted into the server or the runner: both clone it from the `fixture-git` HTTP service inside the Compose network, so the same repository is available in the actual task execution environment without matching mount paths.
 
 The API suite additionally verifies that the runner is active, registered, assigned as default, has `online` status, and sends heartbeats. Successful task/output and stop/force-stop scenarios with remote mode enabled confirm actual execution on the runner.
 
