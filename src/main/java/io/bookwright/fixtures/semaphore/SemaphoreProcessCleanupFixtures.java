@@ -52,6 +52,10 @@ public record SemaphoreProcessCleanupFixtures(
                     "bookwright-process-cleanup-graceful-verifier-" + suffix,
                     "test-environment/fixtures/bash/process-cleanup/graceful-stop/verify.sh",
                     true)),
+            new Template(
+                "bookwright-process-cleanup-graceful-zero-exit-" + suffix,
+                "test-environment/fixtures/bash/process-cleanup/graceful-zero-exit/main.sh",
+                false),
             new Scenario(
                 new Template(
                     "bookwright-process-cleanup-resistant-main-" + suffix,
@@ -80,6 +84,8 @@ public record SemaphoreProcessCleanupFixtures(
             "semaphore-process-cleanup-term-ready",
             "semaphore-process-cleanup-main-term",
             "semaphore-process-cleanup-child-term",
+            "semaphore-graceful-zero-exit-ready",
+            "semaphore-graceful-zero-exit-term",
             "semaphore-resistant-stop-ready",
             "semaphore-resistant-stop-main-term",
             "semaphore-resistant-stop-child-term",
@@ -138,6 +144,7 @@ public record SemaphoreProcessCleanupFixtures(
   public record Templates(
       Scenario normalCompletion,
       Scenario gracefulStop,
+      Template gracefulZeroExit,
       Scenario resistantStop,
       Scenario escapedProcessGroup) {}
 
@@ -153,6 +160,8 @@ public record SemaphoreProcessCleanupFixtures(
       String termReadyMarker,
       String mainTermMarker,
       String childTermMarker,
+      String gracefulZeroExitReadyMarker,
+      String gracefulZeroExitTermMarker,
       String resistantStopReadyMarker,
       String resistantStopMainTermMarker,
       String resistantStopChildTermMarker,
