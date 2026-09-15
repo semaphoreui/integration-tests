@@ -76,6 +76,26 @@ class LocalProcessCleanupTest {
 
   @Test
   @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Graceful task stop remains stopped when the command exits successfully")
+  void gracefulStopWithZeroExitRemainsStopped(
+      ApiSteps api, SemaphoreProcessCleanupFixtures fixtures) {
+    var template = createTemplate(api, fixtures, fixtures.templates().gracefulZeroExit());
+    var task = api.semaphore().tasks().startTask(template.projectId(), template.id());
+    api.semaphore()
+        .tasks()
+        .waitUntilTaskOutputContains(
+            template.projectId(), task.id(), fixtures.expectations().gracefulZeroExitReadyMarker());
+
+    var stoppedTask = api.semaphore().tasks().stopAndWait(template.projectId(), task.id(), false);
+    var taskOutput =
+        api.semaphore().tasks().getTaskOutputText(template.projectId(), stoppedTask.id());
+
+    assertThat(stoppedTask.status()).isEqualTo(fixtures.expectations().stoppedTaskStatus());
+    assertThat(taskOutput).contains(fixtures.expectations().gracefulZeroExitTermMarker());
+  }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
   @DisplayName("Resistant process group is killed after the grace period")
   void resistantProcessGroupIsKilledAfterGracePeriod(
       ApiSteps api, SemaphoreProcessCleanupFixtures fixtures) {
@@ -143,6 +163,28 @@ class LocalProcessCleanupTest {
     return api.semaphore()
         .tasks()
         .getTaskOutputText(templates.verifier().projectId(), verificationTask.id());
+  }
+
+  private Template createTemplate(
+      ApiSteps api,
+      SemaphoreProcessCleanupFixtures fixtures,
+      SemaphoreProcessCleanupFixtures.Template template) {
+    var project = api.semaphore().projects().createProject(fixtures.project());
+    var key =
+        api.semaphore()
+            .accessKeys()
+            .create(project.id(), fixtures.accessKey().request(project.id()));
+    var repository =
+        api.semaphore()
+            .repositories()
+            .create(project.id(), fixtures.repository().request(project.id(), key.id()));
+    var inventory =
+        api.semaphore()
+            .inventories()
+            .create(project.id(), fixtures.inventory().request(project.id(), key.id()));
+    return api.semaphore()
+        .templates()
+        .create(project.id(), template.request(project.id(), repository.id(), inventory.id()));
   }
 
   private CreatedTemplates createTemplates(
