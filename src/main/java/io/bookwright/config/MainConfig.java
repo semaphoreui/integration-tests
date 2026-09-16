@@ -52,6 +52,10 @@ public interface MainConfig extends Config {
   @DefaultValue("http://localhost:3003")
   String runnerFixtureBaseUrl();
 
+  @Key("cache.origin.base.url")
+  @DefaultValue("http://localhost:3000/api/")
+  String cacheOriginBaseUrl();
+
   @Key("teardown.failOnError")
   @DefaultValue("true")
   boolean teardownFailOnError();

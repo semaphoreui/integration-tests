@@ -256,7 +256,20 @@ At the start, tests should not block development until their stability is confir
 
 **Result:** a working CI pipeline and a clear process for analyzing failures.
 
-**Current status:** the stage has been implemented. The pull-request workflow runs the framework quality gate, the API baseline, and a short Chromium UI smoke on `core-sqlite-local`; the browser suite verifies password login, launching an API-prepared executable template, and client-side project-name validation without sending a create request. The daily matrix job runs the PostgreSQL, MySQL, MariaDB, persistent runner, SSH, private HTTPS Git, direct OIDC, HTTPS/subpath OIDC, LDAPS, TOTP, and encryption-rotation feature profiles. The weekly and manual release workflow contains SQLite, PostgreSQL, MySQL, and MariaDB upgrade profiles; SQLite/PostgreSQL are confirmed, while the newly added MySQL/MariaDB variants await their first Linux run. Jobs have timeouts, `fail-fast: false` for matrices, preserve JUnit/HTML/Allure and Compose diagnostics, and cleanup always runs. The full manual configuration matrix on Semaphore `v2.19.12` passed successfully on 2026-09-04: all 11 profiles are green. On the same day, the PR gate with SQLite/UI and both confirmed `v2.19.8 → v2.19.12` upgrade profiles passed separately. Manual investigation runs confirm the known schedule, dynamic-runner, and shell-output defects and are not part of the stable gate. After each run, the individual profile Allure reports are assembled by a reusable workflow into a self-contained single-file HTML artifact. Successful trusted `main` runs are published to the public [GitHub Pages history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment runs remain artifact-only.
+**Current status:** the stage has been implemented. The pull-request workflow runs the framework
+quality gate, the API baseline, and a short Chromium UI smoke on `core-sqlite-local`; the browser
+suite verifies password login, launching an API-prepared executable template, and client-side
+project-name validation without sending a create request. The daily matrix runs the PostgreSQL,
+MySQL, MariaDB, persistent runner, SSH, private HTTPS Git, direct OIDC, HTTPS/subpath OIDC, LDAPS,
+TOTP, and encryption-rotation profiles. The weekly/manual release workflow covers SQLite,
+PostgreSQL, MySQL, and MariaDB upgrades; all four completed successfully in Linux CI by 2026-09-11.
+Jobs have timeouts, `fail-fast: false` for matrices, preserve JUnit/HTML/Allure and Compose
+diagnostics, and always clean up. Manual investigation runs confirm the known schedule,
+dynamic-runner, shell-output, and shared-cache defects and are not part of the stable gate. After
+each run, the individual profile Allure reports are assembled into a self-contained single-file
+HTML artifact. Successful trusted `main` runs are published to the public [GitHub Pages
+history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment
+runs remain artifact-only.
 
 ---
 
@@ -284,33 +297,31 @@ Preliminary directions:
 - installation and upgrade;
 - load and security checks.
 
-### Planned P2 security block: web-cache safety
+### Completed P1 conditional security block: web-cache safety
 
 Semaphore does not provide a shared HTTP cache, and the documented NGINX configuration does not
-enable one, so Web Cache Poisoning is not currently treated as a confirmed default-installation
-defect. It is nevertheless relevant to the project's self-hosted consumption model: customers can
-place Semaphore behind a CDN or enable `proxy_cache`, while authenticated API responses currently
-do not declare an explicit `Cache-Control: private, no-store` policy. A successful cross-user
-reproduction promotes this work from P2 hardening research to a P1 security defect.
+enable one, so the default installation is not affected. The local NGINX profile nevertheless
+confirmed the self-hosted deployment risk on `v2.19.12`: authenticated `GET /api/user` has no
+`Cache-Control` policy, and an unpartitioned shared cache returns user A's response to user B as a
+cache `HIT`. The successful cross-user reproduction promotes the result from P2 hardening research
+to a P1 conditional security defect.
 
-The block will:
+The completed block:
 
-1. inventory cache directives on authentication, authenticated API, redirect, error, SPA shell,
-   Swagger, and versioned static-asset responses;
-2. add a focused NGINX shared-cache profile with two isolated users and observable cache status;
-3. verify that one user's API, login, redirect, and error responses cannot be stored and served to
-   another user;
-4. probe common unkeyed inputs (`Host`, `X-Forwarded-Host`, `X-Original-URL`, `X-Rewrite-URL`, and
-   query parameters) without placing secrets in test output;
-5. preserve intentional public caching for immutable static assets;
-6. if a vulnerability is reproduced, record a minimal confidential-safe reproducer and recommend
-   application-level `private, no-store` headers plus proxy-side bypass rules for authenticated and
-   `/api` traffic; otherwise, document the verified boundary and a safe deployment example.
+1. inventories direct policies for authenticated/unauthenticated API, the SPA shell, generic errors,
+   Swagger, and versioned assets;
+2. adds `feature-web-cache-safety`, with two isolated users and observable `MISS`/`HIT` evidence;
+3. confirms the cross-user leak on the authenticated current-user endpoint;
+4. reproduces it after priming with `X-Forwarded-Host`, `X-Original-URL`, `X-Rewrite-URL`, and a
+   distinct query, while separately confirming that `Host` is keyed;
+5. proves that versioned assets and the public Swagger specification remain intentionally cacheable;
+6. records the reproduction and recommends application-level `private, no-store` headers plus
+   proxy-side exclusion of authenticated and `/api` traffic.
 
-Completion criteria: the direct response-header contract and the two-user proxy scenario are
-automated, no authenticated or sensitive response crosses the user boundary, cacheable public
-assets remain cacheable, and the result is classified as a confirmed defect or a documented
-deployment-hardening requirement based on evidence rather than configuration assumptions.
+**Status:** complete. The direct response-header contract and two-user proxy scenario are automated.
+The strict profile intentionally remains red while the defect exists: three security contracts fail
+and two public/cache-key boundaries pass. The full evidence and safe deployment example are in
+`test-environment/web-cache-authenticated-response-leak-defect.md`.
 
 **Result:** a living prioritized backlog for systematic development of the suite by the project owner.
 
