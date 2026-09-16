@@ -70,11 +70,7 @@ public record SemaphoreSshFixtures(
                 + "ssh-fixture-rotated ansible_connection=ssh ansible_user=fixture ansible_port=22 "
                 + "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'",
             "static"),
-        new Template(
-            "bookwright-ssh-template-" + suffix,
-            "test-environment/fixtures/ansible/ssh.yml",
-            "ansible",
-            ""),
+        new Template("bookwright-ssh-template-" + suffix, "ansible/ssh.yml", "ansible", ""),
         "success",
         "error",
         "semaphore-bookwright-ssh-target-ok",
