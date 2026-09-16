@@ -34,6 +34,11 @@ secrets, removes the retired key and verifies the persisted task fixture.
 The application image comes from the profile manifest. Set APP_IMAGE to run the
 same profile against another image, for example one built from a pull request of
 the application repository by scripts/app-source.sh.
+
+The external profile starts only the fixture services and tests an existing
+Semaphore. up and test require API_BASE_URL, API_USERNAME, API_PASSWORD and
+TEST_REPOSITORY (the fixture-git URL the instance can reach; fixture-git is
+published on FIXTURE_GIT_PORT, default 3080).
 EOF
 }
 
@@ -58,6 +63,12 @@ effective_semaphore_image() {
 }
 
 report_application_source() {
+  if [ "$semaphore_instance" = "external" ]; then
+    printf 'Application source: external instance\n'
+    printf 'Application API: %s\n' "$selected_api_base_url"
+    printf 'Fixture repository: %s\n' "$TEST_REPOSITORY"
+    return
+  fi
   if [ -n "${APP_IMAGE:-}" ]; then
     printf 'Application source: Pull Request\n'
     [ -z "${APP_REPOSITORY:-}" ] || printf 'Application repository: %s\n' "$APP_REPOSITORY"
@@ -67,6 +78,21 @@ report_application_source() {
     printf 'Application source: Docker image\n'
   fi
   printf 'Application image: %s\n' "$selected_semaphore_image"
+}
+
+# Profiles with semaphore_instance: external start only the fixture services and test a
+# user-managed Semaphore. The instance and the fixture URL it can reach come from the environment.
+require_external_instance() {
+  [ -z "${APP_IMAGE:-}" ] || fail "APP_IMAGE cannot be used with profile '$profile_id'; the instance is external"
+  [ -n "${API_BASE_URL:-}" ] || fail "set API_BASE_URL to the external Semaphore URL ending with /api/"
+  [ -n "${API_USERNAME:-}" ] || fail "set API_USERNAME to an admin account of the external Semaphore"
+  [ -n "${API_PASSWORD:-}" ] || fail "set API_PASSWORD for the external Semaphore account"
+  [ -n "${TEST_REPOSITORY:-}" ] \
+    || fail "set TEST_REPOSITORY to the fixture-git URL the external Semaphore can reach, e.g. http://host.docker.internal:${FIXTURE_GIT_PORT:-3080}/fixtures.git"
+  case "$API_BASE_URL" in
+    http://*/api/|https://*/api/) ;;
+    *) fail "API_BASE_URL must use http(s) and end with /api/" ;;
+  esac
 }
 
 select_profile() {
@@ -101,6 +127,19 @@ select_profile() {
   case "$selected_test_task" in
     apiTest|uiTest|totpTest|encryptionRotationTest) ;;
     *) fail "unsupported test_task '$selected_test_task' in $manifest_file" ;;
+  esac
+
+  semaphore_instance=$(manifest_value semaphore_instance)
+  case "$semaphore_instance" in
+    '') ;;
+    external)
+      # Validated by require_external_instance only in actions that talk to the instance.
+      readiness_url="${API_BASE_URL:-}ping"
+      selected_api_base_url=${API_BASE_URL:-}
+      selected_ui_base_url=${UI_BASE_URL:-${selected_api_base_url%api/}}
+      selected_semaphore_image=
+      ;;
+    *) fail "unsupported semaphore_instance '$semaphore_instance' in $manifest_file" ;;
   esac
 
   [ -n "$compose_relative" ] || fail "compose_file is missing in $manifest_file"
@@ -164,6 +203,16 @@ await_ready() {
   compose ps >&2 || true
   compose logs --tail 100 >&2 || true
   return 1
+}
+
+await_published_fixture_git() {
+  [ "$semaphore_instance" = "external" ] || return 0
+  fixture_git_url="http://localhost:${FIXTURE_GIT_PORT:-3080}/fixtures.git/info/refs"
+  if ! curl --silent --show-error --fail --max-time 5 "$fixture_git_url" >/dev/null; then
+    compose ps >&2 || true
+    fail "fixture-git is not published at $fixture_git_url"
+  fi
+  printf 'Fixture Git is published at %s\n' "${fixture_git_url%/info/refs}"
 }
 
 configure_java() {
@@ -322,8 +371,11 @@ write_allure_environment() {
   mkdir -p "$allure_dir"
 
   image=$selected_semaphore_image
-  image_reference=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
-  [ -n "$image_reference" ] || image_reference=$image
+  image_reference=
+  if [ -n "$image" ]; then
+    image_reference=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+    [ -n "$image_reference" ] || image_reference=$image
+  fi
 
   database_image=$(manifest_value database_image)
   database_image_reference=$database_image
@@ -355,7 +407,11 @@ write_allure_environment() {
 
   {
     printf 'profile=%s\n' "$profile_id"
-    if [ -n "${APP_IMAGE:-}" ]; then
+    if [ "$semaphore_instance" = "external" ]; then
+      printf 'application.source=external\n'
+      printf 'semaphore.url=%s\n' "$selected_api_base_url"
+      printf 'fixtures.repository=%s\n' "$TEST_REPOSITORY"
+    elif [ -n "${APP_IMAGE:-}" ]; then
       printf 'application.source=pull-request\n'
       printf 'application.repository=%s\n' "${APP_REPOSITORY:-}"
       printf 'application.pull.request=%s\n' "${APP_PR:-}"
@@ -488,6 +544,7 @@ case "$action" in
     ;;
   up)
     select_profile "${2:-}"
+    [ "$semaphore_instance" != "external" ] || require_external_instance
     report_application_source
     prepare_ssh_fixture
     prepare_tls_fixture
@@ -496,7 +553,12 @@ case "$action" in
     if [ "$selected_encryption_fixture" = "generated" ] && [ ! -s "$encryption_keys_file" ]; then
       write_encryption_keyset old-primary true
     fi
-    compose up --detach
+    if [ "$semaphore_instance" = "external" ]; then
+      compose up --detach --wait
+      await_published_fixture_git
+    else
+      compose up --detach
+    fi
     wait_for_setup
     await_ready
     ;;
@@ -504,6 +566,7 @@ case "$action" in
     select_profile "${2:-}"
     [ "$selected_encryption_fixture" != "generated" ] \
       || fail "profile '$profile_id' requires: test-environment/profile encryption-rotation-test $profile_id"
+    [ "$semaphore_instance" != "external" ] || require_external_instance
     report_application_source
     shift 2
     prepare_ssh_fixture
@@ -511,6 +574,7 @@ case "$action" in
     prepare_git_https_fixture
     prepare_encryption_fixture
     wait_for_setup
+    await_published_fixture_git
     await_ready
     configure_java
     write_allure_environment
@@ -528,6 +592,10 @@ case "$action" in
       fi
       if [ -n "$selected_ui_base_url" ]; then
         set -- "$@" "-Dui.base.url=$selected_ui_base_url"
+      fi
+      if [ "$semaphore_instance" = "external" ]; then
+        # Passwords reach the test JVM through the environment (build.gradle.kts), not argv.
+        set -- "$@" "-Dapi.username=$API_USERNAME" "-Dui.user=$API_USERNAME"
       fi
       if [ "$selected_tls_fixture" = "generated" ]; then
         set -- "$@" \

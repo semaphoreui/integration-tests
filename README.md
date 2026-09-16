@@ -363,6 +363,10 @@ Additional Gradle arguments are passed after the script name. For self-signed TL
 `-Dbookwright.test.ssl.trustStorePassword=...` can be passed. The regular `apiTest` remains the local full suite and
 is never invoked by the external environment launcher.
 
+To run the full `core-sqlite-local` suite (which creates and deletes data) against a disposable
+user-managed instance, use the `external` profile instead; it starts only the fixture services. See
+`test-environment/README.md`, section "External Semaphore instance".
+
 ## [Testing Pull Requests of the Application Repository](docs/application-pr-testing.md)
 
 ## Two modes
