@@ -10,6 +10,7 @@ import lombok.experimental.Accessors;
 @Accessors(fluent = true)
 public class SemaphoreUiSteps {
   @Inject private CoreSmokeSteps core;
+  @Inject private VariableGroupUiSteps variableGroups;
   @Inject private OidcLoginSteps oidc;
   @Inject private TotpLoginSteps totp;
 }

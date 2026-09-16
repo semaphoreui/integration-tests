@@ -285,7 +285,7 @@ The file inventory suite creates a repository-backed `type=file`, runs a playboo
 
 A separate security smoke creates a `login_password` access key with a unique marker, uses it as the inventory credential during task execution and verifies the absence of plaintext in the create/get/list API, structured and raw task output, Allure and JUnit artifacts.
 
-The Variable Group suite creates a mixed group with JSON extra vars, ENV and secrets of types `var`/`env`, renames the saved secret without replacing its value and really runs `variables.yml`. The playbook verifies the secrets by SHA-256 under `no_log` and prints only a safe marker; the test separately checks the create/get/list API and structured/raw output. The same contract passed on SQLite and PostgreSQL `v2.19.8`; an empty ENV variable name gets a diagnosable `400`.
+The Variable Group suite creates a mixed group with JSON extra vars, ENV and secrets of types `var`/`env`, renames the saved secret without replacing its value and really runs `variables.yml`. The playbook verifies the secrets by SHA-256 under `no_log` and prints only a safe marker; the test separately checks the create/get/list API and structured/raw output. A Chromium regression for #2293 performs the rename through the Variable Group form, verifies that the UI sends an `update` without secret plaintext, reopens the form, and executes the preserved value. The API contract passes on SQLite and PostgreSQL, while the browser scenario runs on `core-sqlite-local`; an empty ENV variable name gets a diagnosable `400`.
 
 The Terraform/OpenTofu suite separately verifies the native `TF_VAR_*` contract: a unique secret is stored
 in a Variable Group as `env`, attached to both templates and really read as a Terraform

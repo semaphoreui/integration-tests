@@ -38,7 +38,8 @@ public class VariableGroupSteps {
     return getAndVerifyMasked(projectId, group.id(), request);
   }
 
-  private VariableGroup getAndVerifyMasked(
+  @Step("Get Semaphore Variable Group {groupId}")
+  public VariableGroup getAndVerifyMasked(
       long projectId, long groupId, VariableGroupRequest sourceRequest) {
     JsonNode saved = Calls.body(api.get(projectId, groupId), 200, "saved Variable Group");
     JsonNode listed = Calls.body(api.getAll(projectId), 200, "Variable Group collection");

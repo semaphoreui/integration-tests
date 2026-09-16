@@ -37,6 +37,7 @@ All notable changes to the Semaphore UI test automation project are documented i
 - TOTP secret, passcode, and recovery-code redaction in both HTTP attachments and raw Allure step parameters.
 - Browser TOTP enrollment through Security settings, QR rendering, challenge, invalid passcode, and recovery-form coverage with sensitive failure artifacts suppressed.
 - Core browser smoke for password login, launching an API-provisioned executable template, and client-side project-name validation without a create request.
+- Browser regression for #2293 covering Variable Group secret-name update payload, persisted UI/API state, preserved value execution, and plaintext protection.
 - Variable Group API coverage for mixed JSON/ENV/secret values, secret rename persistence, task execution, masking, and empty-name validation.
 - Survey-variable and launch-time override coverage for enum/int/string/env/secret values, template/task arguments, Ansible params, persistence, execution, and secret masking.
 - Reproducer and upstream fix trace for the `v2.19.8` backend gap that accepts enum defaults outside their allowed survey values.
