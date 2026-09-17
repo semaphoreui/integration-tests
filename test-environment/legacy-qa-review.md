@@ -55,7 +55,7 @@ Legend: **covered** — the contract is already protected by automation; **parti
 | TC-015 | Static inventory | Covered | INI `static` and YAML `static-yaml` are persisted; the template `limit` selects one group, and the host of the second group is not executed |
 | TC-016 | File inventory | Covered with a defect | A repository-backed file is actually executed; create lets traversal through, while update rejects it with an empty `400` |
 | TC-017 | Terraform inventory | Covered | Plan-only Terraform/OpenTofu use the selected workspace inventories on a local module without provider downloads |
-| TC-018 | Variable Groups mixed | Covered | JSON/ENV/secret var+env, rename, masking, and task execution are automated |
+| TC-018 | Variable Groups mixed | Covered | JSON/ENV/secret var+env, API and UI secret rename, masking, persistence, and task execution are automated |
 | TC-019 | TF_VAR secrets | Covered | A secret of type `env` actually becomes a Terraform/OpenTofu input variable; a SHA-256 marker confirms injection without plaintext in API/output/Allure |
 | TC-020 | Ansible template execution | Covered | Do not duplicate |
 | TC-021 | Build/deploy chain | Covered with a clarification | Manual selection of a successful build, `build_task_id`, nested history version, and target/incoming executor env are automated; a `version` of its own exists only on the build task |
