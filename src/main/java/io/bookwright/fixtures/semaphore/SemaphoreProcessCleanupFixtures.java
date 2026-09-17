@@ -37,42 +37,42 @@ public record SemaphoreProcessCleanupFixtures(
             new Scenario(
                 new Template(
                     "bookwright-process-cleanup-normal-main-" + suffix,
-                    "test-environment/fixtures/bash/process-cleanup/normal-completion/main.sh",
+                    "bash/process-cleanup/normal-completion/main.sh",
                     false),
                 new Template(
                     "bookwright-process-cleanup-normal-verifier-" + suffix,
-                    "test-environment/fixtures/bash/process-cleanup/normal-completion/verify.sh",
+                    "bash/process-cleanup/normal-completion/verify.sh",
                     true)),
             new Scenario(
                 new Template(
                     "bookwright-process-cleanup-graceful-main-" + suffix,
-                    "test-environment/fixtures/bash/process-cleanup/graceful-stop/main.sh",
+                    "bash/process-cleanup/graceful-stop/main.sh",
                     false),
                 new Template(
                     "bookwright-process-cleanup-graceful-verifier-" + suffix,
-                    "test-environment/fixtures/bash/process-cleanup/graceful-stop/verify.sh",
+                    "bash/process-cleanup/graceful-stop/verify.sh",
                     true)),
             new Template(
                 "bookwright-process-cleanup-graceful-zero-exit-" + suffix,
-                "test-environment/fixtures/bash/process-cleanup/graceful-zero-exit/main.sh",
+                "bash/process-cleanup/graceful-zero-exit/main.sh",
                 false),
             new Scenario(
                 new Template(
                     "bookwright-process-cleanup-resistant-main-" + suffix,
-                    "test-environment/fixtures/bash/process-cleanup/resistant-stop/main.sh",
+                    "bash/process-cleanup/resistant-stop/main.sh",
                     false),
                 new Template(
                     "bookwright-process-cleanup-resistant-verifier-" + suffix,
-                    "test-environment/fixtures/bash/process-cleanup/resistant-stop/verify.sh",
+                    "bash/process-cleanup/resistant-stop/verify.sh",
                     true)),
             new Scenario(
                 new Template(
                     "bookwright-process-cleanup-escaped-main-" + suffix,
-                    "test-environment/fixtures/bash/process-cleanup/escaped-process-group/main.sh",
+                    "bash/process-cleanup/escaped-process-group/main.sh",
                     false),
                 new Template(
                     "bookwright-process-cleanup-escaped-verifier-" + suffix,
-                    "test-environment/fixtures/bash/process-cleanup/escaped-process-group/verify.sh",
+                    "bash/process-cleanup/escaped-process-group/verify.sh",
                     true))),
         new Expectations(
             "success",
