@@ -2,7 +2,7 @@
 
 set -eu
 
-IMAGE="lowswoo/semaphore-test-container:1.0"
+IMAGE="lowswoo/semaphore-test-container:1.0-arm"
 SCRIPT="/workspace/test-environment/profile"
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
