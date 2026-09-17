@@ -31,7 +31,7 @@ public record SemaphoreRunnerRoutingFixtures(
         "bookwright-missing",
         "bookwright-tagged-template-" + suffix,
         "bookwright-unmatched-template-" + suffix,
-        "test-environment/fixtures/ansible/long-running.yml",
+        "ansible/long-running.yml",
         "semaphore-bookwright-stop-ready",
         2,
         1,

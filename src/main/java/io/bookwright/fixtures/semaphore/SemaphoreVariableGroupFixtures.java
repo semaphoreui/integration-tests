@@ -39,7 +39,7 @@ public record SemaphoreVariableGroupFixtures(
         variableSecret,
         environmentSecret,
         "bookwright-variable-template-" + suffix,
-        "test-environment/fixtures/ansible/variables.yml",
+        "ansible/variables.yml",
         "semaphore-bookwright-variable-group-ok",
         "Environment variables key can not be empty");
   }

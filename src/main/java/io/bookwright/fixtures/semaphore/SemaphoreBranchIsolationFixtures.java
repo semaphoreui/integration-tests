@@ -40,7 +40,7 @@ public record SemaphoreBranchIsolationFixtures(
             "static"),
         new Template(
             "bookwright-branch-isolation-template-" + suffix,
-            "test-environment/fixtures/ansible/branch-isolation/branch-isolation.yml",
+            "ansible/branch-isolation/branch-isolation.yml",
             "[\"--extra-vars\",\"bookwright_isolation_token=" + token + "\"]"),
         "bookwright-branch-isolation-a",
         "bookwright-branch-isolation-b",
