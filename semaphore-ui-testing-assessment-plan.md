@@ -325,7 +325,7 @@ and two public/cache-key boundaries pass. The full evidence and safe deployment 
 
 **Result:** a living prioritized backlog for systematic development of the suite by the project owner.
 
-### Current standalone block: upgrade coverage for every Community DBMS
+### Completed standalone block: upgrade coverage for every Community DBMS
 
 **Risk:** a release can migrate a clean SQLite/PostgreSQL installation correctly while breaking an
 existing MySQL or MariaDB database used by a self-hosted customer.
@@ -343,8 +343,30 @@ existing pinned database images. No application change or Pro subscription is re
 the preserved database with `v2.19.12`, verify all relationships and masked secrets, rerun the old
 template, and finish the regular API suite successfully in Linux CI.
 
-**Priority:** high. **Status:** profiles and CI matrix entries implemented; both complete upgrade
-lifecycle runs passed locally on 2026-09-09; first Linux run pending.
+**Priority:** high. **Status:** complete. Profiles and CI matrix entries are implemented; all four
+Community database upgrade lifecycles passed in Linux CI by 2026-09-11.
+
+### Completed standalone block: webhook integration configuration lifecycle
+
+**Risk:** an API client can receive a successful mutation response while Semaphore keeps using stale
+webhook routing or extracted-value configuration.
+
+**Test level:** black-box API lifecycle plus the existing real webhook-to-task execution scenario.
+
+**Scope:** integration list/get/update, project and integration aliases, matcher and extracted-value
+create/list/update/delete, followed by the existing token-authenticated matcher routing and task
+variable extraction.
+
+**Result:** the positive lifecycle passes for integration update, aliases, and extracted-value
+update. On SQLite `v2.19.12`, matcher update/delete and extracted-value delete return `204` without
+applying the change. The green known-defect canary, source boundary, workaround and upstream fix
+`1af4c105` are recorded in
+`test-environment/integration-child-mutation-false-success-defect.md`.
+The coverage report now observes all 19 documented integration operations successfully; total
+documented API coverage increased from 58/99 (58.6%) to 71/99 (71.7%).
+
+**Priority:** medium. **Status:** implementation complete; convert the canary to positive assertions
+when a stable release containing `1af4c105` replaces the current baseline.
 
 ---
 

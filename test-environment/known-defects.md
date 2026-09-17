@@ -1,6 +1,6 @@
 # Semaphore UI known defects
 
-**Last reviewed:** 2026-09-04  
+**Last reviewed:** 2026-09-17
 **Core runtime baseline:** `semaphoreui/semaphore:v2.19.12`
 
 **Runner and scheduler defect baseline:** `semaphoreui/semaphore:v2.19.12`
@@ -29,6 +29,7 @@ instead. All reproducers use generated fixtures and do not expose credentials or
 | BUG-007 | Project restore accepts duplicate resource names | Medium | Project backup / restore | Confirmed in Linux CI on `v2.19.12`; off-by-one remains on `develop` |
 | BUG-008 | Survey enum accepts a default outside its allowed values | Medium | Template survey validation | Confirmed on `v2.19.8`; fixed on `develop`, not in `v2.19.12` |
 | BUG-009 | Successful short task loses `stdout` or `stderr` | High | Task execution / output collection | Confirmed in Linux CI on `v2.19.12`; fixed on `develop` |
+| BUG-010 | Integration child mutations return `204` without applying changes | Medium | Integrations / API persistence | Confirmed locally on SQLite `v2.19.12`; fixed by `1af4c105` |
 
 ## BUG-001 — Project deletion succeeds while a task is still running
 
@@ -430,6 +431,30 @@ adds command-scoped finalization and bounds pipes inherited by background descen
 The strict test remains in the manual expected-red `feature-shell-output` profile until these fixes
 reach a stable release. It is intentionally excluded from the green PR and nightly gates.
 
+## BUG-010 — Integration child mutations return false success
+
+**Description**
+
+The documented matcher update plus matcher and extracted-value delete endpoints return `204`, but
+the records remain unchanged on SQLite `v2.19.12`. A user can therefore receive confirmation that a
+webhook rule was changed or removed while the old rule remains active.
+
+**Automated reproducer**
+
+```bash
+test-environment/profile up core-sqlite-local
+./gradlew test -DSTAND=semaphore -DSEMAPHORE_PROFILE=core-sqlite-local \
+  --tests io.bookwright.tests.semaphore.WebhookIntegrationApiTest.integrationChildMutationsReturnFalseSuccess
+```
+
+**Upstream status:** fixed by
+[`1af4c105`](https://github.com/semaphoreui/semaphore/commit/1af4c1052dba7da6c3bf55307013ba199421a745),
+which is included in `v2.20.0-alpha1`. The stable-release canary intentionally records the current
+false-success contract until the baseline is upgraded.
+
+**Detailed evidence:**
+[integration-child-mutation-false-success-defect.md](integration-child-mutation-false-success-defect.md)
+
 ## Excluded historical and policy findings
 
 - The `v2.19.6 → v2.19.7` schema upgrade failure is historical; the maintained
@@ -441,7 +466,7 @@ reach a stable release. It is intentionally excluded from the green PR and night
 
 ## Recommended next actions
 
-1. Test `develop` for BUG-004, BUG-008 and BUG-009 and prepare positive regression checks for the
+1. Test `develop` for BUG-004, BUG-008, BUG-009 and BUG-010 and prepare positive regression checks for the
    release that first contains their fixes.
 2. Confirm the intended unavailable-runner queue contract with the product team before filing
    BUG-005 as an unconditional product defect.
