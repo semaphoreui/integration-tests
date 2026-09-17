@@ -4,7 +4,7 @@ The `core-sqlite-local` profile: a minimal Semaphore UI `v2.19.12` stand with SQ
 
 The profile manifest lives in `profiles/<profile>/profile.yaml`. It pins the Semaphore version, installation method, DBMS, execution mode, and capabilities. The lifecycle command reads the manifest, uses a stable Compose project name, and records the actual configuration and image digests in `build/allure-results/environment.properties`.
 
-Five baseline profiles and twelve feature profiles are available:
+Five baseline profiles and thirteen feature profiles are available:
 
 | Profile | DBMS | Purpose |
 |---|---|---|
@@ -25,6 +25,7 @@ Five baseline profiles and twelve feature profiles are available:
 | `feature-schedule-timezone` | SQLite | cron/run-at execution in `Pacific/Kiritimati`; local defect reproducer |
 | `feature-dynamic-runner` | SQLite | webhook-launched one-off runner; defect reproducer for a process that never exits |
 | `feature-shell-output` | SQLite | strict defect reproducer for the loss of `stdout`/`stderr` in a short task |
+| `feature-web-cache-safety` | SQLite | shared-cache cross-user isolation and cache-poisoning defect reproducer |
 | `external` | user-managed | the `core-sqlite-local` suite against an existing Semaphore; only the fixture services are started |
 
 The fixture services live in `compose.fixtures.yml`, the shared Semaphore configuration in `compose.base.yml` (which includes the fixtures), while profiles only add a DB/execution-specific overlay. All of them except `external` publish Semaphore on port `3000`, so only one of them may be running at a time.
@@ -175,6 +176,25 @@ process streams: `stdout` or `stderr`. The profile runs only the strict `ShellOu
 including the background-child scenario, and remains a manual red reproducer until the already
 existing upstream fixes land in stable. The full report is in `shell-output-loss-defect.md`.
 
+## Web-cache safety feature profile
+
+```bash
+test-environment/profile down feature-shell-output
+test-environment/profile up feature-web-cache-safety
+test-environment/profile test feature-web-cache-safety
+```
+
+The profile places SQLite Semaphore `v2.19.12` behind an intentionally shared NGINX cache and runs
+five focused contracts with two disposable users. It confirms that `GET /api/user` has no explicit
+private/no-store policy and can be served from user A to user B as a cache `HIT`. Priming through
+unkeyed forwarding headers and a distinct query reproduces the same boundary violation. Host
+isolation, versioned JavaScript, and the public Swagger specification retain the expected safe
+behavior.
+
+This is a manual red security reproducer, not a production proxy example and not part of stable CI.
+The scope, evidence, and safe NGINX boundary are documented in
+`web-cache-authenticated-response-leak-defect.md`.
+
 ## OIDC feature profile
 
 ```bash
@@ -316,7 +336,8 @@ Each matrix profile runs on its own runner, so the shared port `3000` causes no 
 On stable `v2.19.12` the `profile test` command runs JUnit classes sequentially because of a
 confirmed race in the product output collector. This does not disable concurrent execution checks:
 `ProjectConcurrencyApiTest` itself launches several Semaphore tasks and verifies queue admission.
-The strict concurrent/short-output contract is isolated in `feature-shell-output`.
+The strict concurrent/short-output contract is isolated in `feature-shell-output`. The confirmed
+shared-cache security reproducer is isolated in `feature-web-cache-safety`.
 
 In the manual `Configuration matrix`, the inputs `include_schedule_investigation=true` and
 `include_shell_output_investigation=true` add the corresponding defect profiles only to the

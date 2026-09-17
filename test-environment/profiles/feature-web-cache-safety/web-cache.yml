@@ -1,0 +1,20 @@
+services:
+  cache-proxy:
+    image: nginx:1.27.5-alpine
+    ports:
+      - "3080:80"
+    volumes:
+      - ./profiles/feature-web-cache-safety/nginx.conf:/etc/nginx/nginx.conf:ro
+      - cache-data:/var/cache/nginx
+    depends_on:
+      semaphore:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/api/ping | grep -q pong"]
+      interval: 2s
+      timeout: 3s
+      retries: 45
+    restart: unless-stopped
+
+volumes:
+  cache-data:

@@ -34,6 +34,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreTotpFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreUserLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreVariableGroupFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreWebCacheFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.steps.DbSteps;
 import io.bookwright.steps.UiSteps;
@@ -88,6 +89,7 @@ public class StepsParameterResolver implements ParameterResolver {
         || type == SemaphoreUpgradeFixtures.class
         || type == SemaphoreUserLifecycleFixtures.class
         || type == SemaphoreVariableGroupFixtures.class
+        || type == SemaphoreWebCacheFixtures.class
         || SUPPORTED.contains(type);
   }
 
@@ -193,6 +195,9 @@ public class StepsParameterResolver implements ParameterResolver {
     }
     if (type == SemaphoreVariableGroupFixtures.class) {
       return SemaphoreVariableGroupFixtures.from(TestDataExtension.getOrCreate(extensionContext));
+    }
+    if (type == SemaphoreWebCacheFixtures.class) {
+      return SemaphoreWebCacheFixtures.from(TestDataExtension.getOrCreate(extensionContext));
     }
     if (type == TestUser.class) {
       return UserFixtureExtension.require(extensionContext);

@@ -152,7 +152,7 @@ fun Test.configureBookwrightTestRuntime() {
     ).forEach { (source, target) ->
         System.getProperty(source)?.let { systemProperty(target, it) }
     }
-    val configPrefixes = listOf("api.", "ui.", "db.", "ssh.", "runner.", "teardown.", "local.booking.", "local.user.")
+    val configPrefixes = listOf("api.", "ui.", "db.", "ssh.", "runner.", "cache.", "teardown.", "local.booking.", "local.user.")
     System.getProperties().stringPropertyNames()
         .filter { key -> configPrefixes.any(key::startsWith) }
         .forEach { key -> systemProperty(key, System.getProperty(key)) }
@@ -193,6 +193,13 @@ tasks.register<Test>("apiTest") {
     group = "verification"
     description = "Runs Semaphore API product scenarios."
     filter { includeTestsMatching("io.bookwright.tests.semaphore.*") }
+}
+
+tasks.register<Test>("webCacheTest") {
+    group = "verification"
+    description = "Runs the isolated Semaphore shared-cache security investigation."
+    filter { includeTestsMatching("io.bookwright.tests.webcache.*") }
+    maxParallelForks = 1
 }
 
 val apiCoverageObservations = layout.buildDirectory.file("api-coverage/observations.tsv")

@@ -181,6 +181,22 @@ On `v2.19.12` the task gets `success`, but the saved output may lose the whole `
 PR/nightly gate. The cause, CI evidence and two upstream fixes are described in
 `test-environment/shell-output-loss-defect.md`.
 
+The web-cache safety profile checks the deployment boundary created when a customer enables a
+shared HTTP cache in front of Semaphore:
+
+```bash
+test-environment/profile down feature-shell-output
+test-environment/profile up feature-web-cache-safety
+test-environment/profile test feature-web-cache-safety
+```
+
+On `v2.19.12`, authenticated `GET /api/user` responses have no `Cache-Control` policy. The strict
+two-user scenario confirms that a generic shared NGINX cache can return user A's account response to
+user B as a cache `HIT`, including after priming through unkeyed forwarding headers and a different
+query. Public versioned assets and `/swagger/api-docs.yml` remain intentionally cacheable. The
+profile is a manual red reproducer; evidence and the safe proxy configuration are in
+`test-environment/web-cache-authenticated-response-leak-defect.md`.
+
 The experimental schedule profile reproduces real cron/`run_at` execution in a non-UTC timezone:
 
 ```bash

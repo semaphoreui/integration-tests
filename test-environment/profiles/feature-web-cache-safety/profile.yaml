@@ -1,0 +1,23 @@
+id: feature-web-cache-safety
+description: SQLite behind an intentionally shared NGINX cache for authenticated-response isolation checks
+compose_file: compose.yml
+compose_project: semaphore-test-feature-web-cache-safety
+readiness_url: http://localhost:3080/api/ping
+stand: semaphore
+test_task: webCacheTest
+api_base_url: http://localhost:3080/api/
+ui_base_url: http://localhost:3080
+semaphore_version: v2.19.12
+semaphore_image: semaphoreui/semaphore:v2.19.12
+source_commit: 012ed06d3eccadaed594c73b93b3d8a2459b576f
+edition: community
+installation: docker-compose
+architecture: native
+database_type: sqlite
+database_image: embedded
+execution_mode: local
+execution_executor: local
+auth: password
+proxy_image: nginx:1.27.5-alpine
+git_client: cmd_git
+capabilities: shared-cache,authenticated-cache-isolation,cache-key-poisoning,static-assets

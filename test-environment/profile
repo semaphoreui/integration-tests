@@ -125,7 +125,7 @@ select_profile() {
   selected_encryption_fixture=$(manifest_value encryption_fixture)
 
   case "$selected_test_task" in
-    apiTest|uiTest|totpTest|encryptionRotationTest) ;;
+    apiTest|uiTest|totpTest|encryptionRotationTest|webCacheTest) ;;
     *) fail "unsupported test_task '$selected_test_task' in $manifest_file" ;;
   esac
 

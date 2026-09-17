@@ -58,6 +58,12 @@ class MainConfigTest {
                 .getAnnotation(Config.DefaultValue.class)
                 .value())
         .isEqualTo("false");
+    assertThat(
+            MainConfig.class
+                .getMethod("cacheOriginBaseUrl")
+                .getAnnotation(Config.DefaultValue.class)
+                .value())
+        .isEqualTo("http://localhost:3000/api/");
   }
 
   private void restore(String key, String previous) {
