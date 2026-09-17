@@ -1,0 +1,4 @@
+services:
+  fixture-git:
+    ports:
+      - "${FIXTURE_GIT_PORT:-3080}:80"

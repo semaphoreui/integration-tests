@@ -25,8 +25,9 @@ Five baseline profiles and twelve feature profiles are available:
 | `feature-schedule-timezone` | SQLite | cron/run-at execution in `Pacific/Kiritimati`; local defect reproducer |
 | `feature-dynamic-runner` | SQLite | webhook-launched one-off runner; defect reproducer for a process that never exits |
 | `feature-shell-output` | SQLite | strict defect reproducer for the loss of `stdout`/`stderr` in a short task |
+| `external` | user-managed | the `core-sqlite-local` suite against an existing Semaphore; only the fixture services are started |
 
-The shared Semaphore configuration and the Git fixture live in `compose.base.yml`, while profiles only add a DB/execution-specific overlay. All of them publish Semaphore on port `3000`, so only one profile may be running at a time.
+The fixture services live in `compose.fixtures.yml`, the shared Semaphore configuration in `compose.base.yml` (which includes the fixtures), while profiles only add a DB/execution-specific overlay. All of them except `external` publish Semaphore on port `3000`, so only one of them may be running at a time.
 
 ## Startup
 
@@ -268,6 +269,37 @@ both DBMSs on 2026-08-19. The upgrade workflow remains a separate observed gate 
 the migration of persisted state between release images.
 Details are in `v2.19.8-regression-report.md`; the historical schema defect
 `v2.19.6` → `v2.19.7` is preserved in `upgrade-report.md`.
+
+## External Semaphore instance
+
+The `external` profile runs the same suite as `core-sqlite-local` (`apiTest`, and `uiTest` for the browser smoke) against a Semaphore that is already running and not managed by this repository. `up` starts only `fixture-init`, `fixture-git-init` and `fixture-git`; no `semaphore` container is created. `fixture-git` is published on the host so that the external instance can clone the fixtures.
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `API_BASE_URL` | yes | Semaphore API URL, `http(s)://.../api/` |
+| `API_USERNAME` | yes | admin account used by the API and UI tests |
+| `API_PASSWORD` | yes | its password; passed to the test JVM through the environment, never as a Gradle argument |
+| `TEST_REPOSITORY` | yes | fixture-git URL reachable **from the Semaphore instance**, e.g. `http://host.docker.internal:3080/fixtures.git` or `http://<host-ip>:3080/fixtures.git` |
+| `UI_BASE_URL` | no | defaults to `API_BASE_URL` without the trailing `api/` |
+| `TEST_BRANCH` | no | fixture branch, default `main` |
+| `FIXTURE_GIT_PORT` | no | host port of `fixture-git`, default `3080` |
+
+```bash
+export API_BASE_URL=https://semaphore.example.test/api/
+export API_USERNAME=admin
+export API_PASSWORD='set-from-secret-storage'
+export TEST_REPOSITORY=http://host.docker.internal:3080/fixtures.git
+test-environment/profile up external
+test-environment/profile test external
+./gradlew uiTest -DSTAND=semaphore -DSEMAPHORE_PROFILE=external \
+  -Dapi.base.url="$API_BASE_URL" -Dui.base.url="${API_BASE_URL%api/}" \
+  -Dapi.username="$API_USERNAME" -Dui.user="$API_USERNAME"
+test-environment/profile down external
+```
+
+`up` and `test` refuse to run without the required variables and with `APP_IMAGE`; `show`, `ps`, `logs`, `down` and `clean` do not need them. `up` waits for a healthy `fixture-git`, checks it on `localhost:${FIXTURE_GIT_PORT}` and then waits for `pong` from `${API_BASE_URL}ping`. Whether the instance itself reaches `TEST_REPOSITORY` is only proven by the first task that clones it.
+
+Requirements for the instance: an admin account; local task execution with `ansible`, `terraform`/`tofu` and `bash` as in the release image; network access to `TEST_REPOSITORY`. The suite creates and deletes projects, users, keys and tasks, and the RBAC user `bookwright-rbac-guest` stays behind by design, so never point it at a production instance. For read-only checks of a real environment use `scripts/run-external-tests.sh`. The Allure environment records `application.source=external` and the API URL instead of image digests. The profile is not part of any CI workflow.
 
 ## CI profiles
 

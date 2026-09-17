@@ -1,0 +1,59 @@
+services:
+  fixture-init:
+    image: semaphoreui/semaphore:v2.19.12
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        cp -R /source/. /repository/
+        chown -R 0:0 /repository
+        git -C /repository init -b main
+        git -C /repository config user.name "Semaphore Test Fixture"
+        git -C /repository config user.email "fixture@localhost"
+        git -C /repository add .
+        git -C /repository diff --cached --quiet || git -C /repository commit -m "Prepare safe smoke fixture"
+        git -C /repository branch -f bookwright-fixture-ref HEAD
+        chown -R 1001:0 /repository
+    volumes:
+      - fixture-repository:/repository
+      - ./fixtures:/source:ro
+
+  fixture-git-init:
+    image: semaphoreui/semaphore:v2.19.12
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        rm -rf /srv/git/fixtures.git
+        git config --global --add safe.directory /source
+        git config --global --add safe.directory /source/.git
+        git clone --bare /source /srv/git/fixtures.git
+        git --git-dir=/srv/git/fixtures.git update-server-info
+        chmod -R a+rX /srv/git
+    depends_on:
+      fixture-init:
+        condition: service_completed_successfully
+    volumes:
+      - fixture-repository:/source:ro
+      - fixture-git-repository:/srv/git
+
+  fixture-git:
+    image: nginx:1.27.5-alpine
+    restart: unless-stopped
+    depends_on:
+      fixture-git-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep -q ok"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - fixture-git-repository:/srv/git:ro
+      - ./fixture-git.conf:/etc/nginx/nginx.conf:ro
+
+volumes:
+  fixture-repository:
+  fixture-git-repository:

@@ -1,0 +1,16 @@
+id: external
+description: User-managed Semaphore from API_BASE_URL with the core-sqlite-local suite and local fixture-git
+compose_file: compose.yml
+compose_project: semaphore-test-external
+semaphore_instance: external
+stand: semaphore
+edition: unknown
+installation: external
+architecture: unknown
+database_type: unknown
+database_image: unknown
+execution_mode: unknown
+execution_executor: unknown
+auth: password
+git_client: unknown
+capabilities: core-api,task-execution,task-stop,git-local,rbac,schedules,secrets
