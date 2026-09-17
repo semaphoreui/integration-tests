@@ -136,6 +136,16 @@ fun Test.configureBookwrightTestRuntime() {
             ?.takeIf(String::isNotBlank)
             ?.let { systemProperty(configKey, it) }
     }
+    // The external profile keeps the user-managed instance password out of Gradle arguments.
+    if ((System.getProperty("SEMAPHORE_PROFILE") ?: System.getenv("SEMAPHORE_PROFILE")) == "external") {
+        System.getenv("API_PASSWORD")
+            ?.takeIf(String::isNotBlank)
+            ?.let { password ->
+                listOf("api.password", "ui.password")
+                    .filter { System.getProperty(it).isNullOrBlank() }
+                    .forEach { configKey -> environment(configKey, password) }
+            }
+    }
     mapOf(
         "bookwright.test.ssl.trustStore" to "javax.net.ssl.trustStore",
         "bookwright.test.ssl.trustStorePassword" to "javax.net.ssl.trustStorePassword",

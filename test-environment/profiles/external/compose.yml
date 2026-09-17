@@ -1,0 +1,5 @@
+# Fixture services only: the Semaphore instance under test is managed outside this project.
+include:
+  - path:
+      - ../../compose.fixtures.yml
+      - fixture-git-port.yml

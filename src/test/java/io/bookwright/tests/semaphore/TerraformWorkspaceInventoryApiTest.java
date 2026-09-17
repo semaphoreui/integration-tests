@@ -17,7 +17,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 @Api
 @OwnerDanil
 @Feature("Semaphore Terraform workspace inventories")
-@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "core-sqlite-local")
+@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "core-sqlite-local|external")
 class TerraformWorkspaceInventoryApiTest {
 
   @Test

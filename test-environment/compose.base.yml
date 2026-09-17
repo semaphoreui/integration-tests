@@ -1,24 +1,7 @@
-services:
-  fixture-init:
-    image: semaphoreui/semaphore:v2.19.12
-    user: "0:0"
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        set -eu
-        cp -R /source/. /repository/
-        chown -R 0:0 /repository
-        git -C /repository init -b main
-        git -C /repository config user.name "Semaphore Test Fixture"
-        git -C /repository config user.email "fixture@localhost"
-        git -C /repository add .
-        git -C /repository diff --cached --quiet || git -C /repository commit -m "Prepare safe smoke fixture"
-        git -C /repository branch -f bookwright-fixture-ref HEAD
-        chown -R 1001:0 /repository
-    volumes:
-      - fixture-repository:/repository
-      - ./fixtures:/source/test-environment/fixtures:ro
+include:
+  - compose.fixtures.yml
 
+services:
   semaphore:
     image: ${SEMAPHORE_IMAGE:-semaphoreui/semaphore:v2.19.12}
     ports:
@@ -29,12 +12,7 @@ services:
       SEMAPHORE_ADMIN_NAME: Test Admin
       SEMAPHORE_ADMIN_EMAIL: admin@localhost
       SEMAPHORE_ACCESS_KEY_ENCRYPTION: IlRqgrrO5Gp27MlWakDX1xVrPv4jhoUx+ARY+qGyDxQ=
-    volumes:
-      - fixture-repository:/repository:ro
     restart: unless-stopped
     depends_on:
-      fixture-init:
-        condition: service_completed_successfully
-
-volumes:
-  fixture-repository:
+      fixture-git:
+        condition: service_healthy

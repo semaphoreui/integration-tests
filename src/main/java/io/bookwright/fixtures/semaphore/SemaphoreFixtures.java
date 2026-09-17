@@ -66,14 +66,10 @@ public record SemaphoreFixtures(
             "[local]\nlocalhost ansible_connection=local",
             "static"),
         new Templates(
-            new Template(
-                "bookwright-build-template-" + suffix,
-                "test-environment/fixtures/ansible/smoke.yml",
-                "ansible",
-                ""),
+            new Template("bookwright-build-template-" + suffix, "ansible/smoke.yml", "ansible", ""),
             new Template(
                 "bookwright-stoppable-template-" + suffix,
-                "test-environment/fixtures/ansible/long-running.yml",
+                "ansible/long-running.yml",
                 "ansible",
                 "")),
         new Schedule("bookwright-nightly-schedule-" + suffix, "0 0 * * *", false, ""),

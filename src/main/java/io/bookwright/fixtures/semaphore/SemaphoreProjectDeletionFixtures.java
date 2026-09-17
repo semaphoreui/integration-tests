@@ -33,7 +33,7 @@ public record SemaphoreProjectDeletionFixtures(
             "static"),
         new Template(
             "bookwright-project-delete-template-" + suffix,
-            "test-environment/fixtures/ansible/project-deletion.yml",
+            "ansible/project-deletion.yml",
             "ansible",
             ""),
         "semaphore-bookwright-project-delete-ready",

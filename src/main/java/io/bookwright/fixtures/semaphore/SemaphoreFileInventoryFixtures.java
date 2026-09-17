@@ -30,16 +30,14 @@ public record SemaphoreFileInventoryFixtures(
             config.fixturesRepository(),
             config.fixturesDefaultBranch()),
         new FileInventory(
-            "bookwright-file-inventory-" + suffix,
-            "test-environment/fixtures/ansible/inventories/localhost.ini",
-            "file"),
+            "bookwright-file-inventory-" + suffix, "ansible/inventories/localhost.ini", "file"),
         new FileInventory(
             "bookwright-unsafe-file-inventory-" + suffix,
             "../bookwright-outside-repository.ini",
             "file"),
         new Template(
             "bookwright-file-inventory-template-" + suffix,
-            "test-environment/fixtures/ansible/file-inventory.yml",
+            "ansible/file-inventory.yml",
             "ansible",
             ""),
         "success",

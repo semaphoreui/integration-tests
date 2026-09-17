@@ -34,7 +34,6 @@ services:
       retries: 45
     volumes:
       - dynamic-runner-data:/var/lib/semaphore
-      - fixture-repository:/fixtures/ansible:ro
       - ./profiles/feature-dynamic-runner/dynamic-runner-launcher.py:/dynamic-runner-launcher.py:ro
 
   dynamic-runner-configure:

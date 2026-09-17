@@ -245,11 +245,11 @@ Matrix jobs use separate GitHub-hosted runners and run in parallel with `fail-fa
 ### Test source and application source
 
 The two settings are independent. `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` /
-`git.fixtures.branch`) still determine only which fixtures and tests to use. The fixtures are not
-taken from the checkout — the application clones them by URL — so `CI` sets this pair itself: a pull
-request is tested with its own head branch (for a fork, with the repository of that fork), and a push
-to `main` or a manual run with the branch the run was started on. Locally the defaults from
-`MainConfig` remain in force.
+`git.fixtures.branch`) still determine only which fixtures and tests to use. By default the
+application clones them from the local `fixture-git` Compose service, which serves the
+`test-environment/fixtures` folder of the checkout the profile was started from, so a pull request
+is always tested with its own fixtures and no workflow sets this pair. Override it only to test
+fixtures from another Git remote.
 A separate group `APP_REPOSITORY` / `APP_PR` determines which version of the application to test.
 
 If the application PR is not set, the behaviour does not change: the main repository is not cloned,
@@ -331,7 +331,7 @@ The SSH suite uses a separate typed fixture and verifies a successful Git clone 
 
 The task lifecycle suite launches a safe long-running playbook, waits for the marker of actual execution and verifies a regular stop and a force-stop. In both cases the task moves to `stopped`, and the step after the pause is not executed.
 
-Ansible code is taken only from the trusted `test-environment/fixtures/ansible`, packaged by Compose into a local read-only Git volume with the `main` and `bookwright-fixture-ref` branches. No external code is executed on an API-triggered run.
+Ansible code is taken only from the trusted `test-environment/fixtures/ansible`, packaged by Compose into a local Git volume with the `main` and `bookwright-fixture-ref` branches and served read-only inside the Compose network by the `fixture-git` HTTP service. No external code is executed on an API-triggered run.
 
 The full set of Bookwright infrastructure self-tests and Semaphore product tests:
 
@@ -378,6 +378,10 @@ Additional Gradle arguments are passed after the script name. For self-signed TL
 `-Dbookwright.test.ssl.trustStore=...` and
 `-Dbookwright.test.ssl.trustStorePassword=...` can be passed. The regular `apiTest` remains the local full suite and
 is never invoked by the external environment launcher.
+
+To run the full `core-sqlite-local` suite (which creates and deletes data) against a disposable
+user-managed instance, use the `external` profile instead; it starts only the fixture services. See
+`test-environment/README.md`, section "External Semaphore instance".
 
 ## [Testing Pull Requests of the Application Repository](docs/application-pr-testing.md)
 
@@ -662,7 +666,7 @@ The following environment variables can be used to specify a custom test reposit
 
 | Environment Variable | Description                                | Default                                                |
 | -------------------- | ------------------------------------------ | ------------------------------------------------------ |
-| `TEST_REPOSITORY`    | URL or path to the test repository         | `https://github.com/semaphoreui/integration-tests.git` |
+| `TEST_REPOSITORY`    | URL of the fixtures Git repository         | `http://fixture-git/fixtures.git` (local Compose service) |
 | `TEST_BRANCH`        | Branch containing the test fixtures to use | `main`                                                 |
 
 ### Running tests

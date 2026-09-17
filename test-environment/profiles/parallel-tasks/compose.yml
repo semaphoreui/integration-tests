@@ -2,15 +2,30 @@ services:
   parallel-task-fixture-init:
     image: semaphoreui/semaphore:v2.19.12
     user: "0:0"
-    entrypoint: ["/bin/sh", "/fixture/setup.sh"]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        fixture=/repository/ansible/branch-isolation
+        git config --global --add safe.directory /repository
+        git -C /repository config user.name "Semaphore Parallel Tasks Fixture"
+        git -C /repository config user.email "parallel-tasks-fixture@localhost"
+        for branch in a b; do
+          git -C /repository checkout -B "bookwright-branch-isolation-$$branch" main
+          cp "$$fixture/branch-isolation-$$branch.yml" "$$fixture/branch-isolation.yml"
+          printf '%s\n' "branch-$$branch" > "$$fixture/.bookwright-branch-marker"
+          git -C /repository add -A ansible/branch-isolation
+          git -C /repository commit -m "Add branch isolation fixture $$branch"
+        done
+        git -C /repository checkout main
+        chown -R 1001:0 /repository
     depends_on:
       fixture-init:
         condition: service_completed_successfully
     volumes:
       - fixture-repository:/repository
-      - ./profiles/parallel-tasks/fixtures:/fixture:ro
 
-  semaphore:
+  fixture-git-init:
     depends_on:
       parallel-task-fixture-init:
         condition: service_completed_successfully

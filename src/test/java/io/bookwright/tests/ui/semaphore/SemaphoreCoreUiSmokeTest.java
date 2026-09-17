@@ -21,7 +21,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 @SensitiveUi
 @OwnerDanil
 @Feature("Semaphore core browser smoke")
-@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "core-sqlite-local")
+@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "core-sqlite-local|external")
 class SemaphoreCoreUiSmokeTest {
 
   @Test
