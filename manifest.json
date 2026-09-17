@@ -4,6 +4,60 @@
     {
       "schemaVersion": 1,
       "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35240256141",
+      "versions": [
+        "v2.19.12"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "v2.19.12",
+          "previousVersion": "",
+          "versionLabel": "v2.19.12",
+          "tests": 66,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 37,
+            "skipped": 29,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 82,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 82,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "Merge pull request #29 from semaphoreui/codex/variable-group-ui",
+      "event": "push",
+      "conclusion": "success",
+      "runId": 35240256141,
+      "runAttempt": 1,
+      "runNumber": 88,
+      "createdAt": "2026-09-17T15:26:33Z",
+      "date": "2026-09-17",
+      "headSha": "59e3fc33994d82e4e51b01ca22141123185de92a",
+      "shortSha": "59e3fc3",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/59e3fc33994d82e4e51b01ca22141123185de92a",
+      "path": "reports/2026-09-17/ci/35240256141-1"
+    },
+    {
+      "schemaVersion": 1,
+      "title": "Semaphore CI",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35239575526",
       "versions": [
         "v2.19.12"
