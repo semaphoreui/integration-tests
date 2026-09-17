@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35199131769",
+  "versions": [
+    "v2.19.12"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 65,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 36,
+        "skipped": 29,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 82,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 82,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #27 from semaphoreui/feat/external-profile",
+  "event": "push",
+  "conclusion": "success",
+  "runId": 35199131769,
+  "runAttempt": 1,
+  "runNumber": 83,
+  "createdAt": "2026-09-17T08:20:18Z",
+  "date": "2026-09-17",
+  "headSha": "7ff422476e7de220ed23a5d4fbedabe9bba6a6ab",
+  "shortSha": "7ff4224",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/7ff422476e7de220ed23a5d4fbedabe9bba6a6ab"
+}
