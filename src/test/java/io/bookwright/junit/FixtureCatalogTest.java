@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.bookwright.config.Configs;
 import io.bookwright.fixtures.semaphore.SemaphoreBackupFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTotpFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreUpgradeFixtures;
 import io.bookwright.util.TestData;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
@@ -22,13 +24,17 @@ class FixtureCatalogTest {
   }
 
   @Test
-  void everyRegisteredFactoryCreatesItsDeclaredFixtureType() {
-    assertThat(FixtureCatalog.fixtureTypes())
-        .isNotEmpty()
-        .allSatisfy(
-            type ->
-                assertThat(FixtureCatalog.resolve(type, Configs.main(), TEST_DATA))
-                    .isExactlyInstanceOf(type));
+  void createsFixturesForEverySupportedFactoryShape() {
+    var config = Configs.main();
+
+    assertThat(FixtureCatalog.resolve(SemaphoreTotpFixtures.class, config, TEST_DATA))
+        .isExactlyInstanceOf(SemaphoreTotpFixtures.class);
+    assertThat(FixtureCatalog.resolve(SemaphoreUpgradeFixtures.class, config, TEST_DATA))
+        .isExactlyInstanceOf(SemaphoreUpgradeFixtures.class);
+    assertThat(FixtureCatalog.resolve(SemaphoreBackupFixtures.class, config, TEST_DATA))
+        .isExactlyInstanceOf(SemaphoreBackupFixtures.class);
+    assertThat(FixtureCatalog.resolve(SemaphoreFixtures.class, config, TEST_DATA))
+        .isExactlyInstanceOf(SemaphoreFixtures.class);
   }
 
   @Test

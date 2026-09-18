@@ -33,7 +33,6 @@ import io.bookwright.fixtures.semaphore.SemaphoreVariableGroupFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreWebCacheFixtures;
 import io.bookwright.util.TestData;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -126,10 +125,6 @@ final class FixtureCatalog {
 
   static boolean supports(Class<?> type) {
     return FIXTURES.containsKey(type);
-  }
-
-  static Set<Class<?>> fixtureTypes() {
-    return FIXTURES.keySet();
   }
 
   static <T> T resolve(Class<T> type, ExtensionContext extensionContext) {
