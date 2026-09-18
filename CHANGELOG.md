@@ -15,6 +15,9 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- Full webhook integration configuration lifecycle coverage for integration list/get/update,
+  project/integration aliases, matchers, and extracted values, plus a canary for three child
+  mutations returning false `204` success on SQLite `v2.19.12`.
 - `external` profile running the `core-sqlite-local` suite against a user-managed Semaphore from `API_BASE_URL`/`API_USERNAME`/`API_PASSWORD`; it starts only the fixture services (now in `compose.fixtures.yml`) and publishes `fixture-git` on `FIXTURE_GIT_PORT` for `TEST_REPOSITORY`.
 - Manual shell-output defect profile proving that `v2.19.12` can lose either short `stdout` or `stderr` after task success, with Linux CI evidence and upstream fix trace.
 - Read-only `externalTest` suite with explicit target credentials and no dependency on local task fixtures.

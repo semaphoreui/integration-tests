@@ -1,8 +1,10 @@
 package io.bookwright.fixtures.semaphore;
 
+import io.bookwright.api.model.semaphore.Integration;
 import io.bookwright.api.model.semaphore.IntegrationExtractValueRequest;
 import io.bookwright.api.model.semaphore.IntegrationMatcherRequest;
 import io.bookwright.api.model.semaphore.IntegrationRequest;
+import io.bookwright.api.model.semaphore.IntegrationUpdateRequest;
 import io.bookwright.api.model.semaphore.ProjectRequest;
 import io.bookwright.api.model.semaphore.TemplateRequest;
 import io.bookwright.util.TestData;
@@ -58,6 +60,22 @@ public record SemaphoreIntegrationFixtures(
         integrationName, projectId, templateId, "token", secretId, authHeader, true);
   }
 
+  public IntegrationUpdateRequest updatedIntegration(Integration integration) {
+    return new IntegrationUpdateRequest(
+        integration.id(),
+        updatedIntegrationName(),
+        integration.projectId(),
+        integration.templateId(),
+        integration.authMethod(),
+        integration.authSecretId(),
+        integration.authHeader(),
+        false);
+  }
+
+  public String updatedIntegrationName() {
+    return integrationName + "-updated";
+  }
+
   public IntegrationMatcherRequest matcherRequest(long integrationId) {
     return new IntegrationMatcherRequest(
         integrationId,
@@ -69,6 +87,17 @@ public record SemaphoreIntegrationFixtures(
         acceptedEvent);
   }
 
+  public IntegrationMatcherRequest updatedMatcher(long integrationId) {
+    return new IntegrationMatcherRequest(
+        integrationId,
+        "Route updated deploy event",
+        "header",
+        "equals",
+        "string",
+        eventHeader,
+        acceptedEvent + "-updated");
+  }
+
   public IntegrationExtractValueRequest releaseExtractor(long integrationId) {
     return new IntegrationExtractValueRequest(
         integrationId,
@@ -78,6 +107,25 @@ public record SemaphoreIntegrationFixtures(
         "payload.release",
         "webhook_release",
         "environment");
+  }
+
+  public IntegrationExtractValueRequest updatedReleaseExtractor(long integrationId) {
+    return new IntegrationExtractValueRequest(
+        integrationId,
+        updatedReleaseExtractorName(),
+        "body",
+        "json",
+        "payload.release",
+        updatedReleaseVariable(),
+        "environment");
+  }
+
+  public String updatedReleaseExtractorName() {
+    return "Extract updated release";
+  }
+
+  public String updatedReleaseVariable() {
+    return "webhook_release_updated";
   }
 
   public IntegrationExtractValueRequest traceExtractor(long integrationId) {

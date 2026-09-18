@@ -136,7 +136,12 @@ An automated security smoke test for a `login_password` key confirms that the un
 ### P2 — extension
 
 1. Secret storage. External storage management is a Pro feature; the Community API reports a disabled feature flag and does not allow an honest Vault/OpenBao/AWS/Azure scenario without a test subscription.
-2. Integrations and webhooks. Token auth, project alias routing, header matcher, body/header extraction, and real task execution are automated; HMAC/GitHub/Bitbucket/Basic auth remain an extension.
+2. Integrations and webhooks. Token auth, project/integration alias lifecycle, integration CRUD,
+   matcher and extracted-value lifecycle, matcher routing, body/header extraction, and real task
+   execution are automated. `v2.19.12` returns false `204` success for matcher update/delete and
+   extracted-value delete on SQLite; the canary and upstream fix are documented in
+   `integration-child-mutation-false-success-defect.md`. HMAC/GitHub/Bitbucket/Basic auth remain an
+   extension.
 3. Runners. Registration/default/heartbeat, exact tag routing, and capacity are automated; unavailable recovery and one-off remain known defects.
 4. Workflows. DAG execution is a Pro feature: the Community controller is a documented stub, so e2e is postponed until a test subscription is available.
 5. Backup/restore and migration scenarios. The project backup/restore round trip is automated; the SQLite/PostgreSQL release upgrade is covered separately.
@@ -198,7 +203,18 @@ Variable Groups are covered by a separate API set: create/get/list, mixed JSON e
 
 The survey/task override API set persists enum/int/string/env/secret definitions and executes a task with a launch environment/secret, template/task arguments, and Ansible params on SQLite and PostgreSQL local execution. The persisted template/task payloads, the real marker, and the absence of the survey secret in structured/raw output are verified. On the persistent runner `v2.19.8`, the positive path is replaced by a known-defect canary: the secret does not reach the executor; fix #4086 is already in `v2.20.0-alpha1`. An unsupported target is rejected with `400`. `v2.19.8` also accepts an enum default outside of the values; the defect and upstream fix `eb29c3e8` are described in `survey-default-validation-defect.md`.
 
-Webhook integrations are covered by a separate domain API and steps. The end-to-end scenario creates a token-authenticated searchable integration, a shared project alias, a header matcher, and two extractors for the JSON body/header. An invalid token and a non-matching matcher return a public `204` without task headers; a valid webhook creates a task, returns `X-Semaphore-*` identifiers, persists `integration_id`, and passes the extracted values into Ansible variables. The access-key secret remains masked in the API and HTTP/Allure diagnostics.
+Webhook integrations are covered by a separate domain API and steps. The configuration lifecycle
+verifies integration list/get/update, project and integration aliases, matcher and extracted-value
+list/update/delete contracts. The end-to-end scenario creates a token-authenticated searchable
+integration, a shared project alias, a header matcher, and two extractors for the JSON body/header.
+An invalid token and a non-matching matcher return a public `204` without task headers; a valid
+webhook creates a task, returns `X-Semaphore-*` identifiers, persists `integration_id`, and passes
+the extracted values into Ansible variables. The access-key secret remains masked in the API and
+HTTP/Allure diagnostics. The lifecycle exposed a `v2.19.12` false-success defect: matcher update,
+matcher delete, and extracted-value delete return `204` without applying the change on SQLite. A
+known-defect canary protects this boundary until upstream `1af4c105` reaches the stable baseline.
+With this lifecycle included, the local coverage report observes 19/19 documented integration
+operations and 71/99 documented operations overall.
 
 Project backup/restore is covered by a separate domain API and steps. The round trip exports a project with access keys, repository, inventory, template, schedule, and an already executed task, verifies the absence of plaintext login/password in the JSON, changes only the project name, and restores the configuration. The new resource IDs and all references between them are verified, task history is not transferred, and the restored template successfully executes a trusted playbook.
 
