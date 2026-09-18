@@ -2,9 +2,11 @@ package io.bookwright.junit;
 
 import io.bookwright.api.model.CreatedBooking;
 import io.bookwright.api.model.semaphore.Project;
+import io.bookwright.api.model.semaphore.SemaphoreAuthLifecycleUsers;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.User;
 import io.bookwright.config.Configs;
+import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.util.TestData;
@@ -72,12 +74,37 @@ public enum Precondition implements IPrecondition {
             SemaphoreFixtures.from(Configs.main(), store.testData()).rbac();
         User user = api.semaphore().users().getOrCreate(rbac.userRequest());
         store.putSemaphoreRbacUser(rbac.account(user));
+      }),
+
+  SEMAPHORE_AUTH_LIFECYCLE_USERS_EXIST(
+      "Ensure reusable Semaphore authentication lifecycle users exist",
+      (api, store) -> {
+        SemaphoreAuthLifecycleFixtures fixtures = SemaphoreAuthLifecycleFixtures.standard();
+        store.putSemaphoreAuthLifecycleUsers(
+            new SemaphoreAuthLifecycleUsers(
+                fixtures
+                    .actor()
+                    .account(
+                        api.semaphore()
+                            .users()
+                            .ensurePasswordFixture(
+                                fixtures.actor().userRequest(),
+                                fixtures.actor().baselinePassword())),
+                fixtures
+                    .target()
+                    .account(
+                        api.semaphore()
+                            .users()
+                            .ensurePasswordFixture(
+                                fixtures.target().userRequest(),
+                                fixtures.target().baselinePassword()))));
       });
 
   static final String BOOKING_KEY = "createdBooking";
   static final String SEMAPHORE_PROJECT_KEY = "semaphoreProject";
   static final String SEMAPHORE_TEMPLATE_KEY = "semaphoreTemplate";
   static final String SEMAPHORE_RBAC_USER_KEY = "semaphoreRbacUser";
+  static final String SEMAPHORE_AUTH_LIFECYCLE_USERS_KEY = "semaphoreAuthLifecycleUsers";
 
   private final String title;
   private final BiConsumer<ApiSteps, TestStore> action;

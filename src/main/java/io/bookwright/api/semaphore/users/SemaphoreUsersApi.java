@@ -2,6 +2,7 @@ package io.bookwright.api.semaphore.users;
 
 import io.bookwright.api.model.semaphore.ProjectMemberRequest;
 import io.bookwright.api.model.semaphore.User;
+import io.bookwright.api.model.semaphore.UserPasswordRequest;
 import io.bookwright.api.model.semaphore.UserRequest;
 import io.bookwright.api.model.semaphore.UserTotp;
 import java.util.List;
@@ -29,6 +30,9 @@ public interface SemaphoreUsersApi {
 
   @PUT("users/{userId}")
   Call<Void> updateUser(@Path("userId") long userId, @Body UserRequest request);
+
+  @POST("users/{userId}/password")
+  Call<Void> updatePassword(@Path("userId") long userId, @Body UserPasswordRequest request);
 
   @POST("users/{userId}/2fas/totp")
   Call<UserTotp> enableTotp(@Path("userId") long userId);

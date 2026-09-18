@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.ProjectMemberRequest;
 import io.bookwright.api.model.semaphore.User;
+import io.bookwright.api.model.semaphore.UserPasswordRequest;
 import io.bookwright.api.model.semaphore.UserRequest;
 import io.bookwright.api.model.semaphore.UserTotp;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
@@ -90,6 +91,45 @@ public class UserSteps {
     User user = create(request);
     teardown.push("Delete Semaphore user " + user.id(), () -> deleteIfPresent(user.id()));
     return user;
+  }
+
+  @Step("Ensure reusable Semaphore user {request.username} has its baseline password")
+  public User ensurePasswordFixture(UserRequest request, UserPasswordRequest baselinePassword) {
+    User user = getOrCreate(request);
+    resetPasswordAsAdministrator(user.id(), baselinePassword);
+    teardown.push(
+        "Restore baseline password for Semaphore user " + user.id(),
+        () -> Calls.expectStatus(api.updatePassword(user.id(), baselinePassword), 204));
+    return user;
+  }
+
+  @Step("Change password for current Semaphore user {userId}")
+  public void changeOwnPassword(
+      SemaphoreSessionApis session, long userId, UserPasswordRequest request) {
+    Calls.expectStatus(session.users().updatePassword(userId, request), 204);
+  }
+
+  @Step("Verify an incorrect current password cannot change Semaphore user {userId}")
+  public void verifyIncorrectCurrentPasswordRejected(
+      SemaphoreSessionApis session, long userId, UserPasswordRequest request) {
+    var response = Calls.response(session.users().updatePassword(userId, request));
+    try (var ignored = response.errorBody()) {
+      if (response.code() != 400) {
+        throw new IllegalStateException(
+            "Incorrect current password expected HTTP 400 but received HTTP " + response.code());
+      }
+    }
+  }
+
+  @Step("Verify current user cannot change password for Semaphore user {userId}")
+  public void verifyCannotChangeOtherUserPassword(
+      SemaphoreSessionApis session, long userId, UserPasswordRequest request) {
+    Calls.expectStatus(session.users().updatePassword(userId, request), 401);
+  }
+
+  @Step("Reset password for Semaphore user {userId} as administrator")
+  public void resetPasswordAsAdministrator(long userId, UserPasswordRequest request) {
+    Calls.expectStatus(api.updatePassword(userId, request), 204);
   }
 
   @Step("Update Semaphore user {userId}")

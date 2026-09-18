@@ -52,6 +52,13 @@ the absence of a session cookie and the correct rejection of an empty password. 
 failures remain without throttling or an audit warning; this security gap is described in
 `test-environment/password-login-brute-force-protection-gap.md`.
 
+The authentication lifecycle suite additionally verifies login metadata, server-side logout and
+idempotent repeated logout, self-service password changes with the current password, rejection of an
+incorrect current password, cross-user authorization, and administrator password reset. The old
+password stops creating sessions and the new password works. A safe canary records that an already
+issued second session remains authenticated after the change; the account-recovery risk and source
+boundary are described in `test-environment/password-change-session-revocation-gap.md`.
+
 The same core profile runs plan-only scenarios on the Terraform 1.11.3 and OpenTofu 1.11.0 bundled in
 the release image. The minimal local module does not download providers; workspace inventories of types
 `terraform-workspace` and `tofu-workspace` are confirmed by the real output of each tool. The attached
@@ -289,7 +296,10 @@ project → access key → local Git repository → inventory → task template
 → unassigned project isolation
 ```
 
-After the test, Bookwright LIFO cleanup removes the project data in reverse order. For RBAC a single stable fixture user `bookwright-rbac-guest` is used: repeated runs reuse it, because Semaphore does not allow deleting a user after a login session has been created.
+After the test, Bookwright LIFO cleanup removes the project data in reverse order. RBAC and
+authentication lifecycle checks use dedicated stable fixture users: repeated runs restore their
+baseline passwords and reuse them because `v2.19.12` cannot delete a user after login history has
+been created.
 
 A separate RBAC suite pins the built-in `manager` and `task_runner` contracts. A manager can create project resources and run tasks, but cannot delete the project or manage members. A task runner can run tasks, but gets `403` when modifying resources, the project and the membership.
 
