@@ -3,6 +3,60 @@
   "runs": [
     {
       "schemaVersion": 1,
+      "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35364665811",
+      "versions": [
+        "v2.19.12"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "v2.19.12",
+          "previousVersion": "",
+          "versionLabel": "v2.19.12",
+          "tests": 62,
+          "counts": {
+            "failed": 5,
+            "broken": 0,
+            "passed": 33,
+            "skipped": 24,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 82,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 82,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "Merge pull request #22 from semaphoreui/prod-5",
+      "event": "push",
+      "conclusion": "failure",
+      "runId": 35364665811,
+      "runAttempt": 1,
+      "runNumber": 93,
+      "createdAt": "2026-09-18T15:48:33Z",
+      "date": "2026-09-18",
+      "headSha": "c3ffd6f7e5c1a36d2265fe39065629a19f382dfa",
+      "shortSha": "c3ffd6f",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/c3ffd6f7e5c1a36d2265fe39065629a19f382dfa",
+      "path": "reports/2026-09-18/ci/35364665811-1"
+    },
+    {
+      "schemaVersion": 1,
       "title": "Semaphore configuration matrix",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35314765500",
       "versions": [
