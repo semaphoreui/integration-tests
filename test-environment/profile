@@ -422,7 +422,11 @@ write_allure_environment() {
       printf 'application.source=docker-image\n'
       printf 'semaphore.version=%s\n' "$(manifest_value semaphore_version)"
       printf 'semaphore.image=%s\n' "$image_reference"
-      printf 'semaphore.source.commit=%s\n' "$(manifest_value source_commit)"
+      source_commit=$(manifest_value source_commit)
+      if [ -z "$source_commit" ] && [ -n "$image" ]; then
+        source_commit=$(docker image inspect "$image" --format '{{with index .Config.Labels "org.opencontainers.image.revision"}}{{.}}{{end}}' 2>/dev/null || true)
+      fi
+      [ -z "$source_commit" ] || printf 'semaphore.source.commit=%s\n' "$source_commit"
     fi
     printf 'semaphore.edition=%s\n' "$(manifest_value edition)"
     printf 'installation=%s\n' "$(manifest_value installation)"
