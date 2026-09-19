@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore configuration matrix",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35426440085",
+  "versions": [
+    "v2.19.12"
+  ],
+  "reports": [
+    {
+      "name": "core-mariadb-local",
+      "profile": "core-mariadb-local",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 62,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 32,
+        "skipped": 30,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "core-mysql-local",
+      "profile": "core-mysql-local",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 62,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 32,
+        "skipped": 30,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "core-postgres-local",
+      "profile": "core-postgres-local",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 62,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 32,
+        "skipped": 30,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "feature-encryption-rotation",
+      "profile": "feature-encryption-rotation",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 9,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 3,
+        "skipped": 6,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "feature-git-https",
+      "profile": "feature-git-https",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 2,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 2,
+        "skipped": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "feature-ldap-tls",
+      "profile": "feature-ldap-tls",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 62,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 36,
+        "skipped": 26,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "feature-oidc-local",
+      "profile": "feature-oidc-local",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 9,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 4,
+        "skipped": 5,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "feature-proxy-oidc",
+      "profile": "feature-proxy-oidc",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 9,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 4,
+        "skipped": 5,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "feature-ssh-local",
+      "profile": "feature-ssh-local",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 62,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 35,
+        "skipped": 27,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "feature-totp-local",
+      "profile": "feature-totp-local",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 2,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 2,
+        "skipped": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "prod-postgres-runner",
+      "profile": "prod-postgres-runner",
+      "version": "v2.19.12",
+      "previousVersion": "",
+      "versionLabel": "v2.19.12",
+      "tests": 62,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 34,
+        "skipped": 28,
+        "unknown": 0
+      }
+    }
+  ],
+  "workflow": "Configuration matrix",
+  "workflowSlug": "configuration-matrix",
+  "displayTitle": "Configuration matrix",
+  "event": "schedule",
+  "conclusion": "success",
+  "runId": 35426440085,
+  "runAttempt": 1,
+  "runNumber": 41,
+  "createdAt": "2026-09-19T06:22:50Z",
+  "date": "2026-09-19",
+  "headSha": "16f8ad2ff9592412f8ccd4cec21b93b7afb5800d",
+  "shortSha": "16f8ad2",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/16f8ad2ff9592412f8ccd4cec21b93b7afb5800d"
+}
