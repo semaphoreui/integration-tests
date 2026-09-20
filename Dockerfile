@@ -12,57 +12,58 @@ ENV GRADLE_HOME=/opt/gradle
 ENV PATH=$GRADLE_HOME/bin:$PATH
 
 # Install dependencies and Java 21
+# Install Docker CLI, Compose, Java 21 and dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Java 21
-    openjdk-21-jdk \
-    \
-    # Docker CLI
-    docker.io \
-    \
-    # Git
-    git \
-    \
-    # Core utilities
-    curl \
-    wget \
-    unzip \
-    ca-certificates \
-    \
-    # For tests
-    bash \
-    coreutils \
-    \
-    # For debugging
-    vim \
-    nano \
-    less \
-    \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+  openjdk-21-jdk \
+  ca-certificates \
+  curl \
+  wget \
+  git \
+  unzip \
+  bash \
+  coreutils \
+  vim \
+  nano \
+  less \
+  && rm -rf /var/lib/apt/lists/*
+
+# Add official Docker repository
+RUN install -m 0755 -d /etc/apt/keyrings \
+  && curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  -o /etc/apt/keyrings/docker.asc \
+  && chmod a+r /etc/apt/keyrings/docker.asc \
+  && echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  > /etc/apt/sources.list.d/docker.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends \
+  docker-ce-cli \
+  docker-compose-plugin \
+  && rm -rf /var/lib/apt/lists/*
 
 
-    
 # Install the docker-compose binary
 RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
-    chmod +x /usr/local/bin/docker-compose
+  chmod +x /usr/local/bin/docker-compose
 
 # Install MinIO Client (mc)
-RUN arch=$(uname -m) && \
-    case "$arch" in \
-        x86_64) mc_arch="amd64" ;; \
-        aarch64) mc_arch="arm64" ;; \
-        *) echo "Unsupported architecture: $arch" && exit 1 ;; \
-    esac && \
-    curl -L "https://dl.min.io/client/mc/release/linux-${mc_arch}/mc" -o /usr/local/bin/mc && \
-    chmod +x /usr/local/bin/mc && \
-    mc --version
+# RUN arch=$(uname -m) && \
+#     case "$arch" in \
+#         x86_64) mc_arch="amd64" ;; \
+#         aarch64) mc_arch="arm64" ;; \
+#         *) echo "Unsupported architecture: $arch" && exit 1 ;; \
+#     esac && \
+#     curl -L "https://dl.min.io/client/mc/release/linux-${mc_arch}/mc" -o /usr/local/bin/mc && \
+#     chmod +x /usr/local/bin/mc && \
+#     mc --version
 
 # Verify Java installation and set JAVA_HOME
 RUN java_path=$(dirname $(dirname $(readlink -f $(which java)))) && \
-    echo "export JAVA_HOME=$java_path" >> /etc/profile.d/java.sh && \
-    export JAVA_HOME=$java_path && \
-    java -version && \
-    javac -version
+  echo "export JAVA_HOME=$java_path" >> /etc/profile.d/java.sh && \
+  export JAVA_HOME=$java_path && \
+  java -version && \
+  javac -version
 
 # Verify Docker CLI installation
 RUN docker --version
@@ -82,18 +83,18 @@ COPY build.gradle.kts /workspace/
 
 # Download Gradle dependencies (to speed up subsequent builds)
 RUN ./gradlew --version && \
-    ./gradlew downloadAllure --no-daemon 2>/dev/null || true
+  ./gradlew downloadAllure --no-daemon 2>/dev/null || true
 
 # Copy source code
 COPY . /workspace/
 
 # Create the entry point
 RUN chmod +x /workspace/run-external-tests.sh 2>/dev/null || true && \
-    chmod +x /workspace/publish-results-local.sh 2>/dev/null || true
+  chmod +x /workspace/publish-results-local.sh 2>/dev/null || true
 
 # Health check
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
-    CMD java -version && docker --version
+  CMD java -version && docker --version
 
 # Default entry point
 # ENTRYPOINT ["/bin/bash"]
