@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35627676144",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 77,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 48,
+        "skipped": 29,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 85,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 85,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #32 from semaphoreui/codex/auth-session-password-l…",
+  "event": "push",
+  "conclusion": "success",
+  "runId": 35627676144,
+  "runAttempt": 1,
+  "runNumber": 108,
+  "createdAt": "2026-09-21T16:45:51Z",
+  "date": "2026-09-21",
+  "headSha": "33ff8558c7d25e76f5e7a5a06836e98014bdb24e",
+  "shortSha": "33ff855",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/33ff8558c7d25e76f5e7a5a06836e98014bdb24e"
+}
