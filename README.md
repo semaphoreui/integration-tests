@@ -2,10 +2,15 @@
 
 Test project for [Semaphore UI](https://github.com/semaphoreui/semaphore), built on top of [Bookwright v1.4.0](https://github.com/dantro86/bookwright/releases/tag/v1.4.0) (`b30d7e6`).
 
-The current Semaphore release matrix `v2.19.12` is fully confirmed in Linux CI: 11 configuration
-profiles passed on 2026-09-04. The `v2.19.8 → v2.19.12` upgrade separately passed on SQLite and
-PostgreSQL. Equivalent MySQL 8.4 and MariaDB 10.11 upgrade profiles are implemented and awaiting
-their first Linux CI confirmation after passing locally on 2026-09-09.
+Every profile is tested on the current state of the application: the image is built from the HEAD
+commit of the `develop` branch of `semaphoreui/semaphore`, locally and in CI alike. A test pull
+request can still pin a single run to an application pull request instead; see
+[Testing Pull Requests of the Application Repository](docs/application-pr-testing.md).
+
+The last fully confirmed release matrix is `v2.19.12`: 11 configuration profiles passed in Linux CI
+on 2026-09-04, and the `v2.19.8 → v2.19.12` upgrade separately passed on SQLite and PostgreSQL.
+Equivalent MySQL 8.4 and MariaDB 10.11 upgrade profiles are implemented and awaiting their first
+Linux CI confirmation after passing locally on 2026-09-09.
 
 ## Stack
 
@@ -220,7 +225,7 @@ test-environment/profile upgrade-test upgrade-mariadb-local
 test-environment/profile down upgrade-mariadb-local
 ```
 
-The current upgrade path is `v2.19.8 → v2.19.12`. It successfully confirmed preservation of resources,
+The current upgrade path is `v2.19.8 → develop`. It successfully confirmed preservation of resources,
 access keys and task output on SQLite and PostgreSQL in Linux CI on 2026-09-04. The previous pair
 `v2.19.7 → v2.19.8` passed on both DBMSs on 2026-08-19. The upgrade remains a separate observed
 gate: it verifies migration of the preserved state, not just a clean installation.
@@ -236,9 +241,9 @@ GitHub Actions are split by cost and purpose:
 
 - `CI` runs for every pull request and push to `main`: it first runs the framework quality gate, then the core API suite and a short Chromium UI smoke on `core-sqlite-local`;
 - `Configuration matrix` runs daily at `01:30 UTC` and manually, and verifies PostgreSQL, MySQL, MariaDB, production-like PostgreSQL with a persistent runner, SSH, private HTTPS Git, direct and HTTPS/subpath OIDC, LDAPS, TOTP and database encryption keyring rotation;
-- `Release upgrade` runs weekly on Sundays at `03:30 UTC` and manually, and verifies the `v2.19.8 → v2.19.12` upgrade on SQLite, PostgreSQL, MySQL and MariaDB;
+- `Release upgrade` runs weekly on Sundays at `03:30 UTC` and manually, and verifies the `v2.19.8 → develop` upgrade on SQLite, PostgreSQL, MySQL and MariaDB;
 - `Application PR trigger` accepts `repository_dispatch` from the main repository and launches CI for test PRs explicitly linked to the changed application PR;
-- `Cleanup temporary application images` runs daily at `04:00 UTC` and removes temporary images of closed and merged application PRs.
+- `Cleanup temporary application images` runs daily at `04:00 UTC` and removes temporary images of closed and merged application PRs, as well as superseded branch images.
 
 Matrix jobs use separate GitHub-hosted runners and run in parallel with `fail-fast: false`. JUnit, HTML reports, Allure results and container diagnostics on failure are saved as artifacts. The upgrade workflow is not part of the PR gate; a green job must mean both data preservation and full finalization of the task output.
 
@@ -250,12 +255,14 @@ application clones them from the local `fixture-git` Compose service, which serv
 `test-environment/fixtures` folder of the checkout the profile was started from, so a pull request
 is always tested with its own fixtures and no workflow sets this pair. Override it only to test
 fixtures from another Git remote.
-A separate group `APP_REPOSITORY` / `APP_PR` determines which version of the application to test.
+A separate group `APP_BRANCH` / `APP_REPOSITORY` / `APP_PR` determines which version of the
+application to test.
 
-If the application PR is not set, the behaviour does not change: the main repository is not cloned,
-the application is not built, no temporary Docker image is created, and the image from the profile
-manifest is used. To run the tests against a specific PR of the main repository, it is enough to add
-one line to the **test PR description**:
+If no application PR is declared, the tests run on the HEAD commit of the application `develop`
+branch: the `Application source` job resolves that commit, reuses the image already built for it and
+builds one only when no run has built it yet, so a `develop` commit costs exactly one build for the
+whole pipeline. To run the tests against a specific PR of the main repository instead, it is enough
+to add one line to the **test PR description**:
 
 ```text
 Application-PR: semaphoreui/semaphore#123
@@ -267,8 +274,8 @@ merge, so a forgotten link cannot affect regular runs.
 CI determines the HEAD SHA of that PR, reuses the already published
 `ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-pr-123-<sha>` and builds the application only
 when an image for that commit does not exist yet. A change to the tests alone does not trigger a
-rebuild. The full description, including auto-triggering, authorization and cleanup of temporary images, is
-in [`docs/application-pr-testing.md`](docs/application-pr-testing.md).
+rebuild. The full description, including branch mode, auto-triggering, authorization and cleanup of
+temporary images, is in [`docs/application-pr-testing.md`](docs/application-pr-testing.md).
 
 When `Configuration matrix` is launched manually, the inputs `include_schedule_investigation`
 and/or `include_shell_output_investigation` can be enabled. Then, for that run only, the corresponding
@@ -385,19 +392,31 @@ user-managed instance, use the `external` profile instead; it starts only the fi
 
 ## [Testing Pull Requests of the Application Repository](docs/application-pr-testing.md)
 
-## Two modes
+## Three modes
 
-### Normal mode (default)
+### Branch mode (default)
 
-The test PR description contains no `Application-PR:` line. The application repository is not cloned,
-the application is not built, and no temporary Docker image is created. The image from the profile manifest
-(`test-environment/profiles/<profile>/profile.yaml`, key `semaphore_image`) is used — exactly as before.
+The test PR description contains no `Application-PR:` line. The tests then run on the current state of the
+application: the HEAD commit of its `develop` branch. The pipeline resolves that commit, reuses the image
+already built for it and builds one only when no run has built that commit yet. Local runs and CI behave
+identically, because both go through the same script.
 
 ```text
-clone tests → pull semaphore_image → start application → run tests
+develop HEAD → image exists? → (no: checkout branch → build) → start application → run tests
 ```
 
-No additional steps are required for regular test development.
+The profile manifests declare this as `semaphore_image: branch:develop`
+(`test-environment/profiles/<profile>/profile.yaml`). No additional steps are required for regular test
+development; the first run after a new application commit pays for one build, every later run reuses it.
+
+`APP_BRANCH` selects another branch of the application repository. To test an already published image
+instead, name it in `APP_IMAGE`.
+
+### Docker image mode
+
+`APP_IMAGE` names an already published image; `scripts/app-source.sh` additionally accepts `APP_BRANCH=none`,
+which resolves nothing and leaves the choice to the caller. The application repository is not cloned, nothing
+is built and no temporary image is created.
 
 ### PR mode
 
@@ -453,8 +472,8 @@ picked up, and a manual re-run would not help — it replays the original payloa
 ### What happens after the application PR is merged
 
 While the test PR is open, its application PR may get merged. Such a PR no longer has a version
-to test: its commits are already in the application's main branch. The pipeline loudly reports the reason and
-falls back to normal mode — it takes the image from the profile manifest instead of pinning the tests
+to test: its commits are already in the application's own branch. The pipeline loudly reports the reason and
+falls back to branch mode — it tests the current `develop` instead of pinning the tests
 to an outdated commit forever. The line should be removed from the description after that.
 
 ### CI variables
@@ -471,13 +490,16 @@ gh workflow run ci.yml --ref feature/BOOK-123 \
 
 ## Identification and isolation of temporary images
 
-The tag of the temporary image contains the PR number and the full SHA of its HEAD commit:
+The tag of the temporary image contains the full SHA of the commit it was built from, prefixed by the
+branch it came from or by the PR number:
 
 ```text
+ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-develop-abc123456789...
 ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-pr-123-abc123456789...
 ```
 
-* two different commits of the same PR produce different images;
+* two different commits of the same branch or PR produce different images;
+* a branch image and a PR image never collide, even for the same commit;
 * multiple application/test PR pairs never share a single image;
 * temporary images live in a separate GHCR namespace of the test repository, so the release tags of
   `semaphoreui/semaphore` are not read, not overwritten, and not touched at all.
@@ -492,9 +514,10 @@ Before building, the pipeline checks whether an image for the computed SHA exist
 | --- | --- |
 | Only the test PR changed, the application SHA is the same | image exists → `pull → test`, no build is performed |
 | A new commit appeared in the application PR | new tag → `build → push → test` |
-| No `Application-PR:` in the description | no cloning, no build, no temporary image |
-| Application PR is closed or merged | fallback to normal mode, no build |
-| The run is not a test PR | no description in the context, normal mode |
+| No `Application-PR:` in the description | the `develop` HEAD is resolved; its image is reused or built once |
+| `develop` has not moved since the previous run | image exists → `pull → test`, no build is performed |
+| Application PR is closed or merged | fallback to branch mode |
+| `APP_IMAGE` is set | no cloning, no build, no temporary image |
 
 ## Automatic triggering
 
@@ -582,9 +605,31 @@ dry-run mode and only reports deletion candidates.
 
 ## Running locally
 
+By default nothing has to be set up: the profile resolves the `develop` HEAD, builds its image once and
+reuses it afterwards.
+
+```bash
+test-environment/profile up core-sqlite-local
+test-environment/profile test core-sqlite-local
+```
+
+Outside GitHub Actions the image is built for the local platform and kept in the local Docker store
+(`APP_BUILD_PUSH` defaults to `false` there). When the registry already holds the image of that exact
+commit and the machine can read it, it is pulled instead of being built. The resolved image is remembered
+in `build/test-environment/<profile>/application.env`, so `test`, `logs` and `down` keep talking about the
+image the containers were actually started with; `clean` forgets it again.
+
+Testing another branch of the application, or a published image:
+
+```bash
+APP_BRANCH=release/2.20                      test-environment/profile up core-sqlite-local
+APP_IMAGE=semaphoreui/semaphore:v2.19.14     test-environment/profile up core-sqlite-local
+```
+
 Resolving without any side effects:
 
 ```bash
+scripts/app-source.sh resolve
 APP_LINK_BODY='Application-PR: semaphoreui/semaphore#123' scripts/app-source.sh resolve
 ```
 
@@ -608,17 +653,31 @@ test-environment/profile test core-sqlite-local
 ```
 
 `test-environment/profile` takes the image from `APP_IMAGE` if the variable is set, and from the profile
-manifest otherwise. Useful build variables: `APP_BUILD_PLATFORM` (defaults to
-`linux/amd64`), `APP_DOCKERFILE` (defaults to `deployment/docker/server/Dockerfile`),
-`APP_BUILD_PUSH`.
+manifest otherwise; a manifest value of `branch:<name>` is resolved and built by `scripts/app-source.sh`.
+Useful build variables: `APP_BRANCH` (defaults to `develop`),
+`APP_BUILD_PLATFORM` (defaults to `linux/amd64` in CI and to the local platform elsewhere),
+`APP_DOCKERFILE` (defaults to `deployment/docker/server/Dockerfile`), `APP_BUILD_PUSH` (defaults to
+`true` in CI and to `false` elsewhere).
 
 ## Logging
 
-Normal mode:
+Branch mode:
+
+```text
+Application source: Branch
+Application repository: semaphoreui/semaphore
+Application branch: develop
+Application SHA: abc123456789...
+Application image: ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-develop-abc123456789...
+Application image already exists
+Application build: skipped
+```
+
+Docker image mode:
 
 ```text
 Application source: Docker image
-Application image: semaphoreui/semaphore:v2.19.12
+Application image: profile manifest default
 Application build: skipped
 ```
 
@@ -643,7 +702,7 @@ Application build: completed
 ```
 
 The mode is also recorded in the Allure environment: `application.source`, `application.repository`,
-`application.pull.request`, `semaphore.image`, `semaphore.source.commit`.
+`application.branch`, `application.pull.request`, `semaphore.image`, `semaphore.source.commit`.
 
 ## Error handling
 
@@ -652,9 +711,10 @@ The mode is also recorded in the Allure environment: `application.source`, `appl
 | The application PR does not exist | `Application PR #123 not found in <repo>`, the pipeline fails |
 | No access to the repository | `Unable to access application repository <repo>`, the pipeline fails |
 | The SHA could not be determined | `Unable to resolve the HEAD SHA of application PR #123`, the pipeline fails |
+| The application branch does not exist | `application branch <name> does not exist in <repo>`, the pipeline fails |
 | Two `Application-PR:` lines in the description | the pipeline fails, no choice between them is made |
 | `Application-PR:` does not look like a PR reference | the pipeline fails, reporting the original value |
-| The PR received a new commit during the build | the build is aborted with an explicit out-of-sync message |
+| The branch or PR received a new commit during the build | the build is aborted with an explicit out-of-sync message |
 | The image could not be built | the pipeline fails, the Docker build logs remain in the step output |
 | The image could not be pushed | the pipeline fails after verifying that the image is really missing from the registry |
 | The image is not available for pull | the tag is treated as missing, a build and push are performed |

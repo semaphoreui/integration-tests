@@ -1,12 +1,11 @@
 id: core-sqlite-local
-description: Release Docker image with SQLite and task execution inside the server container
+description: Develop branch image with SQLite and task execution inside the server container
 compose_file: ../../compose.yml
 compose_project: semaphore-test
 readiness_url: http://localhost:3000/api/ping
 stand: semaphore
 semaphore_version: develop
-semaphore_image: semaphoreui/semaphore:develop
-source_commit: 012ed06d3eccadaed594c73b93b3d8a2459b576f
+semaphore_image: branch:develop
 edition: community
 installation: docker-compose
 architecture: native

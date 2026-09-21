@@ -1,11 +1,13 @@
 """Behaviour tests for scripts/app-source.sh.
 
-The script talks to the GitHub API through `gh` and to the registry through `docker`. Both are
-replaced by stubs on PATH, so the tests cover the resolution logic, the reuse decision and the
-error handling without any network access or Docker build.
+The script talks to the GitHub API through `gh`, to the application repository through `git` and
+to the registry through `docker`. All three are replaced by stubs on PATH, so the tests cover the
+resolution logic, the reuse decision and the error handling without any network access or Docker
+build.
 
-The link between a test run and an application pull request is declared in the description of the
-test pull request, which reaches the script as APP_LINK_BODY.
+Without an explicit declaration the script builds the application branch (develop); the link
+between a test run and an application pull request is declared in the description of the test
+pull request, which reaches the script as APP_LINK_BODY.
 """
 
 import os
@@ -19,6 +21,7 @@ import unittest
 REPOSITORY_ROOT = Path(__file__).parents[2]
 SCRIPT = REPOSITORY_ROOT / "scripts" / "app-source.sh"
 HEAD_SHA = "ffdb25923c69e3d6e3f62c555fd339014ae03864"
+BRANCH_SHA = "1c4f0a2b5e7d9c3a6b8f0e2d4c6a8b0d2f4e6a81"
 
 
 class AppSourceTestCase(unittest.TestCase):
@@ -28,6 +31,7 @@ class AppSourceTestCase(unittest.TestCase):
         self.stub_dir = self.root / "bin"
         self.stub_dir.mkdir()
         self.addCleanup(self._temporary_directory.cleanup)
+        self.stub_git()
 
     def write_stub(self, name, body):
         path = self.stub_dir / name
@@ -53,6 +57,24 @@ esac
 """,
         )
 
+    def stub_git(self, sha=BRANCH_SHA, status=0, branch="develop"):
+        """git is only used to look the branch HEAD up and, in a real build, to fetch it."""
+        self.write_stub(
+            "git",
+            f"""
+case "$1" in
+  ls-remote)
+    if [ {status} -ne 0 ]; then
+      printf 'fatal: repository not found\\n' >&2
+      exit {status}
+    fi
+    printf '{sha}\\trefs/heads/{branch}\\n'
+    ;;
+  *) exit 0 ;;
+esac
+""",
+        )
+
     def stub_docker(self, manifest_status=1, local_status=1):
         self.write_stub(
             "docker",
@@ -74,6 +96,9 @@ esac
         env = {
             "PATH": f"{self.stub_dir}:{os.environ['PATH']}",
             "HOME": str(self.root),
+            # The default of APP_BUILD_PUSH follows the environment, so the tests state which
+            # one they are describing instead of inheriting the machine they run on.
+            "GITHUB_ACTIONS": "true",
         }
         env.update(environment or {})
         completed = subprocess.run(
@@ -99,38 +124,149 @@ esac
         return values
 
 
-class NormalModeTest(AppSourceTestCase):
-    def test_without_a_link_nothing_is_resolved_or_built(self):
+class BranchModeTest(AppSourceTestCase):
+    """Without a declared pull request the tests run on the application branch."""
+
+    def test_without_a_link_the_application_branch_is_built(self):
         self.stub_gh()
         self.stub_docker()
 
         result = self.run_script("resolve")
         values = self.parse(result.stdout)
 
-        self.assertEqual("docker-image", values["APP_SOURCE"])
-        self.assertEqual("", values["APP_IMAGE"])
-        self.assertEqual("", values["APP_SHA"])
-        self.assertEqual("false", values["APP_BUILD_REQUIRED"])
-        self.assertIn("Application source: Docker image", result.stdout)
+        self.assertEqual("branch", values["APP_SOURCE"])
+        self.assertEqual("semaphoreui/semaphore", values["APP_REPOSITORY"])
+        self.assertEqual("develop", values["APP_BRANCH"])
+        self.assertEqual("default-branch", values["APP_LINK_SOURCE"])
+        self.assertEqual(BRANCH_SHA, values["APP_SHA"])
+        self.assertEqual("", values["APP_PR"])
+        self.assertEqual("true", values["APP_BUILD_REQUIRED"])
+        self.assertIn("Application source: Branch", result.stdout)
+        self.assertIn("Building application...", result.stdout)
+
+    def test_the_image_is_named_after_the_branch_and_its_commit(self):
+        self.stub_gh()
+        self.stub_docker()
+
+        values = self.parse(
+            self.run_script(
+                environment={"GITHUB_REPOSITORY": "semaphoreui/integration-tests"}
+            ).stdout
+        )
+
+        self.assertEqual(
+            f"ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-develop-{BRANCH_SHA}",
+            values["APP_IMAGE"],
+        )
+        self.assertNotIn("semaphoreui/semaphore:", values["APP_IMAGE"])
+
+    def test_an_image_built_for_this_commit_is_reused(self):
+        self.stub_gh()
+        self.stub_docker(manifest_status=0)
+
+        result = self.run_script("ensure")
+        values = self.parse(result.stdout)
+
+        self.assertEqual("true", values["APP_IMAGE_EXISTS"])
+        self.assertEqual("false", values["APP_BUILD_PERFORMED"])
         self.assertIn("Application build: skipped", result.stdout)
 
-    def test_a_description_without_the_trailer_stays_in_normal_mode(self):
+    def test_a_new_commit_of_the_branch_yields_a_new_image(self):
+        other_sha = "abc123456789abc123456789abc123456789abcd"
+        self.stub_gh()
+        self.stub_docker()
+
+        first = self.parse(self.run_script().stdout)["APP_IMAGE"]
+        self.stub_git(sha=other_sha)
+        second = self.parse(self.run_script().stdout)["APP_IMAGE"]
+
+        self.assertNotEqual(first, second)
+        self.assertTrue(first.endswith(BRANCH_SHA))
+        self.assertTrue(second.endswith(other_sha))
+
+    def test_another_branch_can_be_requested(self):
+        self.stub_gh()
+        self.stub_docker()
+        self.stub_git(branch="release/2.20")
+
+        values = self.parse(
+            self.run_script(environment={"APP_BRANCH": "release/2.20"}).stdout
+        )
+
+        self.assertEqual("branch", values["APP_SOURCE"])
+        self.assertEqual("release/2.20", values["APP_BRANCH"])
+        # The slash is not allowed in a Docker tag.
+        self.assertIn(f":ci-release-2.20-{BRANCH_SHA}", values["APP_IMAGE"])
+
+    def test_link_action_names_the_branch_without_resolving_it(self):
+        values = self.parse(self.run_script("link").stdout)
+
+        self.assertEqual("branch", values["APP_SOURCE"])
+        self.assertEqual("develop", values["APP_BRANCH"])
+        self.assertEqual("", values["APP_SHA"])
+        self.assertEqual("", values["APP_IMAGE"])
+
+    def test_a_missing_branch_fails(self):
+        self.stub_gh()
+        self.stub_docker()
+        self.stub_git(sha="")
+
+        result = self.run_script(expect_success=False)
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("does not exist", result.stderr)
+
+    def test_an_unreachable_application_repository_fails(self):
+        self.stub_gh()
+        self.stub_docker()
+        self.stub_git(status=128)
+
+        result = self.run_script(expect_success=False)
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("Unable to access application repository", result.stderr)
+
+
+class DockerImageModeTest(AppSourceTestCase):
+    """Nothing is resolved or built when an image is named or the manifest image is requested."""
+
+    def test_an_explicit_app_image_is_preserved(self):
+        self.stub_gh()
+        self.stub_docker()
+
+        values = self.parse(
+            self.run_script(environment={"APP_IMAGE": "semaphoreui/semaphore:v2.19.12"}).stdout
+        )
+
+        self.assertEqual("docker-image", values["APP_SOURCE"])
+        self.assertEqual("semaphoreui/semaphore:v2.19.12", values["APP_IMAGE"])
+        self.assertEqual("", values["APP_BRANCH"])
+
+    def test_branch_none_keeps_the_profile_manifest_image(self):
+        self.stub_gh()
+        self.stub_docker()
+
+        result = self.run_script("resolve", environment={"APP_BRANCH": "none"})
+        values = self.parse(result.stdout)
+
+        self.assertEqual("docker-image", values["APP_SOURCE"])
+        self.assertEqual("", values["APP_IMAGE"])
+        self.assertEqual("false", values["APP_BUILD_REQUIRED"])
+        self.assertIn("Application image: profile manifest default", result.stdout)
+
+    def test_a_description_without_the_trailer_is_not_a_declaration(self):
         self.stub_gh()
         self.stub_docker()
         body = "Adds a regression test for schedules.\n\nSee the linked issue for context."
 
-        values = self.parse(self.run_script(environment={"APP_LINK_BODY": body}).stdout)
+        values = self.parse(
+            self.run_script(
+                environment={"APP_LINK_BODY": body, "APP_BRANCH": "none"}
+            ).stdout
+        )
 
         self.assertEqual("docker-image", values["APP_SOURCE"])
         self.assertEqual("", values["APP_PR"])
-
-    def test_an_empty_description_stays_in_normal_mode(self):
-        self.stub_gh()
-        self.stub_docker()
-
-        values = self.parse(self.run_script(environment={"APP_LINK_BODY": ""}).stdout)
-
-        self.assertEqual("docker-image", values["APP_SOURCE"])
 
     def test_a_commented_out_template_example_is_not_a_declaration(self):
         self.stub_gh()
@@ -145,7 +281,7 @@ class NormalModeTest(AppSourceTestCase):
 
         values = self.parse(self.run_script(environment={"APP_LINK_BODY": body}).stdout)
 
-        self.assertEqual("docker-image", values["APP_SOURCE"])
+        self.assertEqual("branch", values["APP_SOURCE"])
         self.assertEqual("", values["APP_PR"])
 
     def test_the_trailer_must_start_a_line(self):
@@ -155,18 +291,43 @@ class NormalModeTest(AppSourceTestCase):
 
         values = self.parse(self.run_script(environment={"APP_LINK_BODY": body}).stdout)
 
-        self.assertEqual("docker-image", values["APP_SOURCE"])
+        self.assertEqual("branch", values["APP_SOURCE"])
+        self.assertEqual("", values["APP_PR"])
 
-    def test_an_explicit_app_image_is_preserved(self):
+
+class LocalBuildTest(AppSourceTestCase):
+    """Outside GitHub Actions the image is built for this machine instead of being pushed."""
+
+    LOCAL = {"GITHUB_ACTIONS": ""}
+
+    def test_the_local_store_decides_whether_the_image_exists(self):
         self.stub_gh()
-        self.stub_docker()
+        self.stub_docker(manifest_status=1, local_status=0)
 
-        values = self.parse(
-            self.run_script(environment={"APP_IMAGE": "semaphoreui/semaphore:v2.19.12"}).stdout
-        )
+        values = self.parse(self.run_script(environment=self.LOCAL).stdout)
 
-        self.assertEqual("docker-image", values["APP_SOURCE"])
-        self.assertEqual("semaphoreui/semaphore:v2.19.12", values["APP_IMAGE"])
+        self.assertEqual("true", values["APP_IMAGE_EXISTS"])
+        self.assertEqual("false", values["APP_BUILD_REQUIRED"])
+
+    def test_an_image_published_for_this_commit_is_pulled_instead_of_built(self):
+        self.stub_gh()
+        self.stub_docker(manifest_status=0, local_status=1)
+
+        result = self.run_script(environment=self.LOCAL)
+        values = self.parse(result.stdout)
+
+        self.assertEqual("true", values["APP_IMAGE_EXISTS"])
+        self.assertEqual("false", values["APP_BUILD_REQUIRED"])
+        self.assertIn("Pulling the application image", result.stdout)
+
+    def test_an_image_nobody_published_is_built(self):
+        self.stub_gh()
+        self.stub_docker(manifest_status=1, local_status=1)
+
+        values = self.parse(self.run_script(environment=self.LOCAL).stdout)
+
+        self.assertEqual("false", values["APP_IMAGE_EXISTS"])
+        self.assertEqual("true", values["APP_BUILD_REQUIRED"])
 
 
 class DescriptionLinkTest(AppSourceTestCase):
@@ -359,7 +520,7 @@ class ImageReuseTest(AppSourceTestCase):
 
 
 class ClosedApplicationPullRequestTest(AppSourceTestCase):
-    def test_a_merged_application_pull_request_falls_back_to_normal_mode(self):
+    def test_a_merged_application_pull_request_falls_back_to_the_branch(self):
         self.stub_gh(state="closed")
         self.stub_docker()
 
@@ -368,12 +529,27 @@ class ClosedApplicationPullRequestTest(AppSourceTestCase):
         )
         values = self.parse(result.stdout)
 
-        self.assertEqual("docker-image", values["APP_SOURCE"])
+        self.assertEqual("branch", values["APP_SOURCE"])
         self.assertEqual("closed", values["APP_PR_STATE"])
-        self.assertEqual("", values["APP_IMAGE"])
-        self.assertEqual("false", values["APP_BUILD_REQUIRED"])
+        self.assertEqual("develop", values["APP_BRANCH"])
+        self.assertEqual(BRANCH_SHA, values["APP_SHA"])
+        self.assertIn(f":ci-develop-{BRANCH_SHA}", values["APP_IMAGE"])
         self.assertIn("no version left to test", result.stdout)
         self.assertIn("Remove the Application-PR line", result.stdout)
+
+    def test_a_merged_application_pull_request_can_fall_back_to_the_manifest_image(self):
+        self.stub_gh(state="closed")
+        self.stub_docker()
+
+        result = self.run_script(
+            "resolve",
+            environment={"APP_LINK_BODY": "Application-PR: #123", "APP_BRANCH": "none"},
+        )
+        values = self.parse(result.stdout)
+
+        self.assertEqual("docker-image", values["APP_SOURCE"])
+        self.assertEqual("", values["APP_IMAGE"])
+        self.assertEqual("false", values["APP_BUILD_REQUIRED"])
         self.assertIn("Application build: skipped", result.stdout)
 
     def test_an_open_application_pull_request_still_builds(self):
