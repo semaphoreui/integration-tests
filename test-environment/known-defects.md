@@ -1,6 +1,6 @@
 # Semaphore UI known defects
 
-**Last reviewed:** 2026-09-04  
+**Last reviewed:** 2026-09-17
 **Core runtime baseline:** `semaphoreui/semaphore:v2.19.12`
 
 **Runner and scheduler defect baseline:** `semaphoreui/semaphore:v2.19.12`
@@ -432,6 +432,10 @@ reach a stable release. It is intentionally excluded from the green PR and night
 
 ## Excluded historical and policy findings
 
+- Integration matcher update/delete and extracted-value delete returned false `204` success on
+  SQLite `v2.19.12`. The current-source suite asserts the fixed positive contract from `1af4c105`;
+  historical evidence remains in
+  [integration-child-mutation-false-success-defect.md](integration-child-mutation-false-success-defect.md).
 - The `v2.19.6 → v2.19.7` schema upgrade failure is historical; the maintained
   `v2.19.7 → v2.19.8` upgrade path passes. It remains documented in
   [upgrade-report.md](upgrade-report.md).

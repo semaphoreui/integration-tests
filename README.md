@@ -362,6 +362,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `test-environment/runner-unavailable-routing-defect.md` — fail-fast instead of a recoverable queue when no matching runner is available.
 - `test-environment/remote-runner-survey-secrets-defect.md` — loss of secret survey variables on remote dispatch.
 - `test-environment/survey-default-validation-defect.md` — missing enum default validation in `v2.19.8`.
+- `test-environment/integration-child-mutation-false-success-defect.md` — historical matcher/extracted-value false-success defect and its positive regression coverage on current Semaphore.
 
 The Semaphore source code is stored locally in `/semaphore/` and is excluded from this repository.
 
