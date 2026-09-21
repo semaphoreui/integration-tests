@@ -442,6 +442,9 @@ reach a stable release. It is intentionally excluded from the green PR and night
 - Missing password-login rate limiting is tracked as a security-hardening gap rather than a confirmed
   product defect because no explicit product contract was identified. See
   [password-login-brute-force-protection-gap.md](password-login-brute-force-protection-gap.md).
+- Existing sessions surviving a local password change or administrator reset are tracked as an
+  account-recovery security gap pending a product-contract decision. See
+  [password-change-session-revocation-gap.md](password-change-session-revocation-gap.md).
 
 ## Recommended next actions
 

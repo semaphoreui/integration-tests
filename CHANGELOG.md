@@ -18,6 +18,10 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- Authentication lifecycle coverage for login metadata, logout invalidation/idempotency,
+  self-service password changes, cross-user denial, and administrator password reset.
+- A security-gap canary and source analysis proving that password changes leave other existing
+  sessions authenticated.
 - Full webhook integration configuration lifecycle coverage for integration list/get/update,
   project/integration aliases, matchers, and extracted values, including positive regression
   coverage for matcher update/delete and extracted-value delete.

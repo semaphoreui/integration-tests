@@ -3,6 +3,7 @@ package io.bookwright.junit;
 import io.bookwright.api.AuthSession;
 import io.bookwright.api.model.CreatedBooking;
 import io.bookwright.api.model.semaphore.Project;
+import io.bookwright.api.model.semaphore.SemaphoreAuthLifecycleUsers;
 import io.bookwright.api.model.semaphore.SemaphoreTestUser;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.util.TestData;
@@ -55,6 +56,11 @@ public class TestStore {
     return getRequired(Precondition.SEMAPHORE_RBAC_USER_KEY, SemaphoreTestUser.class);
   }
 
+  public SemaphoreAuthLifecycleUsers semaphoreAuthLifecycleUsers() {
+    return getRequired(
+        Precondition.SEMAPHORE_AUTH_LIFECYCLE_USERS_KEY, SemaphoreAuthLifecycleUsers.class);
+  }
+
   public Project semaphoreProject() {
     return getRequired(Precondition.SEMAPHORE_PROJECT_KEY, Project.class);
   }
@@ -69,6 +75,10 @@ public class TestStore {
 
   void putSemaphoreRbacUser(SemaphoreTestUser user) {
     put(Precondition.SEMAPHORE_RBAC_USER_KEY, user);
+  }
+
+  void putSemaphoreAuthLifecycleUsers(SemaphoreAuthLifecycleUsers users) {
+    put(Precondition.SEMAPHORE_AUTH_LIFECYCLE_USERS_KEY, users);
   }
 
   void putSemaphoreProject(Project project) {

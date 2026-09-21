@@ -6,6 +6,7 @@ import io.bookwright.assertions.SecretAssertions;
 import io.bookwright.config.Configs;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHttpsGitFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
@@ -60,6 +61,10 @@ class FixtureArchitectureTest {
           "999_999_999",
           "bookwright-rbac-guest",
           "Bookwright-test-password-42!",
+          "bookwright-auth-actor",
+          "bookwright-auth-target",
+          "Bookwright-auth-actor-42!",
+          "Bookwright-auth-target-42!",
           "bookwright-no-user-",
           "http://fixture-git/fixtures.git",
           "semaphore-bookwright-smoke-ok",
@@ -109,6 +114,7 @@ class FixtureArchitectureTest {
     LocalUserFixtures local = LocalUserFixtures.from(Configs.main());
     SemaphoreFixtures semaphore =
         SemaphoreFixtures.from(Configs.main(), new TestData(1L, 2L, "fixture-redaction"));
+    SemaphoreAuthLifecycleFixtures authLifecycle = SemaphoreAuthLifecycleFixtures.standard();
     SemaphoreHttpsGitFixtures httpsGit =
         SemaphoreHttpsGitFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreLdapFixtures ldap = SemaphoreLdapFixtures.standard();
@@ -143,6 +149,18 @@ class FixtureArchitectureTest {
         "Semaphore fixture diagnostics", semaphore.toString(), semaphore.rbac().password());
     SecretAssertions.absent(
         "Semaphore fixture diagnostics", semaphore.toString(), semaphore.invalidLogin().password());
+    SecretAssertions.absent(
+        "Semaphore auth lifecycle fixture diagnostics",
+        authLifecycle.toString(),
+        authLifecycle.actor().password());
+    SecretAssertions.absent(
+        "Semaphore auth lifecycle fixture diagnostics",
+        authLifecycle.toString(),
+        authLifecycle.actor().changedPassword());
+    SecretAssertions.absent(
+        "Semaphore auth lifecycle password request diagnostics",
+        authLifecycle.actor().validChange().toString(),
+        authLifecycle.actor().changedPassword());
     SecretAssertions.absent(
         "Semaphore HTTPS Git fixture diagnostics",
         httpsGit.toString(),
@@ -218,6 +236,7 @@ class FixtureArchitectureTest {
     assertThat(sauceDemo.toString()).contains("[REDACTED]");
     assertThat(local.toString()).contains("[REDACTED]");
     assertThat(semaphore.toString()).contains("[REDACTED]");
+    assertThat(authLifecycle.toString()).contains("[REDACTED]");
     assertThat(httpsGit.toString()).contains("[REDACTED]");
     assertThat(ldap.toString()).contains("[REDACTED]");
     assertThat(oidc.toString()).contains("[REDACTED]");

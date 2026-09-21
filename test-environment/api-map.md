@@ -1,6 +1,6 @@
 # API Map for the First Automation
 
-**Test environment version:** Semaphore UI `v2.19.8`
+**Test environment version:** Semaphore UI `v2.19.12`
 **Sources:** `api-docs.yml`, `api/router.go`, read-only requests against the local test environment
 
 ## Big Picture
@@ -156,6 +156,13 @@ Password login security covers the account-enumeration boundary: an existing use
 an unknown user receive the same `401` with an empty body, no invalid path creates a session cookie,
 and an empty password is rejected. Five retries on `v2.19.8` remain without `429`, `Retry-After`, or a warning;
 the canary and source boundary are in `password-login-brute-force-protection-gap.md`.
+
+The authentication lifecycle additionally covers login metadata, logout and repeated logout,
+self-service password change with the current-password check, cross-user denial, and administrator
+reset. The previous credentials stop creating sessions and the new credentials work. A known-gap
+canary proves that another session issued before the password change remains authorized; the
+account-recovery impact and source boundary are in
+`password-change-session-revocation-gap.md`.
 
 Of the P1 Git risks, the following are automated: a successful run from an explicitly selected branch, a missing ref, and an unreachable authenticated HTTPS remote. Errors bring the task to the expected `error` status, preserve useful Git diagnostics, and do not expose the login/password in structured or raw output.
 

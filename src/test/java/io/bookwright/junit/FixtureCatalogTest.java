@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.bookwright.config.Configs;
+import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreBackupFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTotpFixtures;
@@ -19,6 +20,7 @@ class FixtureCatalogTest {
   @Test
   void recognizesOnlyRegisteredFixtureTypes() {
     assertThat(FixtureCatalog.supports(SemaphoreBackupFixtures.class)).isTrue();
+    assertThat(FixtureCatalog.supports(SemaphoreAuthLifecycleFixtures.class)).isTrue();
     assertThat(FixtureCatalog.supports(SemaphoreTotpFixtures.class)).isTrue();
     assertThat(FixtureCatalog.supports(String.class)).isFalse();
   }

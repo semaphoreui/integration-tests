@@ -5,6 +5,7 @@ import io.bookwright.config.MainConfig;
 import io.bookwright.fixtures.database.HotelDatabaseFixtures;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreBackupFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreBranchIsolationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreBuildDeployFixtures;
@@ -50,6 +51,9 @@ final class FixtureCatalog {
           fixture(
               SemaphoreEncryptionRotationFixtures.class,
               context -> SemaphoreEncryptionRotationFixtures.from(context.config())),
+          fixture(
+              SemaphoreAuthLifecycleFixtures.class,
+              context -> SemaphoreAuthLifecycleFixtures.standard()),
           fixture(
               SemaphoreBackupFixtures.class,
               context -> SemaphoreBackupFixtures.from(context.testData())),

@@ -1,13 +1,18 @@
 package io.bookwright.api.semaphore.auth;
 
+import io.bookwright.api.model.semaphore.LoginMetadata;
 import io.bookwright.api.model.semaphore.LoginRequest;
 import io.bookwright.api.model.semaphore.TotpPasscodeRequest;
 import io.bookwright.api.model.semaphore.TotpRecoveryRequest;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.GET;
 import retrofit2.http.POST;
 
 public interface SemaphoreAuthApi {
+
+  @GET("auth/login")
+  Call<LoginMetadata> getLoginMetadata();
 
   @POST("auth/login")
   Call<Void> login(@Body LoginRequest request);

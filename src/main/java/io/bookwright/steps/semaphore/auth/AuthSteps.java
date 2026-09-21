@@ -2,6 +2,7 @@ package io.bookwright.steps.semaphore.auth;
 
 import com.google.inject.Inject;
 import io.bookwright.api.RetrofitFactory;
+import io.bookwright.api.model.semaphore.LoginMetadata;
 import io.bookwright.api.model.semaphore.LoginRequest;
 import io.bookwright.api.model.semaphore.SemaphoreTestUser;
 import io.bookwright.api.model.semaphore.TotpPasscodeRequest;
@@ -76,6 +77,11 @@ public class AuthSteps {
         api.login(new LoginRequest(config.apiUsername(), config.apiPassword())), 204);
   }
 
+  @Step("Get Semaphore login metadata")
+  public LoginMetadata loginMetadata() {
+    return Calls.body(api.getLoginMetadata(), 200, "login metadata");
+  }
+
   @Step("Login as isolated Semaphore user")
   public SemaphoreSessionApis loginAs(SemaphoreTestUser account) {
     return loginAs(new LoginRequest(account.user().username(), account.password()));
@@ -87,6 +93,19 @@ public class AuthSteps {
     var isolatedAuth = retrofit.create(SemaphoreAuthApi.class);
     Calls.expectStatus(isolatedAuth.login(request), 204);
     return SemaphoreSessionApis.create(retrofit);
+  }
+
+  @Step("Verify isolated Semaphore credentials are rejected")
+  public void loginIsRejected(LoginRequest request) {
+    var isolatedAuth = RetrofitFactory.create(config.apiBaseUrl()).create(SemaphoreAuthApi.class);
+    Response<Void> response = Calls.response(isolatedAuth.login(request));
+    try (var ignored = response.errorBody()) {
+      if (response.code() != 401 || issuesSessionCookie(response)) {
+        throw new IllegalStateException(
+            "Rejected login expected HTTP 401 without a session cookie but received HTTP %d"
+                .formatted(response.code()));
+      }
+    }
   }
 
   @Step("Verify isolated Semaphore session requires TOTP")
