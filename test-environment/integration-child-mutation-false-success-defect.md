@@ -1,8 +1,8 @@
-# Integration child mutations return false success
+# Integration child mutation regression
 
 ## Summary
 
-Semaphore `v2.19.12` returns `204 No Content` for three documented integration mutation requests
+Semaphore `v2.19.12` returned `204 No Content` for three documented integration mutation requests
 without applying the requested change on SQLite:
 
 - `PUT /api/project/{project_id}/integrations/{integration_id}/matchers/{matcher_id}`;
@@ -17,9 +17,12 @@ same scenario, which limits the defect to the child mutation paths above.
 
 **Component:** integrations / API persistence
 
-**Confirmed baseline:** `semaphoreui/semaphore:v2.19.12` (`012ed06d`) with SQLite
+**Historical baseline:** `semaphoreui/semaphore:v2.19.12` (`012ed06d`) with SQLite
 
-**Upstream fix:** [`1af4c105`](https://github.com/semaphoreui/semaphore/commit/1af4c1052dba7da6c3bf55307013ba199421a745), included in `v2.20.0-alpha1`
+**Current status:** fixed by
+[`1af4c105`](https://github.com/semaphoreui/semaphore/commit/1af4c1052dba7da6c3bf55307013ba199421a745).
+The integration suite runs against the current Semaphore application source and verifies the
+positive persistence contract.
 
 ## User impact
 
@@ -68,19 +71,21 @@ errors, and still return `204`.
 Upstream commit `1af4c105` derives IDs from the route, scopes mutations to the project and
 integration, uses portable delete SQL, checks affected rows, and propagates remaining errors.
 
-## Automated canary
+## Automated regression
 
 ```bash
+eval "$(scripts/app-source.sh ensure | grep '^APP_' | sed 's/^/export /')"
 test-environment/profile up core-sqlite-local
-./gradlew test -DSTAND=semaphore -DSEMAPHORE_PROFILE=core-sqlite-local \
-  --tests io.bookwright.tests.semaphore.WebhookIntegrationApiTest.integrationChildMutationsReturnFalseSuccess
+test-environment/profile test core-sqlite-local --no-daemon \
+  --tests io.bookwright.tests.semaphore.WebhookIntegrationApiTest.integrationChildMutationsPersist
 test-environment/profile down core-sqlite-local
 ```
 
-The canary passes only while it observes the false-success behavior. When the stable baseline moves
-to a release containing `1af4c105`, replace its assertions with the positive update/delete contract.
+The regression requires the matcher update to persist and requires the deleted matcher and extracted
+value to disappear from their collections. It fails if the historical false-success behavior
+returns.
 
-## Workaround
+## Historical workaround
 
 Until the fix reaches the deployed release, delete and recreate the whole integration, then verify
 its matcher and extracted-value lists through the API before enabling the webhook alias.

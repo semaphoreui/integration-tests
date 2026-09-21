@@ -98,8 +98,8 @@ class WebhookIntegrationApiTest {
 
   @Test
   @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
-  @DisplayName("Known defect: integration child mutations return false success")
-  void integrationChildMutationsReturnFalseSuccess(
+  @DisplayName("Integration child mutations persist updates and deletions")
+  void integrationChildMutationsPersist(
       ApiSteps api, SemaphoreFixtures core, SemaphoreIntegrationFixtures fixture) {
     var context = createIntegration(api, core, fixture);
     var integration = context.integration();
@@ -123,9 +123,10 @@ class WebhookIntegrationApiTest {
                     matcher.id(),
                     fixture.updatedMatcher(integration.id())))
         .satisfies(
-            unchanged -> {
-              assertThat(unchanged.name()).isEqualTo(matcher.name());
-              assertThat(unchanged.value()).isEqualTo(matcher.value());
+            updated -> {
+              assertThat(updated.name()).isEqualTo(fixture.updatedMatcher(integration.id()).name());
+              assertThat(updated.value())
+                  .isEqualTo(fixture.updatedMatcher(integration.id()).value());
             });
     api.semaphore()
         .integrations()
@@ -135,10 +136,12 @@ class WebhookIntegrationApiTest {
         .deleteExtractValue(context.projectId(), integration.id(), extractedValue.id());
 
     assertThat(api.semaphore().integrations().getMatchers(context.projectId(), integration.id()))
-        .contains(matcher);
+        .extracting(item -> item.id())
+        .doesNotContain(matcher.id());
     assertThat(
             api.semaphore().integrations().getExtractValues(context.projectId(), integration.id()))
-        .contains(extractedValue);
+        .extracting(item -> item.id())
+        .doesNotContain(extractedValue.id());
   }
 
   @Test

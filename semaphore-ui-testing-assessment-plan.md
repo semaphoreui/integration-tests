@@ -357,16 +357,15 @@ webhook routing or extracted-value configuration.
 create/list/update/delete, followed by the existing token-authenticated matcher routing and task
 variable extraction.
 
-**Result:** the positive lifecycle passes for integration update, aliases, and extracted-value
-update. On SQLite `v2.19.12`, matcher update/delete and extracted-value delete return `204` without
-applying the change. The green known-defect canary, source boundary, workaround and upstream fix
-`1af4c105` are recorded in
+**Result:** the lifecycle verifies integration update, aliases, matcher update/delete, and
+extracted-value update/delete against the current Semaphore application source. The historical
+`v2.19.12` false-success boundary and upstream fix `1af4c105` are recorded in
 `test-environment/integration-child-mutation-false-success-defect.md`.
 The coverage report now observes all 19 documented integration operations successfully; total
 documented API coverage increased from 58/99 (58.6%) to 71/99 (71.7%).
 
-**Priority:** medium. **Status:** implementation complete; convert the canary to positive assertions
-when a stable release containing `1af4c105` replaces the current baseline.
+**Priority:** medium. **Status:** complete; the former canary now asserts the fixed positive
+contract on the current application source.
 
 ---
 
