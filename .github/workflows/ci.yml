@@ -105,6 +105,17 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  config-contract:
+    name: Configuration contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check config file, environment override and validation
+        run: python3 test-environment/config-contract/check.py
+
   core-sqlite:
     name: Core API + UI · SQLite
     needs:
