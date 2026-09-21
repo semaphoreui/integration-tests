@@ -1,0 +1,7 @@
+{
+  "dialect": "sqlite",
+  "sqlite": {
+    "host": "/tmp/semaphore-config-contract.sqlite"
+  },
+  "port": ":3101"
+}
