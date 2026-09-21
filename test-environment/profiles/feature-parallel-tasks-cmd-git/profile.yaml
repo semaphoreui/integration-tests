@@ -5,9 +5,8 @@ compose_project: semaphore-test-feature-parallel-tasks-cmd-git
 readiness_url: http://localhost:3000/api/ping
 stand: semaphore
 test_class: io.bookwright.tests.semaphore.parallel.*
-semaphore_version: v2.19.12
-semaphore_image: semaphoreui/semaphore:v2.19.12
-source_commit: 012ed06d3eccadaed594c73b93b3d8a2459b576f
+semaphore_version: develop
+semaphore_image: branch:develop
 edition: community
 installation: docker-compose
 architecture: native

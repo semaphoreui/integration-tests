@@ -1,6 +1,6 @@
 # Local test environment
 
-The `core-sqlite-local` profile: a minimal Semaphore UI `v2.19.12` stand with SQLite, local task execution, and a trusted Git fixture.
+The `core-sqlite-local` profile: a minimal Semaphore UI stand with SQLite, local task execution, and a trusted Git fixture. Like every managed profile it declares `semaphore_image: branch:develop`, so `up` runs the image built from the HEAD commit of the application `develop` branch (`scripts/app-source.sh` builds it once per commit and reuses it afterwards). `APP_BRANCH` selects another branch of the application repository, and `APP_IMAGE` any published image.
 
 The profile manifest lives in `profiles/<profile>/profile.yaml`. It pins the Semaphore version, installation method, DBMS, execution mode, and capabilities. The lifecycle command reads the manifest, uses a stable Compose project name, and records the actual configuration and image digests in `build/allure-results/environment.properties`.
 
@@ -265,7 +265,7 @@ After `semaphore vault rekey --backup`, the lifecycle requires the state `0 rows
 
 ## N-1 → current upgrade
 
-Four isolated profiles verify the upgrade of the release image `v2.19.8` → `v2.19.12` while keeping the same DB:
+Four isolated profiles verify the upgrade of the release image `v2.19.8` → the current `develop` build while keeping the same DB:
 
 ```bash
 test-environment/profile upgrade-test upgrade-sqlite-local
@@ -280,7 +280,7 @@ test-environment/profile down upgrade-mariadb-local
 
 The command deletes only the volumes of the selected upgrade profile, brings up N-1, creates a linked persisted fixture, and executes a task. Then it recreates only the server on the current image, verifies the persisted project/access key/repository/inventory/template/schedule/task output, re-executes the old template, and runs the regular core suite. Both image references and digests are recorded in the Allure environment.
 
-The `v2.19.8` → `v2.19.12` pair is the current upgrade gate and passed successfully on SQLite and
+The `v2.19.8` → `develop` pair is the current upgrade gate; the `v2.19.8` → `v2.19.12` pair it replaced passed successfully on SQLite and
 PostgreSQL in Linux CI on 2026-09-04. MySQL 8.4 and MariaDB 10.11 are wired into the same weekly
 workflow, passed locally on 2026-09-09, and remain pending until their first successful Linux run.
 The previous pair `v2.19.7` → `v2.19.8` also read the persisted

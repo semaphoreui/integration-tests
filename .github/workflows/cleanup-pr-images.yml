@@ -1,7 +1,14 @@
 name: Cleanup temporary application images
 
-# Removes temporary application images built for application pull requests that are closed or
-# merged. Only the semaphore-ci package of this test repository is touched; release images of
+# Removes temporary application images this pipeline built and no longer needs:
+#
+#   * pull request images (ci-pr-<number>-<sha>) whose application pull request is closed or
+#     merged for longer than the retention window;
+#   * branch images (ci-<branch>-<sha>, for example the develop image every run is tested on)
+#     older than BRANCH_RETENTION_DAYS. The newest image of each branch is always kept, so the
+#     next run still reuses it instead of rebuilding the same commit.
+#
+# Only the semaphore-ci package of this test repository is touched; release images of
 # semaphoreui/semaphore live in a different registry namespace and are never inspected here.
 #
 # Deleting a package version needs a token with delete:packages, which the built-in GITHUB_TOKEN
@@ -28,7 +35,7 @@ concurrency:
 
 jobs:
   cleanup:
-    name: Delete images of closed application pull requests
+    name: Delete superseded and closed pull request images
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -43,6 +50,9 @@ jobs:
       # Grace period after the application pull request was closed or merged, so that a run
       # started just before the merge can still pull its image.
       RETENTION_HOURS: "24"
+      # A branch image stays useful until the branch moves on; this window only has to outlive a
+      # run that is already using it.
+      BRANCH_RETENTION_DAYS: "7"
     steps:
       - name: Delete stale temporary images
         run: |
@@ -58,8 +68,9 @@ jobs:
             user) versions_path="users/$PACKAGE_OWNER/packages/container/$(printf '%s' "$PACKAGE_NAME" | sed 's|/|%2F|g')/versions" ;;
           esac
 
+          # Newest first, which is what lets the first branch image of a branch be kept.
           if ! gh api --paginate "$versions_path" \
-            --jq '.[] | [(.id | tostring), (.metadata.container.tags | join(","))] | @tsv' \
+            --jq '.[] | [(.id | tostring), (.metadata.container.tags | join(",")), .created_at] | @tsv' \
             > "$work_dir/versions.tsv" 2>"$work_dir/error"; then
             if grep -qi 'not found' "$work_dir/error"; then
               printf 'No temporary image package exists yet; nothing to clean up.\n'
@@ -74,13 +85,49 @@ jobs:
           deleted=0
           kept=0
 
-          while IFS=$'\t' read -r version_id tags; do
+          : > "$work_dir/branches-kept"
+
+          while IFS=$'\t' read -r version_id tags created_at; do
             [ -n "$version_id" ] || continue
 
-            # Only tags produced by scripts/app-source.sh are considered: ci-pr-<number>-<sha>.
+            # Only tags produced by scripts/app-source.sh are considered: ci-pr-<number>-<sha>
+            # for a pull request and ci-<branch>-<sha> for a branch.
             pr_number=$(printf '%s\n' "$tags" | tr ',' '\n' | sed -n 's/^ci-pr-\([0-9][0-9]*\)-[0-9a-f]\{40\}$/\1/p' | sed -n '1p')
             if [ -z "$pr_number" ]; then
-              kept=$((kept + 1))
+              branch_slug=$(printf '%s\n' "$tags" | tr ',' '\n' | sed -n 's/^ci-\([A-Za-z0-9._-]*\)-[0-9a-f]\{40\}$/\1/p' | sed -n '1p')
+              if [ -z "$branch_slug" ]; then
+                kept=$((kept + 1))
+                continue
+              fi
+
+              # Versions arrive newest first, so the first one seen for a branch is its current
+              # image: the one the next run is meant to reuse.
+              if ! grep -qx "$branch_slug" "$work_dir/branches-kept"; then
+                printf '%s\n' "$branch_slug" >> "$work_dir/branches-kept"
+                printf 'Version %s (%s): current image of branch %s, keeping it\n' \
+                  "$version_id" "$tags" "$branch_slug"
+                kept=$((kept + 1))
+                continue
+              fi
+
+              created_epoch=$(date -u -d "$created_at" +%s)
+              age_days=$(( (now - created_epoch) / 86400 ))
+              if [ "$age_days" -lt "$BRANCH_RETENTION_DAYS" ]; then
+                kept=$((kept + 1))
+                continue
+              fi
+
+              candidates=$((candidates + 1))
+              if [ "$DRY_RUN" = "true" ]; then
+                printf 'Version %s (%s): would delete, superseded branch image built %sd ago\n' \
+                  "$version_id" "$tags" "$age_days"
+                continue
+              fi
+
+              printf 'Version %s (%s): deleting, superseded branch image built %sd ago\n' \
+                "$version_id" "$tags" "$age_days"
+              gh api --method DELETE "$versions_path/$version_id"
+              deleted=$((deleted + 1))
               continue
             fi
 

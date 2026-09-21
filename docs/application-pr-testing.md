@@ -7,23 +7,35 @@ Two independent settings are kept separate.
 | What it determines | Setting | Where it is set |
 | --- | --- | --- |
 | **Which tests to run** | `TEST_REPOSITORY` / `TEST_BRANCH` (`git.fixtures.repository` / `git.fixtures.branch`) | [MainConfig.java](../src/main/java/io/bookwright/config/MainConfig.java), stand properties, `-D` parameters; default is the local `fixture-git` Compose service serving the fixtures of the checkout, so CI does not set them |
-| **Which application version to test** | the `Application-PR:` line in the test PR description | PR description; `APP_REPOSITORY` / `APP_PR` as an internal CI mechanism |
+| **Which application version to test** | the application branch (`develop` by default), or the `Application-PR:` line in the test PR description | `APP_BRANCH` / `APP_IMAGE`; PR description; `APP_REPOSITORY` / `APP_PR` as an internal CI mechanism |
 
 The semantics of `TEST_REPOSITORY` / `TEST_BRANCH` have not changed.
 
-## Two modes
+## Three modes
 
-### Normal mode (default)
+### Branch mode (default)
 
-The test PR description contains no `Application-PR:` line. The application repository is not cloned,
-the application is not built, and no temporary Docker image is created. The image from the profile manifest
-(`test-environment/profiles/<profile>/profile.yaml`, key `semaphore_image`) is used — exactly as before.
+The test PR description contains no `Application-PR:` line. The tests then run on the current state of the
+application: the HEAD commit of its `develop` branch. The pipeline resolves that commit, reuses the image
+already built for it and builds one only when no run has built that commit yet. Local runs and CI behave
+identically, because both go through the same script.
 
 ```text
-clone tests → pull semaphore_image → start application → run tests
+develop HEAD → image exists? → (no: checkout branch → build) → start application → run tests
 ```
 
-No additional steps are required for regular test development.
+The profile manifests declare this as `semaphore_image: branch:develop`
+(`test-environment/profiles/<profile>/profile.yaml`). No additional steps are required for regular test
+development; the first run after a new application commit pays for one build, every later run reuses it.
+
+`APP_BRANCH` selects another branch of the application repository. To test an already published image
+instead, name it in `APP_IMAGE`.
+
+### Docker image mode
+
+`APP_IMAGE` names an already published image; `scripts/app-source.sh` additionally accepts `APP_BRANCH=none`,
+which resolves nothing and leaves the choice to the caller. The application repository is not cloned, nothing
+is built and no temporary image is created.
 
 ### PR mode
 
@@ -79,8 +91,8 @@ picked up, and a manual re-run would not help — it replays the original payloa
 ### What happens after the application PR is merged
 
 While the test PR is open, its application PR may get merged. Such a PR no longer has a version
-to test: its commits are already in the application's main branch. The pipeline loudly reports the reason and
-falls back to normal mode — it takes the image from the profile manifest instead of pinning the tests
+to test: its commits are already in the application's own branch. The pipeline loudly reports the reason and
+falls back to branch mode — it tests the current `develop` instead of pinning the tests
 to an outdated commit forever. The line should be removed from the description after that.
 
 ### CI variables
@@ -97,13 +109,16 @@ gh workflow run ci.yml --ref feature/BOOK-123 \
 
 ## Identification and isolation of temporary images
 
-The tag of the temporary image contains the PR number and the full SHA of its HEAD commit:
+The tag of the temporary image contains the full SHA of the commit it was built from, prefixed by the
+branch it came from or by the PR number:
 
 ```text
+ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-develop-abc123456789...
 ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-pr-123-abc123456789...
 ```
 
-* two different commits of the same PR produce different images;
+* two different commits of the same branch or PR produce different images;
+* a branch image and a PR image never collide, even for the same commit;
 * multiple application/test PR pairs never share a single image;
 * temporary images live in a separate GHCR namespace of the test repository, so the release tags of
   `semaphoreui/semaphore` are not read, not overwritten, and not touched at all.
@@ -118,9 +133,10 @@ Before building, the pipeline checks whether an image for the computed SHA exist
 | --- | --- |
 | Only the test PR changed, the application SHA is the same | image exists → `pull → test`, no build is performed |
 | A new commit appeared in the application PR | new tag → `build → push → test` |
-| No `Application-PR:` in the description | no cloning, no build, no temporary image |
-| Application PR is closed or merged | fallback to normal mode, no build |
-| The run is not a test PR | no description in the context, normal mode |
+| No `Application-PR:` in the description | the `develop` HEAD is resolved; its image is reused or built once |
+| `develop` has not moved since the previous run | image exists → `pull → test`, no build is performed |
+| Application PR is closed or merged | fallback to branch mode |
+| `APP_IMAGE` is set | no cloning, no build, no temporary image |
 
 ## Automatic triggering
 
@@ -208,9 +224,31 @@ dry-run mode and only reports deletion candidates.
 
 ## Running locally
 
+By default nothing has to be set up: the profile resolves the `develop` HEAD, builds its image once and
+reuses it afterwards.
+
+```bash
+test-environment/profile up core-sqlite-local
+test-environment/profile test core-sqlite-local
+```
+
+Outside GitHub Actions the image is built for the local platform and kept in the local Docker store
+(`APP_BUILD_PUSH` defaults to `false` there). When the registry already holds the image of that exact
+commit and the machine can read it, it is pulled instead of being built. The resolved image is remembered
+in `build/test-environment/<profile>/application.env`, so `test`, `logs` and `down` keep talking about the
+image the containers were actually started with; `clean` forgets it again.
+
+Testing another branch of the application, or a published image:
+
+```bash
+APP_BRANCH=release/2.20                      test-environment/profile up core-sqlite-local
+APP_IMAGE=semaphoreui/semaphore:v2.19.14     test-environment/profile up core-sqlite-local
+```
+
 Resolving without any side effects:
 
 ```bash
+scripts/app-source.sh resolve
 APP_LINK_BODY='Application-PR: semaphoreui/semaphore#123' scripts/app-source.sh resolve
 ```
 
@@ -234,17 +272,31 @@ test-environment/profile test core-sqlite-local
 ```
 
 `test-environment/profile` takes the image from `APP_IMAGE` if the variable is set, and from the profile
-manifest otherwise. Useful build variables: `APP_BUILD_PLATFORM` (defaults to
-`linux/amd64`), `APP_DOCKERFILE` (defaults to `deployment/docker/server/Dockerfile`),
-`APP_BUILD_PUSH`.
+manifest otherwise; a manifest value of `branch:<name>` is resolved and built by `scripts/app-source.sh`.
+Useful build variables: `APP_BRANCH` (defaults to `develop`),
+`APP_BUILD_PLATFORM` (defaults to `linux/amd64` in CI and to the local platform elsewhere),
+`APP_DOCKERFILE` (defaults to `deployment/docker/server/Dockerfile`), `APP_BUILD_PUSH` (defaults to
+`true` in CI and to `false` elsewhere).
 
 ## Logging
 
-Normal mode:
+Branch mode:
+
+```text
+Application source: Branch
+Application repository: semaphoreui/semaphore
+Application branch: develop
+Application SHA: abc123456789...
+Application image: ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-develop-abc123456789...
+Application image already exists
+Application build: skipped
+```
+
+Docker image mode:
 
 ```text
 Application source: Docker image
-Application image: semaphoreui/semaphore:v2.19.12
+Application image: profile manifest default
 Application build: skipped
 ```
 
@@ -269,7 +321,7 @@ Application build: completed
 ```
 
 The mode is also recorded in the Allure environment: `application.source`, `application.repository`,
-`application.pull.request`, `semaphore.image`, `semaphore.source.commit`.
+`application.branch`, `application.pull.request`, `semaphore.image`, `semaphore.source.commit`.
 
 ## Error handling
 
@@ -278,9 +330,10 @@ The mode is also recorded in the Allure environment: `application.source`, `appl
 | The application PR does not exist | `Application PR #123 not found in <repo>`, the pipeline fails |
 | No access to the repository | `Unable to access application repository <repo>`, the pipeline fails |
 | The SHA could not be determined | `Unable to resolve the HEAD SHA of application PR #123`, the pipeline fails |
+| The application branch does not exist | `application branch <name> does not exist in <repo>`, the pipeline fails |
 | Two `Application-PR:` lines in the description | the pipeline fails, no choice between them is made |
 | `Application-PR:` does not look like a PR reference | the pipeline fails, reporting the original value |
-| The PR received a new commit during the build | the build is aborted with an explicit out-of-sync message |
+| The branch or PR received a new commit during the build | the build is aborted with an explicit out-of-sync message |
 | The image could not be built | the pipeline fails, the Docker build logs remain in the step output |
 | The image could not be pushed | the pipeline fails after verifying that the image is really missing from the registry |
 | The image is not available for pull | the tag is treated as missing, a build and push are performed |
