@@ -24,7 +24,7 @@ Five baseline profiles and thirteen feature profiles are available:
 | `feature-encryption-rotation` | PostgreSQL 14.3 | keyring hot reload, mixed-key reads, vault rekey, and retired key removal |
 | `feature-schedule-timezone` | SQLite | cron/run-at execution in `Pacific/Kiritimati`; local defect reproducer |
 | `feature-dynamic-runner` | SQLite | webhook-launched one-off runner; defect reproducer for a process that never exits |
-| `feature-shell-output` | SQLite | strict defect reproducer for the loss of `stdout`/`stderr` in a short task |
+| `feature-shell-output` | SQLite | regression for complete short `stdout`/`stderr` and bounded inherited pipes |
 | `feature-web-cache-safety` | SQLite | shared-cache cross-user isolation and cache-poisoning defect reproducer |
 | `external` | user-managed | the `core-sqlite-local` suite against an existing Semaphore; only the fixture services are started |
 
@@ -171,10 +171,11 @@ test-environment/profile up feature-shell-output
 test-environment/profile test feature-shell-output
 ```
 
-On release `v2.19.12` a short, successfully completed Bash task may retain only one of the
-process streams: `stdout` or `stderr`. The profile runs only the strict `ShellOutputTest`,
-including the background-child scenario, and remains a manual red reproducer until the already
-existing upstream fixes land in stable. The full report is in `shell-output-loss-defect.md`.
+Release `v2.19.12` may retain only one process stream for a short successful Bash task. On the
+current `develop` application source, the focused profile is a green regression: it requires both
+`stdout` and `stderr`, and verifies that an inherited pipe from a background child does not delay
+completion indefinitely. The same contract runs in `core-sqlite-local` on pull requests. Historical
+evidence for the release defect is preserved in `shell-output-loss-defect.md`.
 
 ## Web-cache safety feature profile
 
@@ -328,21 +329,19 @@ The profiles are wired into three GitHub Actions workflows:
 | Workflow | Trigger | Profiles |
 |---|---|---|
 | `CI` | pull request and push to `main` | API suite and Chromium UI smoke on `core-sqlite-local` after the framework quality gate |
-| `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation` |
+| `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-shell-output` |
 | `Release upgrade` | Sunday at `03:30 UTC`, manually | `upgrade-sqlite-local`, `upgrade-postgres-local`, `upgrade-mysql-local`, `upgrade-mariadb-local` |
 
 Each matrix profile runs on its own runner, so the shared port `3000` causes no conflicts. After execution the workflow keeps JUnit/HTML/Allure artifacts, adds `profile ps` and a final snapshot of the Compose logs on failure, and then removes only the containers and volumes of the selected profile.
 
-On stable `v2.19.12` the `profile test` command runs JUnit classes sequentially because of a
-confirmed race in the product output collector. This does not disable concurrent execution checks:
-`ProjectConcurrencyApiTest` itself launches several Semaphore tasks and verifies queue admission.
-The strict concurrent/short-output contract is isolated in `feature-shell-output`. The confirmed
-shared-cache security reproducer is isolated in `feature-web-cache-safety`.
+Profile suites run JUnit classes sequentially; task concurrency remains covered explicitly inside
+`ProjectConcurrencyApiTest`. The short-output contract also runs in the SQLite PR gate and is
+isolated in `feature-shell-output` for the daily matrix. The confirmed shared-cache security
+reproducer remains isolated in `feature-web-cache-safety`.
 
-In the manual `Configuration matrix`, the inputs `include_schedule_investigation=true` and
-`include_shell_output_investigation=true` add the corresponding defect profiles only to the
-selected run. Their failure, expected until the fix, does not pollute the daily gate but preserves
-Linux diagnostics for confirming the defects.
+In the manual `Configuration matrix`, `include_schedule_investigation=true` adds the known-failing
+schedule profile only to the selected run. `feature-shell-output` is now a regular green matrix
+entry against the current application source.
 
 The raw Allure results of each job are uploaded as a separate artifact. The final reusable workflow downloads them, generates an independent HTML report for each profile, and uploads the combined site as a downloadable artifact. The build runs even after a test failure, including on pull requests, so the diagnostics of a red run can be opened without GitHub Pages. Successful trusted `main` runs are also published to the public [GitHub Pages history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment runs remain artifact-only.
 

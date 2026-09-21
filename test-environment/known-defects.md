@@ -1,6 +1,6 @@
 # Semaphore UI known defects
 
-**Last reviewed:** 2026-09-17
+**Last reviewed:** 2026-09-21
 **Core runtime baseline:** `semaphoreui/semaphore:v2.19.12`
 
 **Runner and scheduler defect baseline:** `semaphoreui/semaphore:v2.19.12`
@@ -28,7 +28,7 @@ instead. All reproducers use generated fixtures and do not expose credentials or
 | BUG-006 | One-off runner does not exit after a completed task | Medium | Runner lifecycle | Confirmed locally on `v2.19.12`; defective condition remains on `develop` |
 | BUG-007 | Project restore accepts duplicate resource names | Medium | Project backup / restore | Confirmed in Linux CI on `v2.19.12`; off-by-one remains on `develop` |
 | BUG-008 | Survey enum accepts a default outside its allowed values | Medium | Template survey validation | Confirmed on `v2.19.8`; fixed on `develop`, not in `v2.19.12` |
-| BUG-009 | Successful short task loses `stdout` or `stderr` | High | Task execution / output collection | Confirmed in Linux CI on `v2.19.12`; fixed on `develop` |
+| BUG-009 | Successful short task loses `stdout` or `stderr` | High | Task execution / output collection | Historical on `v2.19.12`; fixed and covered on `develop` |
 
 ## BUG-001 — Project deletion succeeds while a task is still running
 
@@ -427,8 +427,10 @@ and
 The first fix registers readers before waiting and drains both pipes before `cmd.Wait`; the second
 adds command-scoped finalization and bounds pipes inherited by background descendants.
 
-The strict test remains in the manual expected-red `feature-shell-output` profile until these fixes
-reach a stable release. It is intentionally excluded from the green PR and nightly gates.
+The strict test is now a positive regression against the current application source. It runs in the
+SQLite pull-request gate and in the focused daily `feature-shell-output` profile. The release-specific
+failure and its evidence remain documented here until a stable release containing both fixes is used
+as an upgrade baseline. Both scenarios passed locally against `develop@e95560fd` on 2026-09-21.
 
 ## Excluded historical and policy findings
 
@@ -448,7 +450,7 @@ reach a stable release. It is intentionally excluded from the green PR and night
 
 ## Recommended next actions
 
-1. Test `develop` for BUG-004, BUG-008 and BUG-009 and prepare positive regression checks for the
+1. Test `develop` for BUG-004 and BUG-008 and prepare positive regression checks for the
    release that first contains their fixes.
 2. Confirm the intended unavailable-runner queue contract with the product team before filing
    BUG-005 as an unconditional product defect.

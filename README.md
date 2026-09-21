@@ -188,9 +188,9 @@ test-environment/profile up feature-shell-output
 test-environment/profile test feature-shell-output
 ```
 
-On `v2.19.12` the task gets `success`, but the saved output may lose the whole `stdout` or
-`stderr`. The strict test of both streams is kept as a manual red reproducer and is not part of the stable
-PR/nightly gate. The cause, CI evidence and two upstream fixes are described in
+`v2.19.12` may report `success` while losing the whole `stdout` or `stderr` stream. The fixes are
+present on `develop`, so the strict contract now runs in the regular SQLite PR gate and the focused
+profile runs in the daily matrix. The historical failure, CI evidence, and upstream fixes remain in
 `test-environment/shell-output-loss-defect.md`.
 
 The web-cache safety profile checks the deployment boundary created when a customer enables a
@@ -284,10 +284,9 @@ when an image for that commit does not exist yet. A change to the tests alone do
 rebuild. The full description, including branch mode, auto-triggering, authorization and cleanup of
 temporary images, is in [`docs/application-pr-testing.md`](docs/application-pr-testing.md).
 
-When `Configuration matrix` is launched manually, the inputs `include_schedule_investigation`
-and/or `include_shell_output_investigation` can be enabled. Then, for that run only, the corresponding
-known red defect profiles are added to the matrix to confirm the problem on Linux and collect the
-standard artifacts; the daily run remains a green gate without expected failures.
+When `Configuration matrix` is launched manually, `include_schedule_investigation` can add the
+known-red schedule profile to that run for Linux evidence. The fixed `feature-shell-output` profile
+is a regular daily entry; the daily run otherwise remains free of expected failures.
 
 After every CI, nightly matrix or release-upgrade run, Allure is automatically assembled into a ready-made HTML site and uploaded as the artifact `allure-html-<run>-<attempt>`. Every Allure report is built in single-file mode: after downloading, it is enough to unpack the archive and open `index.html` with a double click — no local HTTP server is needed. For a matrix run the start page contains a separate report for each profile, so the results of different DBMSs are not mixed in retries.
 

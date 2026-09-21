@@ -6,6 +6,8 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Changed
 
+- Promoted the fixed shell-output canary to a positive regression on the current application source:
+  it now runs in the SQLite pull-request gate and as a focused daily matrix profile.
 - Centralized test-parameter fixture construction in a type-safe `FixtureCatalog`, replacing the
   growing fixture-specific condition chain in `StepsParameterResolver` without reflection or marker
   interfaces.

@@ -107,15 +107,16 @@ This end-to-end flow covers the main user actions and at the same time touches t
 
 I bring up Semaphore locally and record a reproducible path from cloning the repository to a running service.
 
-**Current status:** release profiles have been moved to `v2.19.12`
-(`012ed06d3eccadaed594c73b93b3d8a2459b576f`), and the upgrade path to
-`v2.19.8 → v2.19.12`. The new Linux baseline was fully confirmed on 2026-09-04: all 11
-configuration matrix profiles are green, as are the PR gate with SQLite/UI and the SQLite/PostgreSQL upgrade profiles. At the same time,
+**Current status:** regular core and feature profiles build the current Semaphore `develop` commit,
+while the reproducible release-upgrade path remains `v2.19.8 → v2.19.12`. The release baseline was
+fully confirmed in Linux CI on 2026-09-04, and the current-source SQLite/API/UI gate now validates
+each test pull request. At the same time,
 Linux CI confirmed that `v2.19.12` loses one of the short `stdout`/`stderr` streams after the terminal `success`;
-the strict `feature-shell-output` keeps the reproduction separate from the stable gate. `feature-schedule-timezone` reproduces
+the current `develop` fixes are protected by the strict SQLite PR contract and the daily
+`feature-shell-output` profile. `feature-schedule-timezone` reproduces
 the absence of tasks for an active cron/`run_at`, and `feature-dynamic-runner` reproduces a one-off
-runner that never exits after a successful task and the `finish` webhook. All three defect profiles are excluded from the stable CI
-matrix. The reports are located in `test-environment/v2.19.8-regression-report.md`,
+runner that never exits after a successful task and the `finish` webhook. The still-failing schedule
+and dynamic-runner profiles are excluded from the stable CI matrix. The reports are located in `test-environment/v2.19.8-regression-report.md`,
 `test-environment/schedule-execution-defect.md`, and
 `test-environment/dynamic-runner-one-off-exit-defect.md`, and the new release defect is in
 `test-environment/shell-output-loss-defect.md`.
@@ -261,11 +262,11 @@ quality gate, the API baseline, and a short Chromium UI smoke on `core-sqlite-lo
 suite verifies password login, launching an API-prepared executable template, and client-side
 project-name validation without sending a create request. The daily matrix runs the PostgreSQL,
 MySQL, MariaDB, persistent runner, SSH, private HTTPS Git, direct OIDC, HTTPS/subpath OIDC, LDAPS,
-TOTP, and encryption-rotation profiles. The weekly/manual release workflow covers SQLite,
+TOTP, encryption-rotation, and shell-output profiles. The weekly/manual release workflow covers SQLite,
 PostgreSQL, MySQL, and MariaDB upgrades; all four completed successfully in Linux CI by 2026-09-11.
 Jobs have timeouts, `fail-fast: false` for matrices, preserve JUnit/HTML/Allure and Compose
 diagnostics, and always clean up. Manual investigation runs confirm the known schedule,
-dynamic-runner, shell-output, and shared-cache defects and are not part of the stable gate. After
+dynamic-runner, and shared-cache defects and are not part of the stable gate. After
 each run, the individual profile Allure reports are assembled into a self-contained single-file
 HTML artifact. Successful trusted `main` runs are published to the public [GitHub Pages
 history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment
@@ -366,6 +367,19 @@ documented API coverage increased from 58/99 (58.6%) to 71/99 (71.7%).
 
 **Priority:** medium. **Status:** complete; the former canary now asserts the fixed positive
 contract on the current application source.
+
+### Completed standalone block: shell-output regression
+
+**Risk:** a task can report `success` while its persisted audit output silently loses either
+`stdout` or `stderr`, and a background descendant can keep inherited pipes open indefinitely.
+
+**Result:** the strict short-command and background-child scenarios pass against
+`develop@e95560fd`. They run without retries in the SQLite pull-request gate, while the focused
+`feature-shell-output` profile runs in the daily configuration matrix. The original `v2.19.12`
+evidence remains in `test-environment/shell-output-loss-defect.md` until a stable release containing
+both upstream fixes becomes the release baseline.
+
+**Priority:** high. **Status:** complete on the current application source.
 
 ---
 

@@ -146,7 +146,7 @@ Database versions must not be taken as "latest" implicitly. Each profile must pi
 | `feature-ldap-tls` | SQLite and pinned OpenLDAP with TLS | LDAPS service/user bind, search/mapping, provisioning/reuse, logout, invalid password, and local-email conflict | nightly |
 | `feature-totp-local` | SQLite, password auth, and TOTP recovery | API lifecycle; browser Security/QR, challenge, invalid/valid passcode, and recovery form | nightly |
 | `feature-schedule-timezone` | SQLite, `Pacific/Kiritimati`, local execution | Real cron/run-at execution and the schedule → task link | manual; defect reproducer |
-| `feature-shell-output` | SQLite, local execution | Completeness of short `stdout`/`stderr` and closing of inherited pipes | manual; defect reproducer |
+| `feature-shell-output` | SQLite, local execution | Completeness of short `stdout`/`stderr` and closing of inherited pipes | PR SQLite contract and focused nightly profile |
 | `feature-web-cache-safety` | SQLite, shared NGINX cache, two users | authenticated cache isolation, unkeyed-input priming, Host keying, and public asset caching | manual; security defect reproducer |
 | `feature-proxy-oidc` | PostgreSQL, NGINX TLS, non-root web path, Dex | Callback URL, Secure cookie, redirects, account mapping, and negative paths | nightly |
 | `feature-encryption-rotation` | PostgreSQL, file keyring with two test-only AES keys | Hot reload of primary, mixed-key reads, `vault check`, backup/rekey, removal of the retired key, and post-rekey execution | nightly |
@@ -155,9 +155,9 @@ Database versions must not be taken as "latest" implicitly. Each profile must pi
 | `pro-docker-executor` | Pro runner with Docker executor | Task container isolation, limits, cleanup, secret hydration | when Pro is available, nightly |
 | `pro-k8s-executor` | Helm/Pro runner with Kubernetes executor | pod lifecycle, service account, pull secret, and cleanup | when Pro/K8s is available, release |
 
-The five base profiles and thirteen feature profiles are implemented. `feature-git-https` checks the separate client-side boundary of private Git with real trusted TLS and Basic Auth. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, and `feature-totp-local` provide green positive and negative auth paths without multiplying across the whole DB matrix; the proxy variant additionally pins the HTTPS/subpath/cookie contract, and TOTP the passcode/recovery lifecycle. `feature-encryption-rotation` checks zero-downtime primary switch-over, rekey, and safe removal of the retired key. `feature-schedule-timezone` reproduces missing cron/run-at tasks, `feature-dynamic-runner` a one-off runner that does not terminate after a successful task, `feature-shell-output` the loss of one of the short process streams after `success`, and `feature-web-cache-safety` an authenticated response crossing users through a shared cache. All four profiles remain manual red reproducers. HA has been investigated and correctly postponed as Enterprise-only instead of an unsafe community imitation.
+The five base profiles and thirteen feature profiles are implemented. `feature-git-https` checks the separate client-side boundary of private Git with real trusted TLS and Basic Auth. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, and `feature-totp-local` provide green positive and negative auth paths without multiplying across the whole DB matrix; the proxy variant additionally pins the HTTPS/subpath/cookie contract, and TOTP the passcode/recovery lifecycle. `feature-encryption-rotation` checks zero-downtime primary switch-over, rekey, and safe removal of the retired key. `feature-shell-output` protects the fixes for complete stream collection and bounded inherited pipes on the current application source. `feature-schedule-timezone`, `feature-dynamic-runner`, and `feature-web-cache-safety` remain manual red reproducers. HA has been investigated and correctly postponed as Enterprise-only instead of an unsafe community imitation.
 
-The CI distribution is also implemented: the API baseline and a short Chromium UI smoke on `core-sqlite-local` are part of the pull-request gate after the framework quality checks; the other four base profiles, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, and `feature-encryption-rotation` run in a daily matrix job. Four release-upgrade profiles run as a separate weekly and manual check: SQLite and PostgreSQL are confirmed, while the new MySQL and MariaDB variants await their first Linux run. The upgrade workflow is deliberately excluded from the PR gate.
+The CI distribution is also implemented: the API baseline, the shell-output regression, and a short Chromium UI smoke on `core-sqlite-local` are part of the pull-request gate after the framework quality checks; the other four base profiles, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, and the focused `feature-shell-output` run in a daily matrix job. Four release-upgrade profiles run as a separate weekly and manual check. The upgrade workflow is deliberately excluded from the PR gate.
 
 ## Which tests to run where
 
@@ -182,7 +182,7 @@ The CI distribution is also implemented: the API baseline and a short Chromium U
 | Git over SSH, SSH inventory, and key rotation | — | — | — | — | — | `feature-ssh-local` |
 | Private Git over HTTPS and Basic Auth | — | — | — | — | — | `feature-git-https` |
 | real cron/run-at execution | — | — | — | — | — | `feature-schedule-timezone`, defect |
-| completeness of short stdout/stderr | defect | planned | planned | planned | planned | `feature-shell-output` |
+| completeness of short stdout/stderr | ✓ | — | — | — | — | `feature-shell-output`, nightly |
 | constraints, schedules, cleanup, clean migration | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | secrets and absence of leaks | ✓ | ✓ | ✓ | ✓ | ✓ | encryption/storage extend the set |
 | database encryption key rotation | — | — | — | — | — | `feature-encryption-rotation` |
@@ -247,18 +247,16 @@ Proposed launch interface:
 
 The `profile` command is implemented for `core-sqlite-local`, `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-schedule-timezone`, `feature-dynamic-runner`, `feature-shell-output`, and the upgrade profiles: it manages the Compose lifecycle, generates local SSH/TLS/HTTPS-Git/encryption fixtures when needed, waits for readiness/setup services, runs the selected test lifecycle, and records manifest/runtime metadata and image digests in Allure. Subsequent profiles are plugged in through the same interface.
 
-## Discovered reproducibility risk
+## Application-source reproducibility
 
-The current test Compose is pinned to the fully verified release image `v2.19.12` (tag commit
-`012ed06d3eccadaed594c73b93b3d8a2459b576f`). The previous baseline is `v2.19.8`
-(`3449a04f3bfa2522ec7fd60803f71b578c39f6b4`).
+Regular core and feature profiles declare `semaphore_image: branch:develop`. The profile lifecycle
+resolves the branch to an exact commit, builds or reuses the corresponding image, and stores the
+repository, branch, commit, and image in its state and Allure metadata. A linked application pull
+request or explicit `APP_IMAGE` can override that source without changing the profile.
 
-This means the API schema and configuration details cannot automatically be assumed to match the running image. Before extending the matrix, one of two rules must be chosen:
-
-- test the release image and take the schema/source from the corresponding tag;
-- test the build of the current source commit and store the commit as the stand version.
-
-For a regression system it is better to support both profile types: the release image for the customer scenario and a source build for early verification of the upcoming release.
+Release-upgrade profiles stay pinned to immutable release images. This deliberately supports both
+early regression testing on the current source and reproducible customer upgrade paths without
+silently mixing their provenance.
 
 ## Recommended sequence
 

@@ -10,11 +10,6 @@ on:
         required: false
         type: boolean
         default: false
-      include_shell_output_investigation:
-        description: Include the known-failing shell output reproducer
-        required: false
-        type: boolean
-        default: false
       application_branch:
         description: >-
           Application branch to test; defaults to develop
@@ -66,7 +61,8 @@ jobs:
           - feature-ldap-tls
           - feature-totp-local
           - feature-encryption-rotation
-        include: ${{ fromJSON(inputs.include_schedule_investigation && inputs.include_shell_output_investigation && '[{"profile":"feature-schedule-timezone"},{"profile":"feature-shell-output"}]' || inputs.include_schedule_investigation && '[{"profile":"feature-schedule-timezone"}]' || inputs.include_shell_output_investigation && '[{"profile":"feature-shell-output"}]' || '[]') }}
+          - feature-shell-output
+        include: ${{ fromJSON(inputs.include_schedule_investigation && '[{"profile":"feature-schedule-timezone"}]' || '[]') }}
     env:
       PROFILE: ${{ matrix.profile }}
       APP_SOURCE: ${{ needs.app-image.outputs.app_source }}
