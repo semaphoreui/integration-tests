@@ -113,7 +113,9 @@ The MySQL 8.4 and MariaDB 10.11 versions are pinned in the test matrix and passe
 
 ## Remote runner
 
-The production-like profile uses the same PostgreSQL overlay, enables `SEMAPHORE_USE_REMOTE_RUNNER`, and starts `semaphoreui/runner:v2.19.12` as a separate service:
+The production-like profile uses the same PostgreSQL overlay, enables
+`SEMAPHORE_USE_REMOTE_RUNNER`, and starts the persistent runner as a separate service from the same
+resolved application image as the server:
 
 ```bash
 test-environment/profile down core-postgres-local
@@ -127,7 +129,10 @@ The Git fixture is not mounted into the server or the runner: both clone it from
 
 The API suite additionally verifies that the runner is active, registered, assigned as default, has `online` status, and sends heartbeats. Successful task/output and stop/force-stop scenarios with remote mode enabled confirm actual execution on the runner.
 
-On `v2.19.8` the profile also contains a known-defect canary: a secret survey variable is lost before remote dispatch, although the same launch passes with local execution. The canary does not print the secret value; the upstream fix #4086 and the criterion for removing the workaround are described in `remote-runner-survey-secrets-defect.md`.
+The profile runs the server and persistent runner from the same resolved application image. Its
+positive survey regression proves that a secret value reaches the remote executor, produces only a
+safe hash marker, and remains absent from API, structured, raw, and Allure diagnostics. Older
+release evidence is preserved in `remote-runner-survey-secrets-defect.md`.
 
 ## SSH feature profile
 

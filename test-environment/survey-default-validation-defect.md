@@ -8,7 +8,7 @@ invalid definition is persisted, even though the launch form cannot represent th
 valid enum choice.
 
 The executable stable suite checks a different server-side rule—unsupported survey targets are
-rejected—while this version-specific defect remains documented separately.
+rejected—and the current-source suite now also protects the fixed enum-default contract.
 
 ## Environment
 
@@ -17,6 +17,7 @@ rejected—while this version-specific defect remains documented separately.
 - execution mode: local;
 - profile: `core-sqlite-local`;
 - reproduced: 2026-08-20.
+- positive regression: 2026-09-21 on `develop@e95560fd`.
 
 ## Steps to reproduce
 
@@ -59,5 +60,9 @@ The release source for `v2.19.8` validates survey targets but does not validate 
 between type, values and default. Upstream commit
 [`eb29c3e8`](https://github.com/semaphoreui/semaphore/commit/eb29c3e802df4890dc803709954dc373ae8968b2)
 adds `ValidateSurveyVar` and backend tests, including rejection of enum defaults outside the values
-list. The commit is contained in `v2.20.0-alpha1`, so the regression check should switch to the
-expected `400` contract when the test matrix advances to that release line.
+list. The commit is contained in `v2.20.0-alpha1`.
+
+The regression now sends the invalid enum definition in the regular API suite and requires HTTP
+`400` with `survey variable "deployment_env": default_value "qa" is not in values list`. The
+historical `v2.19.8` result remains documented because that release still persists the invalid
+template.

@@ -177,7 +177,7 @@ The CI distribution is also implemented: the API baseline, the shell-output regr
 | project max parallel / queue admission | ✓ | planned | ✓ | planned | planned | core profiles |
 | runner exact tag / capacity / used runner | — | — | ✓ | — | — | `prod-postgres-runner` |
 | unavailable matching runner recovery | — | — | defect: task error | — | — | `runner-unavailable-routing-defect.md` |
-| secret survey variable dispatch | local ✓ | local ✓ | defect: value lost | local ✓ | local ✓ | `remote-runner-survey-secrets-defect.md` |
+| secret survey variable dispatch | local ✓ | local ✓ | ✓ current source | local ✓ | local ✓ | historical release evidence in `remote-runner-survey-secrets-defect.md` |
 | dynamic start/finish webhook and one-off exit | — | — | — | — | — | `feature-dynamic-runner`, defect |
 | Git over SSH, SSH inventory, and key rotation | — | — | — | — | — | `feature-ssh-local` |
 | Private Git over HTTPS and Basic Auth | — | — | — | — | — | `feature-git-https` |

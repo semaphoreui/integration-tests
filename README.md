@@ -104,7 +104,11 @@ The runner registers automatically, stores a long-lived token in a separate volu
 
 When no suitable active runner is available, the behaviour differs from the capacity case: `v2.19.8` moves the task to `error: no runners available` instead of keeping it in the queue. This was reproduced for a temporarily disabled matching runner and for a non-existent tag; details are in `test-environment/runner-unavailable-routing-defect.md`.
 
-Another remote execution difference: `v2.19.8` loses secret survey variables before dispatch, so the task receives an undefined variable. The profile contains a safe known-defect canary that does not print the value; the upstream fix #4086 is already included in `v2.20.0-alpha1`. The evidence and the criterion for switching to a positive regression are described in `test-environment/remote-runner-survey-secrets-defect.md`.
+Older releases lose secret survey variables before remote dispatch. The current-source profile runs
+the server and persistent runner from the same resolved application image and positively verifies
+successful secret delivery without exposing plaintext. Historical evidence for `v2.19.12` and the
+two-sided compatibility boundary are described in
+`test-environment/remote-runner-survey-secrets-defect.md`.
 
 The SSH feature profile verifies an encrypted access key on two client boundaries at once: Git clone over SSH and an Ansible connection to a remote target:
 
@@ -331,7 +335,7 @@ when launching the deploy. Semaphore assigns the build a `start_version`, passes
 safe version markers. The deploy detail API stores the link, while the displayed version is taken from the
 nested `build_task` in the task history — the deploy task has no `version` field of its own.
 
-The survey/task override suite saves enum, integer, string, env-target and secret survey variables in the template, then runs `survey-overrides.yml` with overridden values, template/task arguments and Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. The task really runs on SQLite and PostgreSQL with local execution, the secret is verified by SHA-256 under `no_log` and is absent from the structured/raw output. The persistent runner on `v2.19.8` loses the survey secret before dispatch; this is covered by a separate canary until the move to upstream #4086. An unsupported survey target gets `400`. A `v2.19.8` gap is also recorded: an enum default outside the list is accepted by the backend; the fix is already in upstream `v2.20.0-alpha1`.
+The survey/task override suite saves enum, integer, string, env-target and secret survey variables in the template, then runs `survey-overrides.yml` with overridden values, template/task arguments and Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. The task really runs with local execution and through the persistent runner, the secret is verified by SHA-256 under `no_log` and is absent from the structured/raw output. Unsupported survey targets and enum defaults outside their allowed values receive diagnosable `400` responses. The historical remote-dispatch and enum-default defects remain documented separately.
 
 The webhook integration suite creates a token-authenticated searchable integration, a project alias, a header matcher and extractors from the JSON body/header. Requests with a wrong token or event do not launch a task, while a valid webhook returns task identifiers, saves the link through `integration_id` and really passes the extracted values to the Ansible playbook. The token is stored in a `login_password` access key and is redacted in API/Allure diagnostics.
 

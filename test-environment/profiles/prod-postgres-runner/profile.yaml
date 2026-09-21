@@ -14,7 +14,7 @@ database_type: postgres
 database_image: postgres:14.3
 execution_mode: remote-runner
 execution_executor: local
-runner_image: semaphoreui/runner:v2.19.12
+runner_image: application-image
 runner_name: bookwright-persistent-runner
 auth: password
 git_client: cmd_git

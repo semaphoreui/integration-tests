@@ -23,11 +23,11 @@ instead. All reproducers use generated fixtures and do not expose credentials or
 | BUG-001 | Project deletion succeeds while a task is still running | High | Projects / task execution | Confirmed in Linux CI on `v2.19.12` |
 | BUG-002 | File inventory creation accepts a path outside its repository | High | Inventory API / path validation | Confirmed in Linux CI on `v2.19.12` |
 | BUG-003 | Active schedules do not create tasks | High | Scheduler | Confirmed locally on `v2.19.12`; both `run_at` and cron fail |
-| BUG-004 | Remote runner loses secret survey variables | High | Remote runner dispatch / secrets | Confirmed in Linux CI on `v2.19.12`; fixed on `develop` |
+| BUG-004 | Remote runner loses secret survey variables | High | Remote runner dispatch / secrets | Historical on `v2.19.12`; fixed and covered on `develop` |
 | BUG-005 | Tasks fail when no matching runner is temporarily available | High | Runner routing / task queue | Confirmed in Linux CI on `v2.19.12`; product-contract decision required |
 | BUG-006 | One-off runner does not exit after a completed task | Medium | Runner lifecycle | Confirmed locally on `v2.19.12`; defective condition remains on `develop` |
 | BUG-007 | Project restore accepts duplicate resource names | Medium | Project backup / restore | Confirmed in Linux CI on `v2.19.12`; off-by-one remains on `develop` |
-| BUG-008 | Survey enum accepts a default outside its allowed values | Medium | Template survey validation | Confirmed on `v2.19.8`; fixed on `develop`, not in `v2.19.12` |
+| BUG-008 | Survey enum accepts a default outside its allowed values | Medium | Template survey validation | Historical on `v2.19.8`; fixed and covered on `develop` |
 | BUG-009 | Successful short task loses `stdout` or `stderr` | High | Task execution / output collection | Historical on `v2.19.12`; fixed and covered on `develop` |
 
 ## BUG-001 — Project deletion succeeds while a task is still running
@@ -184,7 +184,7 @@ not leaked.
 ```bash
 test-environment/profile up prod-postgres-runner
 test-environment/profile test prod-postgres-runner \
-  --tests io.bookwright.tests.semaphore.SurveyAndTaskOverridesApiTest.remoteRunnerLosesSurveySecret
+  --tests io.bookwright.tests.semaphore.SurveyAndTaskOverridesApiTest.remoteRunnerReceivesSurveySecret
 ```
 
 **Current-stable evidence:** the expected-defect canary passed in the complete
@@ -194,6 +194,11 @@ on 2026-09-04 by observing the undefined survey variable without exposing its va
 **Upstream status:** fixed by [PR #4086](https://github.com/semaphoreui/semaphore/pull/4086), commit
 [`081425d2`](https://github.com/semaphoreui/semaphore/commit/081425d2bc20d5fe41def47ec6a429e2e43cf715),
 on `develop`; the fix is not contained in the current stable `v2.19.12` tag.
+
+**Current-source regression:** the profile runs both the server and persistent runner from the
+resolved `develop` application image. On 2026-09-21, `develop@e95560fd` delivered the secret to the
+runner, completed the task successfully, and kept the plaintext absent from structured/raw output.
+The complete production-like API suite passed with this paired image.
 
 **Detailed evidence:** [remote-runner-survey-secrets-defect.md](remote-runner-survey-secrets-defect.md)
 
@@ -374,6 +379,10 @@ task parameters can diverge because validation happens too late or only in the b
 [`eb29c3e8`](https://github.com/semaphoreui/semaphore/commit/eb29c3e802df4890dc803709954dc373ae8968b2).
 The fix is not contained in the current stable `v2.19.12` tag.
 
+**Current-source regression:** template creation now must return `400` containing the exact invalid
+default diagnostic. This passed locally against `develop@e95560fd` on 2026-09-21 and runs in the
+regular API suite.
+
 **Detailed evidence:** [survey-default-validation-defect.md](survey-default-validation-defect.md)
 
 ## BUG-009 — Successful short task loses `stdout` or `stderr`
@@ -450,10 +459,8 @@ as an upgrade baseline. Both scenarios passed locally against `develop@e95560fd`
 
 ## Recommended next actions
 
-1. Test `develop` for BUG-004 and BUG-008 and prepare positive regression checks for the
-   release that first contains their fixes.
-2. Confirm the intended unavailable-runner queue contract with the product team before filing
+1. Confirm the intended unavailable-runner queue contract with the product team before filing
    BUG-005 as an unconditional product defect.
-3. Create or link upstream issues for BUG-001, BUG-002, BUG-003, BUG-006 and BUG-007, preserving
+2. Create or link upstream issues for BUG-001, BUG-002, BUG-003, BUG-006 and BUG-007, preserving
    Allure results and sanitized server logs as evidence.
-4. Rerun every open canary when the next stable image replaces `v2.19.12`.
+3. Rerun every open canary when the next stable image replaces `v2.19.12`.

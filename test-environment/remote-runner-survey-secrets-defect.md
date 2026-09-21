@@ -11,6 +11,7 @@ The same template and launch payload succeed with local execution.
 - initially observed: 2026-08-21 on `v2.19.8`;
 - reconfirmed: 2026-09-04 in Linux CI on `v2.19.12`;
 - Semaphore server and runner: `v2.19.12`;
+- positive regression: 2026-09-21 on server and runner `develop@e95560fd`;
 - profile: `prod-postgres-runner`;
 - database: PostgreSQL 14.3;
 - executor: persistent remote runner, `local` executor.
@@ -25,8 +26,9 @@ The same template and launch payload succeed with local execution.
 
 The task reaches terminal `error`. Ansible reports that the survey variable is
 undefined. The automated reproducer is
-`SurveyAndTaskOverridesApiTest.remoteRunnerLosesSurveySecret`; it also checks
-that the plaintext value is absent from task output.
+the historical behavior now documented by this report. The maintained
+`SurveyAndTaskOverridesApiTest.remoteRunnerReceivesSurveySecret` instead protects the fixed positive
+contract and checks that the plaintext value is absent from task output.
 
 ## Expected
 
@@ -59,11 +61,14 @@ tested stable `v2.19.12` release.
 
 The current-stable evidence is the `prod-postgres-runner` job in
 [configuration matrix run 33871024329](https://github.com/semaphoreui/integration-tests/actions/runs/33871024329).
-The canary is expected to pass only when it observes the undefined variable and confirms that the
+The historical canary passed only when it observed the undefined variable and confirmed that the
 secret value was not leaked.
 
 ## Regression criterion
 
-After upgrading to a release containing #4086, replace the known-defect canary
-with the positive survey execution assertion on `prod-postgres-runner`. Keep
-the existing redaction checks for structured/raw output and test artifacts.
+The known-defect canary has been replaced by a positive survey execution assertion on
+`prod-postgres-runner`. The profile deliberately runs the server and runner from the same resolved
+application image: #4086 adds both server-side persistence/dispatch and runner-side consumption, so
+mixing `develop` server with a `v2.19.12` runner would reproduce the old failure by design. The
+positive regression requires task `success`, the safe hash marker, and plaintext absence from
+structured/raw output and test artifacts.
