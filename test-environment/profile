@@ -31,9 +31,13 @@ encryption-rotation-test is available only for encryption rotation profiles. It
 creates data with the old primary key, hot-reloads a new primary, rekeys database
 secrets, removes the retired key and verifies the persisted task fixture.
 
-The application image comes from the profile manifest. Set APP_IMAGE to run the
-same profile against another image, for example one built from a pull request of
-the application repository by scripts/app-source.sh.
+The application image comes from the profile manifest. A manifest that declares
+"semaphore_image: branch:<name>" is tested on an image built from the HEAD commit
+of that branch of the application repository: scripts/app-source.sh resolves the
+commit, reuses an image already built for it and otherwise builds one. Set
+APP_IMAGE to run the same profile against another image instead, for example one
+built from a pull request of the application repository, and APP_BRANCH to build
+another branch of the application repository.
 
 The external profile starts only the fixture services and tests an existing
 Semaphore. up and test require API_BASE_URL, API_USERNAME, API_PASSWORD and
@@ -52,14 +56,133 @@ manifest_value() {
   sed -n "s/^${key}:[[:space:]]*//p" "$manifest_file" | sed -n '1p'
 }
 
-# The application under test normally comes from the profile manifest. APP_IMAGE overrides it
-# with a temporary image built from an application pull request; see scripts/app-source.sh.
+# The application under test comes from the profile manifest. APP_IMAGE overrides it with an
+# image built elsewhere, typically from an application pull request by scripts/app-source.sh;
+# a manifest value of "branch:<name>" is resolved and built by the same script.
+#
+# The result is remembered per profile (see application_state_file) so that every later action
+# of the same profile keeps talking about the image the containers were actually started with,
+# even when the application branch has moved on since.
 effective_semaphore_image() {
   if [ -n "${APP_IMAGE:-}" ]; then
     printf '%s' "$APP_IMAGE"
   else
     manifest_value semaphore_image
   fi
+}
+
+# Which of the three application sources this run uses, and what to say about it. APP_IMAGE is
+# how CI hands over an image it already built, so its provenance comes from the environment.
+select_application_source() {
+  application_source=docker-image
+  application_repository=${APP_REPOSITORY:-}
+  application_branch=
+  application_pr=${APP_PR:-}
+  application_sha=${APP_SHA:-}
+
+  if [ -n "${APP_IMAGE:-}" ]; then
+    # APP_SOURCE is set by CI alongside APP_IMAGE; older callers only pass the pull request
+    # values, which is what the fallback describes.
+    application_source=${APP_SOURCE:-}
+    application_branch=${APP_BRANCH:-}
+    if [ -z "$application_source" ]; then
+      application_source=docker-image
+      [ -z "$application_pr" ] || application_source=pull-request
+    fi
+    return 0
+  fi
+
+  case "$selected_semaphore_image" in
+    branch:*)
+      application_source=branch
+      application_branch=${selected_semaphore_image#branch:}
+      # APP_BRANCH tests another branch of the same application repository. It cannot switch the
+      # source off, because a manifest that declares a branch pins no image to fall back to.
+      case "${APP_BRANCH:-}" in
+        '') ;;
+        none) fail "APP_BRANCH=none needs an image to run instead; set APP_IMAGE to the image to test" ;;
+        *) application_branch=$APP_BRANCH ;;
+      esac
+      [ -n "$application_repository" ] || application_repository=semaphoreui/semaphore
+      [ -n "$application_branch" ] \
+        || fail "semaphore_image in $manifest_file declares no branch name"
+      # Not resolvable without the network, so the actions that do not start containers keep
+      # working offline and the image name stays empty until it is needed.
+      selected_semaphore_image=
+      load_application_state
+      ;;
+  esac
+}
+
+application_state_file() {
+  printf '%s/build/test-environment/%s/application.env' "$repository_dir" "$profile_id"
+}
+
+# Only the values this script wrote are read back, and each of them is checked before use.
+load_application_state() {
+  state_file=$(application_state_file)
+  [ -f "$state_file" ] || return 0
+
+  state_image=$(sed -n 's/^APP_IMAGE=//p' "$state_file" | sed -n '1p')
+  [ -n "$state_image" ] || return 0
+
+  selected_semaphore_image=$state_image
+  application_source=$(sed -n 's/^APP_SOURCE=//p' "$state_file" | sed -n '1p')
+  application_branch=$(sed -n 's/^APP_BRANCH=//p' "$state_file" | sed -n '1p')
+  application_sha=$(sed -n 's/^APP_SHA=//p' "$state_file" | sed -n '1p')
+  application_repository=$(sed -n 's/^APP_REPOSITORY=//p' "$state_file" | sed -n '1p')
+  application_pr=$(sed -n 's/^APP_PR=//p' "$state_file" | sed -n '1p')
+}
+
+write_application_state() {
+  state_file=$(application_state_file)
+  mkdir -p "$(dirname -- "$state_file")"
+  {
+    printf 'APP_SOURCE=%s\n' "$application_source"
+    printf 'APP_REPOSITORY=%s\n' "$application_repository"
+    printf 'APP_BRANCH=%s\n' "$application_branch"
+    printf 'APP_PR=%s\n' "$application_pr"
+    printf 'APP_SHA=%s\n' "$application_sha"
+    printf 'APP_IMAGE=%s\n' "$selected_semaphore_image"
+  } > "$state_file"
+}
+
+# Called by the actions that start containers. In branch mode it resolves the HEAD commit of the
+# application branch and builds the image when no image exists for that commit yet; every other
+# mode only records what was already decided.
+ensure_application_image() {
+  [ "$semaphore_instance" != "external" ] || return 0
+
+  if [ "$application_source" = "branch" ]; then
+    printf 'Resolving the application image of %s@%s...\n' \
+      "$application_repository" "$application_branch"
+    state_output="$repository_dir/build/test-environment/$profile_id/app-source.env"
+    mkdir -p "$(dirname -- "$state_output")"
+    # The build log has to stay visible while it runs, so the output is teed instead of
+    # captured; the exit status travels through the same stream because a pipeline hides it.
+    (
+      set +e
+      APP_BRANCH=$application_branch
+      APP_REPOSITORY=$application_repository
+      export APP_BRANCH APP_REPOSITORY
+      unset APP_IMAGE APP_PR
+      "$repository_dir/scripts/app-source.sh" ensure
+      printf 'APP_SOURCE_STATUS=%s\n' "$?"
+    ) | tee "$state_output"
+
+    app_source_status=$(sed -n 's/^APP_SOURCE_STATUS=//p' "$state_output" | sed -n '$p')
+    [ "$app_source_status" = "0" ] \
+      || fail "scripts/app-source.sh could not provide an image for $application_repository@$application_branch"
+
+    resolved_image=$(sed -n 's/^APP_IMAGE=//p' "$state_output" | sed -n '$p')
+    [ -n "$resolved_image" ] \
+      || fail "scripts/app-source.sh did not resolve an application image for branch '$application_branch'"
+    selected_semaphore_image=$resolved_image
+    application_sha=$(sed -n 's/^APP_SHA=//p' "$state_output" | sed -n '$p')
+    rm -f "$state_output"
+  fi
+
+  write_application_state
 }
 
 report_application_source() {
@@ -69,15 +192,24 @@ report_application_source() {
     printf 'Fixture repository: %s\n' "$TEST_REPOSITORY"
     return
   fi
-  if [ -n "${APP_IMAGE:-}" ]; then
-    printf 'Application source: Pull Request\n'
-    [ -z "${APP_REPOSITORY:-}" ] || printf 'Application repository: %s\n' "$APP_REPOSITORY"
-    [ -z "${APP_PR:-}" ] || printf 'Application PR: #%s\n' "$APP_PR"
-    [ -z "${APP_SHA:-}" ] || printf 'Application SHA: %s\n' "$APP_SHA"
-  else
-    printf 'Application source: Docker image\n'
-  fi
-  printf 'Application image: %s\n' "$selected_semaphore_image"
+  case "$application_source" in
+    pull-request)
+      printf 'Application source: Pull Request\n'
+      [ -z "$application_repository" ] || printf 'Application repository: %s\n' "$application_repository"
+      [ -z "$application_pr" ] || printf 'Application PR: #%s\n' "$application_pr"
+      [ -z "$application_sha" ] || printf 'Application SHA: %s\n' "$application_sha"
+      ;;
+    branch)
+      printf 'Application source: Branch\n'
+      printf 'Application repository: %s\n' "$application_repository"
+      printf 'Application branch: %s\n' "$application_branch"
+      [ -z "$application_sha" ] || printf 'Application SHA: %s\n' "$application_sha"
+      ;;
+    *)
+      printf 'Application source: Docker image\n'
+      ;;
+  esac
+  printf 'Application image: %s\n' "${selected_semaphore_image:-unresolved}"
 }
 
 # Profiles with semaphore_instance: external start only the fixture services and test a
@@ -111,6 +243,7 @@ select_profile() {
   stand=$(manifest_value stand)
   setup_service=$(manifest_value setup_service)
   selected_semaphore_image=$(effective_semaphore_image)
+  select_application_source
   selected_schedule_timezone=$(manifest_value schedule_timezone)
   [ -n "$selected_schedule_timezone" ] || selected_schedule_timezone=UTC
   selected_test_task=$(manifest_value test_task)
@@ -152,8 +285,11 @@ select_profile() {
   [ -f "$compose_file" ] || fail "Compose file does not exist: $compose_file"
 }
 
+# Actions that do not start the application (ps, logs, down, clean) must work before any image
+# has been resolved. Compose only needs a syntactically valid reference to parse the file; it
+# addresses existing containers by project name, so the placeholder is never pulled or run.
 compose() {
-  SEMAPHORE_IMAGE="$selected_semaphore_image" \
+  SEMAPHORE_IMAGE="${selected_semaphore_image:-unresolved-application-image}" \
     docker compose --project-name "$compose_project" --file "$compose_file" "$@"
 }
 
@@ -411,13 +547,20 @@ write_allure_environment() {
       printf 'application.source=external\n'
       printf 'semaphore.url=%s\n' "$selected_api_base_url"
       printf 'fixtures.repository=%s\n' "$TEST_REPOSITORY"
-    elif [ -n "${APP_IMAGE:-}" ]; then
+    elif [ "$application_source" = "pull-request" ]; then
       printf 'application.source=pull-request\n'
-      printf 'application.repository=%s\n' "${APP_REPOSITORY:-}"
-      printf 'application.pull.request=%s\n' "${APP_PR:-}"
-      printf 'semaphore.version=%s\n' "pr-${APP_PR:-unknown}"
+      printf 'application.repository=%s\n' "$application_repository"
+      printf 'application.pull.request=%s\n' "$application_pr"
+      printf 'semaphore.version=%s\n' "pr-${application_pr:-unknown}"
       printf 'semaphore.image=%s\n' "$image_reference"
-      printf 'semaphore.source.commit=%s\n' "${APP_SHA:-}"
+      printf 'semaphore.source.commit=%s\n' "$application_sha"
+    elif [ "$application_source" = "branch" ]; then
+      printf 'application.source=branch\n'
+      printf 'application.repository=%s\n' "$application_repository"
+      printf 'application.branch=%s\n' "$application_branch"
+      printf 'semaphore.version=%s\n' "$(manifest_value semaphore_version)"
+      printf 'semaphore.image=%s\n' "$image_reference"
+      printf 'semaphore.source.commit=%s\n' "$application_sha"
     else
       printf 'application.source=docker-image\n'
       printf 'semaphore.version=%s\n' "$(manifest_value semaphore_version)"
@@ -545,6 +688,7 @@ case "$action" in
   up)
     select_profile "${2:-}"
     [ "$semaphore_instance" != "external" ] || require_external_instance
+    ensure_application_image
     report_application_source
     prepare_ssh_fixture
     prepare_tls_fixture
@@ -567,6 +711,9 @@ case "$action" in
     [ "$selected_encryption_fixture" != "generated" ] \
       || fail "profile '$profile_id' requires: test-environment/profile encryption-rotation-test $profile_id"
     [ "$semaphore_instance" != "external" ] || require_external_instance
+    # Normally the image was resolved by the up action and read back from the profile state;
+    # resolving here too keeps a direct test run working, and never rebuilds an existing image.
+    [ -n "$selected_semaphore_image" ] || ensure_application_image
     report_application_source
     shift 2
     prepare_ssh_fixture
@@ -613,6 +760,11 @@ case "$action" in
     previous_semaphore_image=$(manifest_value previous_semaphore_image)
     [ -n "$previous_semaphore_image" ] || fail "profile '$profile_id' does not define previous_semaphore_image"
     configure_java
+    # The current image is resolved before the previous one is started, so the upgrade half of
+    # the run cannot be delayed by a build and both halves use one and the same current image.
+    ensure_application_image
+    current_semaphore_image=$selected_semaphore_image
+    report_application_source
 
     compose down --volumes --remove-orphans
     selected_semaphore_image=$previous_semaphore_image
@@ -621,7 +773,7 @@ case "$action" in
     await_ready
     run_upgrade_phase seed
 
-    selected_semaphore_image=$(effective_semaphore_image)
+    selected_semaphore_image=$current_semaphore_image
     compose up --detach --force-recreate semaphore
     await_ready
     write_allure_environment
@@ -643,6 +795,8 @@ case "$action" in
     [ "$selected_encryption_fixture" = "generated" ] \
       || fail "profile '$profile_id' does not define encryption_fixture: generated"
     configure_java
+    ensure_application_image
+    report_application_source
     prepare_encryption_fixture
 
     compose down --volumes --remove-orphans
@@ -709,6 +863,9 @@ case "$action" in
     select_profile "${2:-}"
     [ "${3:-}" = "--yes" ] || fail "clean removes profile volumes; repeat with: test-environment/profile clean $profile_id --yes"
     compose down --volumes --remove-orphans
+    # The next up of this profile resolves the application image again instead of reusing the
+    # commit this one happened to start with.
+    rm -f "$(application_state_file)"
     ;;
   help|-h|--help|'')
     usage
