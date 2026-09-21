@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35587859628",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 71,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 42,
+        "skipped": 29,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 82,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 82,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #35 from semaphoreui/codex/config-contract-checks",
+  "event": "push",
+  "conclusion": "success",
+  "runId": 35587859628,
+  "runAttempt": 1,
+  "runNumber": 102,
+  "createdAt": "2026-09-21T10:16:23Z",
+  "date": "2026-09-21",
+  "headSha": "7e760c9c12cea110bd5fa07def56815e063fdd3e",
+  "shortSha": "7e760c9",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/7e760c9c12cea110bd5fa07def56815e063fdd3e"
+}
