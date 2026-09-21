@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35620740943",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 71,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 42,
+        "skipped": 29,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 85,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 85,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #33 from semaphoreui/codex/typed-fixture-catalog",
+  "event": "push",
+  "conclusion": "success",
+  "runId": 35620740943,
+  "runAttempt": 1,
+  "runNumber": 103,
+  "createdAt": "2026-09-21T15:42:17Z",
+  "date": "2026-09-21",
+  "headSha": "f85f5ae3c334b6a31b26ceafd82f16cb03571d7f",
+  "shortSha": "f85f5ae",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/f85f5ae3c334b6a31b26ceafd82f16cb03571d7f"
+}
