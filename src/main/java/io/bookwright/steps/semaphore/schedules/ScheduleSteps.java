@@ -31,7 +31,9 @@ public class ScheduleSteps {
     Schedule schedule = Calls.body(api.createSchedule(projectId, request), 201, "created schedule");
     teardown.push(
         "Delete Semaphore schedule " + schedule.id(),
-        () -> Calls.expectStatus(api.deleteSchedule(projectId, schedule.id()), 204));
+        () ->
+            Calls.expectStatus(
+                Calls.response(api.deleteSchedule(projectId, schedule.id())), 204, 404));
     return schedule;
   }
 
@@ -64,6 +66,16 @@ public class ScheduleSteps {
   @Step("List schedules in Semaphore project {projectId}")
   public List<Schedule> getSchedules(long projectId) {
     return Calls.body(api.getSchedules(projectId), 200, "schedules");
+  }
+
+  @Step("Verify Semaphore schedule {scheduleId} is absent")
+  public void verifyAbsent(long projectId, long scheduleId) {
+    Calls.expectStatus(Calls.response(api.getSchedule(projectId, scheduleId)), 404);
+    if (getSchedules(projectId).stream().anyMatch(schedule -> schedule.id() == scheduleId)) {
+      throw new IllegalStateException(
+          "Deleted Semaphore schedule %d is still present in project %d"
+              .formatted(scheduleId, projectId));
+    }
   }
 
   @Step("Update Semaphore schedule {scheduleId}")

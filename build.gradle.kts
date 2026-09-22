@@ -164,6 +164,9 @@ fun Test.configureBookwrightTestRuntime() {
 
 tasks.withType<Test>().configureEach {
     configureBookwrightTestRuntime()
+    // Product and UI tests depend on mutable services outside Gradle's input graph. Reusing an
+    // UP-TO-DATE result after switching an application image can report a test that never ran.
+    outputs.upToDateWhen { false }
 }
 
 tasks.test {
