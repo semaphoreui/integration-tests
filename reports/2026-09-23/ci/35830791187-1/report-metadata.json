@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35830791187",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 77,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 50,
+        "skipped": 27,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 85,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 85,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ]
+}
