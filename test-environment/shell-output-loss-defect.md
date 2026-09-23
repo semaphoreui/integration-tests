@@ -7,7 +7,9 @@
 - configuration: Community, Docker Compose, SQLite, local task execution;
 - reproduced: 2026-09-04 in Linux CI;
 - GitHub Actions run: [33866188839](https://github.com/semaphoreui/integration-tests/actions/runs/33866188839);
-- fixed in `develop`, but the fix is not yet included in the current stable release `v2.19.12`.
+- fixed in `develop` and protected there by a positive PR/nightly regression;
+- positive regression confirmed locally on 2026-09-21 against `develop@e95560fd`;
+- the fix is not yet included in the current stable release `v2.19.12`.
 
 ## Description
 
@@ -90,10 +92,12 @@ Upstream fixed both parts after the `v2.19.12` release:
 ## Automated control
 
 `ShellOutputTest` keeps strict checks of both markers and of the completion time of the background
-scenario. Until the fix lands in stable, it runs only under the
-`feature-shell-output` profile, is not masked by retries, and is not part of the green PR/nightly gate. In the manual
-`Configuration matrix` it can be enabled with the input parameter
-`include_shell_output_investigation=true` to obtain the standard CI artifacts.
+scenario without retries. Against the current application source it runs as a positive contract in
+the regular `core-sqlite-local` pull-request gate. The focused `feature-shell-output` profile runs in
+the daily configuration matrix and remains available locally for isolated diagnosis.
+
+The historical `v2.19.12` result is deliberately not rewritten as green: running the same strict
+test against that release remains a valid reproduction of the original defect.
 
 The remaining profile suites execute JUnit classes sequentially and wait for their own evidentiary
 marker. This reduces pressure on the defective concurrent output collector of `v2.19.12` without adding

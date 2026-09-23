@@ -18,7 +18,9 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 @Api
 @OwnerDanil
 @Feature("Semaphore shell output")
-@EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "feature-shell-output")
+@EnabledIfSystemProperty(
+    named = "SEMAPHORE_PROFILE",
+    matches = "core-sqlite-local|feature-shell-output")
 class ShellOutputTest {
 
   @Test

@@ -1,5 +1,7 @@
 package io.bookwright.steps.semaphore.templates;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.TemplateRequest;
@@ -11,6 +13,8 @@ import java.io.IOException;
 import java.util.List;
 
 public class TemplateSteps {
+
+  private static final ObjectMapper JSON = new ObjectMapper();
 
   private final SemaphoreTemplatesApi api;
   private final TeardownStorage teardown;
@@ -38,7 +42,8 @@ public class TemplateSteps {
     Calls.expectStatus(response, 400);
     try (var body = response.errorBody()) {
       String diagnostic = body == null ? "" : body.string();
-      if (!diagnostic.contains(expectedValidationError)) {
+      String validationMessage = validationMessage(diagnostic);
+      if (!validationMessage.contains(expectedValidationError)) {
         throw new IllegalStateException(
             "Template validation response did not contain '%s'. Body: %s"
                 .formatted(expectedValidationError, diagnostic));
@@ -46,6 +51,15 @@ public class TemplateSteps {
     } catch (IOException error) {
       throw new IllegalStateException(
           "Could not read Semaphore template validation response", error);
+    }
+  }
+
+  private String validationMessage(String responseBody) {
+    try {
+      var document = JSON.readTree(responseBody);
+      return document.hasNonNull("error") ? document.get("error").asText() : responseBody;
+    } catch (JsonProcessingException ignored) {
+      return responseBody;
     }
   }
 

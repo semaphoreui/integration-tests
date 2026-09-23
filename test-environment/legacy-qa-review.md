@@ -59,7 +59,7 @@ Legend: **covered** — the contract is already protected by automation; **parti
 | TC-019 | TF_VAR secrets | Covered | A secret of type `env` actually becomes a Terraform/OpenTofu input variable; a SHA-256 marker confirms injection without plaintext in API/output/Allure |
 | TC-020 | Ansible template execution | Covered | Do not duplicate |
 | TC-021 | Build/deploy chain | Covered with a clarification | Manual selection of a successful build, `build_task_id`, nested history version, and target/incoming executor env are automated; a `version` of its own exists only on the build task |
-| TC-022 | Survey variables | Covered by API with a defect | Enum/int/string/env/secret metadata, persistence, local execution, and backend target validation; `v2.19.8` loses the secret on remote dispatch; UI widgets/required remain a browser check |
+| TC-022 | Survey variables | Covered by API | Enum/int/string/env/secret metadata, persistence, local and remote-runner execution, backend target/default validation, and secret masking; UI widgets/required remain a browser check |
 | TC-023 | Task overrides | Covered by API | Launch values, template/task arguments, and Ansible limit/tags/skip-tags/diff/skip-galaxy are actually executed |
 | TC-024 | Stop task | Covered | Regular stop and force-stop are made deterministic by a marker |
 | TC-025 | Cron schedule | Partial | CRUD/validation/toggle added; real fire and DST to be moved to the slow profile |
@@ -78,6 +78,6 @@ Legend: **covered** — the contract is already protected by automation; **parti
 1. Schedules contract and validation — current implementation.
 2. Local SSH Git/inventory fixture without external network access.
 3. Variable Groups, survey variables, and launch-time overrides — done at the API level.
-4. Queue/max parallel and runner tags — done; unavailable runner recovery and loss of the survey secret on remote dispatch are captured by separate reproducers/canaries.
+4. Queue/max parallel and runner tags — done; unavailable runner recovery remains a defect candidate, while remote survey-secret dispatch is a positive current-source regression with historical release evidence.
 5. Minimal UI smoke — done: password login, task launch, and client-side project-name validation without a POST.
 6. Separate feature profiles for Vault, Terraform, and webhook integration.

@@ -289,7 +289,12 @@ select_profile() {
 # has been resolved. Compose only needs a syntactically valid reference to parse the file; it
 # addresses existing containers by project name, so the placeholder is never pulled or run.
 compose() {
+  compose_runner_image=$(manifest_value runner_image)
+  if [ "$compose_runner_image" = "application-image" ]; then
+    compose_runner_image=${selected_semaphore_image:-unresolved-application-image}
+  fi
   SEMAPHORE_IMAGE="${selected_semaphore_image:-unresolved-application-image}" \
+    SEMAPHORE_RUNNER_IMAGE="${compose_runner_image:-semaphoreui/runner:v2.19.12}" \
     docker compose --project-name "$compose_project" --file "$compose_file" "$@"
 }
 
@@ -521,6 +526,9 @@ write_allure_environment() {
   fi
 
   runner_image=$(manifest_value runner_image)
+  if [ "$runner_image" = "application-image" ]; then
+    runner_image=$selected_semaphore_image
+  fi
   runner_image_reference=$runner_image
   if [ -n "$runner_image" ]; then
     inspected_runner_image=$(docker image inspect "$runner_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
