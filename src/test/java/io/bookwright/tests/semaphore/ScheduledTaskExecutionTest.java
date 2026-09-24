@@ -41,6 +41,31 @@ class ScheduledTaskExecutionTest {
     assertThat(completedTask.status()).isEqualTo(fixtures.expectations().successfulTaskStatus());
     assertThat(api.semaphore().tasks().getTaskOutputText(context.projectId(), completedTask.id()))
         .contains(fixtures.expectations().outputMarker());
+    assertThat(api.semaphore().schedules().getSchedule(context.projectId(), schedule.id()).active())
+        .isFalse();
+  }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("One-shot schedule is deleted after its task is created")
+  void runAtScheduleDeletesItself(
+      ApiSteps api, SemaphoreFixtures fixtures, SemaphoreScheduleFixtures schedules) {
+    var context = createRunnableTemplate(api, fixtures);
+    var execution =
+        schedules.execution().nextDeletingRunAt(context.projectId(), context.templateId());
+    var schedule = api.semaphore().schedules().create(context.projectId(), execution.request());
+
+    var completedTask =
+        api.semaphore()
+            .tasks()
+            .waitForTemplateTaskToSucceed(
+                context.projectId(), context.templateId(), schedules.execution().taskMessage());
+
+    assertThat(schedule.deleteAfterRun()).isTrue();
+    assertThat(completedTask.scheduleId()).isNull();
+    assertThat(api.semaphore().tasks().getTaskOutputText(context.projectId(), completedTask.id()))
+        .contains(fixtures.expectations().outputMarker());
+    api.semaphore().schedules().verifyAbsent(context.projectId(), schedule.id());
   }
 
   @Test
@@ -59,11 +84,13 @@ class ScheduledTaskExecutionTest {
             .tasks()
             .waitForScheduledTaskToSucceed(
                 context.projectId(), schedule.id(), context.templateId());
+    var persistedSchedule =
+        api.semaphore().schedules().getSchedule(context.projectId(), schedule.id());
 
     assertThat(api.semaphore().system().info().scheduleTimezone())
         .isEqualTo(schedules.expectedTimezone());
-    assertThat(schedule.active()).isTrue();
-    assertThat(schedule.cronFormat()).isEqualTo(execution.request().cronFormat());
+    assertThat(persistedSchedule.active()).isTrue();
+    assertThat(persistedSchedule.cronFormat()).isEqualTo(execution.request().cronFormat());
     assertThat(Instant.now()).isAfterOrEqualTo(execution.expectedAt());
     assertThat(completedTask.scheduleId()).isEqualTo(schedule.id());
     assertThat(completedTask.message()).isEqualTo(schedules.execution().taskMessage());

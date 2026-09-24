@@ -62,8 +62,8 @@ Legend: **covered** — the contract is already protected by automation; **parti
 | TC-022 | Survey variables | Covered by API | Enum/int/string/env/secret metadata, persistence, local and remote-runner execution, backend target/default validation, and secret masking; UI widgets/required remain a browser check |
 | TC-023 | Task overrides | Covered by API | Launch values, template/task arguments, and Ansible limit/tags/skip-tags/diff/skip-galaxy are actually executed |
 | TC-024 | Stop task | Covered | Regular stop and force-stop are made deterministic by a marker |
-| TC-025 | Cron schedule | Partial | CRUD/validation/toggle added; real fire and DST to be moved to the slow profile |
-| TC-026 | Run-at schedule | Partial | Payload/validation added; fire/delete-after-run to be moved to the slow profile |
+| TC-025 | Cron schedule | Covered | CRUD/validation/toggle and real execution in a non-UTC timezone run in the schedule profile |
+| TC-026 | Run-at schedule | Covered | Persistence, execution, automatic deactivation, and delete-after-run are automated |
 | TC-027 | Runner registration | Partial | Registration/status/heartbeat are covered; offline recovery reproduces `error` instead of the expected waiting |
 | TC-028 | Runner tags | Covered with a defect | Exact tag and used_runner_id pass, busy runner requeue works; unavailable/unmatched tag ends in error |
 | TC-029 | GitHub integration | External | Needs a webhook receiver and a controlled GitHub event fixture |

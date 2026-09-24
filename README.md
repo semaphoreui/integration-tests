@@ -213,7 +213,7 @@ query. Public versioned assets and `/swagger/api-docs.yml` remain intentionally 
 profile is a manual red reproducer; evidence and the safe proxy configuration are in
 `test-environment/web-cache-authenticated-response-leak-defect.md`.
 
-The experimental schedule profile reproduces real cron/`run_at` execution in a non-UTC timezone:
+The schedule profile verifies real cron/`run_at` execution in a non-UTC timezone:
 
 ```bash
 test-environment/profile down feature-ssh-local
@@ -221,7 +221,11 @@ test-environment/profile up feature-schedule-timezone
 test-environment/profile test feature-schedule-timezone
 ```
 
-On `v2.19.8` both scenarios reproduce the defect locally: the active schedule is saved, but no task is created. The profile is not yet included in the CI matrix; the evidence and expected behaviour are in `test-environment/schedule-execution-defect.md`.
+The suite covers recurring cron execution, one-shot deactivation, and `delete_after_run` cleanup.
+The original apparent no-task defect was an invalid test payload: Ansible `limit` was sent as a
+string instead of an array. Corrected scenarios pass on `v2.19.12` and current `develop`; the
+investigation record is in `test-environment/schedule-execution-defect.md`. The profile now runs in
+the daily configuration matrix.
 
 Verification of upgrading the published images on a preserved database is launched by a separate command:
 
@@ -288,9 +292,9 @@ when an image for that commit does not exist yet. A change to the tests alone do
 rebuild. The full description, including branch mode, auto-triggering, authorization and cleanup of
 temporary images, is in [`docs/application-pr-testing.md`](docs/application-pr-testing.md).
 
-When `Configuration matrix` is launched manually, `include_schedule_investigation` can add the
-known-red schedule profile to that run for Linux evidence. The fixed `feature-shell-output` profile
-is a regular daily entry; the daily run otherwise remains free of expected failures.
+The fixed `feature-shell-output` and corrected `feature-schedule-timezone` profiles are regular
+daily entries. Manual runs use the same green matrix and can optionally select another application
+branch.
 
 After every CI, nightly matrix or release-upgrade run, Allure is automatically assembled into a ready-made HTML site and uploaded as the artifact `allure-html-<run>-<attempt>`. Every Allure report is built in single-file mode: after downloading, it is enough to unpack the archive and open `index.html` with a double click — no local HTTP server is needed. For a matrix run the start page contains a separate report for each profile, so the results of different DBMSs are not mixed in retries.
 
@@ -370,7 +374,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `test-environment/configuration-testing-overview.md` — matrix of client configurations and reference profiles;
 - `test-environment/smoke-report.md` — environment verification results.
 - `test-environment/known-defects.md` — summary of current defects with priorities and reproduction steps.
-- `test-environment/schedule-execution-defect.md` — reproducible cron/run-at execution defect.
+- `test-environment/schedule-execution-defect.md` — resolved schedule investigation and corrected regression coverage.
 - `test-environment/dynamic-runner-one-off-exit-defect.md` — reproducible one-off runner exit defect.
 - `test-environment/runner-unavailable-routing-defect.md` — fail-fast instead of a recoverable queue when no matching runner is available.
 - `test-environment/remote-runner-survey-secrets-defect.md` — loss of secret survey variables on remote dispatch.

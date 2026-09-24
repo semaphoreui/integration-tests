@@ -145,7 +145,7 @@ Database versions must not be taken as "latest" implicitly. Each profile must pi
 | `feature-oidc-local` | SQLite and pinned local Dex | Discovery, browser login, callback, session/logout, return path, provisioning, repeat login, local-email conflict, and provider failure | nightly |
 | `feature-ldap-tls` | SQLite and pinned OpenLDAP with TLS | LDAPS service/user bind, search/mapping, provisioning/reuse, logout, invalid password, and local-email conflict | nightly |
 | `feature-totp-local` | SQLite, password auth, and TOTP recovery | API lifecycle; browser Security/QR, challenge, invalid/valid passcode, and recovery form | nightly |
-| `feature-schedule-timezone` | SQLite, `Pacific/Kiritimati`, local execution | Real cron/run-at execution and the schedule → task link | manual; defect reproducer |
+| `feature-schedule-timezone` | SQLite, `Pacific/Kiritimati`, local execution | Cron execution, one-shot deactivation/deletion, and stored task parameters | nightly |
 | `feature-shell-output` | SQLite, local execution | Completeness of short `stdout`/`stderr` and closing of inherited pipes | PR SQLite contract and focused nightly profile |
 | `feature-web-cache-safety` | SQLite, shared NGINX cache, two users | authenticated cache isolation, unkeyed-input priming, Host keying, and public asset caching | manual; security defect reproducer |
 | `feature-proxy-oidc` | PostgreSQL, NGINX TLS, non-root web path, Dex | Callback URL, Secure cookie, redirects, account mapping, and negative paths | nightly |
@@ -155,9 +155,9 @@ Database versions must not be taken as "latest" implicitly. Each profile must pi
 | `pro-docker-executor` | Pro runner with Docker executor | Task container isolation, limits, cleanup, secret hydration | when Pro is available, nightly |
 | `pro-k8s-executor` | Helm/Pro runner with Kubernetes executor | pod lifecycle, service account, pull secret, and cleanup | when Pro/K8s is available, release |
 
-The five base profiles and thirteen feature profiles are implemented. `feature-git-https` checks the separate client-side boundary of private Git with real trusted TLS and Basic Auth. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, and `feature-totp-local` provide green positive and negative auth paths without multiplying across the whole DB matrix; the proxy variant additionally pins the HTTPS/subpath/cookie contract, and TOTP the passcode/recovery lifecycle. `feature-encryption-rotation` checks zero-downtime primary switch-over, rekey, and safe removal of the retired key. `feature-shell-output` protects the fixes for complete stream collection and bounded inherited pipes on the current application source. `feature-schedule-timezone`, `feature-dynamic-runner`, and `feature-web-cache-safety` remain manual red reproducers. HA has been investigated and correctly postponed as Enterprise-only instead of an unsafe community imitation.
+The five base profiles and thirteen feature profiles are implemented. `feature-git-https` checks the separate client-side boundary of private Git with real trusted TLS and Basic Auth. `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, and `feature-totp-local` provide green positive and negative auth paths without multiplying across the whole DB matrix; the proxy variant additionally pins the HTTPS/subpath/cookie contract, and TOTP the passcode/recovery lifecycle. `feature-encryption-rotation` checks zero-downtime primary switch-over, rekey, and safe removal of the retired key. `feature-shell-output` protects the fixes for complete stream collection and bounded inherited pipes, while `feature-schedule-timezone` protects the cron/run-at lifecycle. `feature-dynamic-runner` and `feature-web-cache-safety` remain manual red reproducers. HA has been investigated and correctly postponed as Enterprise-only instead of an unsafe community imitation.
 
-The CI distribution is also implemented: the API baseline, the shell-output regression, and a short Chromium UI smoke on `core-sqlite-local` are part of the pull-request gate after the framework quality checks; the other four base profiles, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, and the focused `feature-shell-output` run in a daily matrix job. Four release-upgrade profiles run as a separate weekly and manual check. The upgrade workflow is deliberately excluded from the PR gate.
+The CI distribution is also implemented: the API baseline, the shell-output regression, and a short Chromium UI smoke on `core-sqlite-local` are part of the pull-request gate after the framework quality checks; the other four base profiles, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-shell-output`, and `feature-schedule-timezone` run in a daily matrix job. Four release-upgrade profiles run as a separate weekly and manual check. The upgrade workflow is deliberately excluded from the PR gate.
 
 ## Which tests to run where
 
@@ -181,7 +181,7 @@ The CI distribution is also implemented: the API baseline, the shell-output regr
 | dynamic start/finish webhook and one-off exit | — | — | — | — | — | `feature-dynamic-runner`, defect |
 | Git over SSH, SSH inventory, and key rotation | — | — | — | — | — | `feature-ssh-local` |
 | Private Git over HTTPS and Basic Auth | — | — | — | — | — | `feature-git-https` |
-| real cron/run-at execution | — | — | — | — | — | `feature-schedule-timezone`, defect |
+| real cron/run-at execution | — | — | — | — | — | `feature-schedule-timezone`, nightly |
 | completeness of short stdout/stderr | ✓ | — | — | — | — | `feature-shell-output`, nightly |
 | constraints, schedules, cleanup, clean migration | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | secrets and absence of leaks | ✓ | ✓ | ✓ | ✓ | ✓ | encryption/storage extend the set |
@@ -273,7 +273,9 @@ are done and confirmed in Linux CI:
    added to the weekly workflow. Both passed locally on 2026-09-09 and remain pending until the
    first successful Linux run.
 6. Add the SSH feature profile. Done: Git clone, Ansible SSH target, wrong key, secret replacement for an existing key ID, and key material protection are checked on two isolated SSH fixtures. `known_hosts` is postponed until a release with the corresponding upstream configuration.
-7. Add real schedule execution. The reproducer is implemented for cron and `run_at`; the missing task on `v2.19.8` is confirmed locally and in Linux CI. The next step is upstream issue/fix verification.
+7. Add real schedule execution. Done: cron, one-shot deactivation, `delete_after_run`, task
+   parameters, and non-UTC timezone execution pass on `v2.19.12` and current `develop`. The former
+   missing-task report was withdrawn after correcting the fixture's Ansible `limit` type.
 8. Add the OIDC feature profile. Done: pinned Dex, discovery, browser login, callback, session/logout, return path, provisioning, repeat login, local-email conflict, and provider failure pass locally on `v2.19.8`.
 9. Add LDAP with TLS. Done: pinned OpenLDAP, LDAPS service/user bind, search/mapping, provisioning/reuse, logout, invalid password, and local-email conflict pass locally on `v2.19.8`.
 10. Add the dynamic one-off runner. Done as a manual reproducer: the webhook starts the runner, the task completes successfully, and the `finish` webhook arrives, but the process does not exit on `v2.19.8`. The likely unreachable exit condition is recorded in `dynamic-runner-one-off-exit-defect.md`; the profile is not added to the green CI matrix.

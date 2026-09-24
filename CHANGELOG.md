@@ -11,6 +11,10 @@ All notable changes to the Semaphore UI test automation project are documented i
   and enum validation; the daily persistent-runner profile protects remote secret delivery.
 - Made the production-like profile run its server and persistent runner from the same resolved
   application image so two-sided application fixes are tested without mixing release versions.
+- Corrected the schedule fixture to send Ansible `limit` as an array, withdrawing the former
+  BUG-003 false positive after cron and `run_at` passed on `v2.19.12` and current `develop`.
+- Test tasks no longer reuse Gradle `UP-TO-DATE` results from a different mutable application
+  environment.
 - Centralized test-parameter fixture construction in a type-safe `FixtureCatalog`, replacing the
   growing fixture-specific condition chain in `StepsParameterResolver` without reflection or marker
   interfaces.
@@ -23,6 +27,8 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- Daily schedule lifecycle coverage for non-UTC cron execution, one-shot deactivation,
+  `delete_after_run` cleanup, stored task parameters, and successful playbook output.
 - Authentication lifecycle coverage for login metadata, logout invalidation/idempotency,
   self-service password changes, cross-user denial, and administrator password reset.
 - A security-gap canary and source analysis proving that password changes leave other existing

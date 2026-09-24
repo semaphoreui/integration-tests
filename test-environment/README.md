@@ -22,7 +22,7 @@ Five baseline profiles and thirteen feature profiles are available:
 | `feature-ldap-tls` | SQLite | LDAPS bind/search, user provisioning/reuse, logout, and negative credential/account scenarios |
 | `feature-totp-local` | SQLite | API and browser TOTP: Security/QR, challenge, invalid passcode, and recovery lifecycle |
 | `feature-encryption-rotation` | PostgreSQL 14.3 | keyring hot reload, mixed-key reads, vault rekey, and retired key removal |
-| `feature-schedule-timezone` | SQLite | cron/run-at execution in `Pacific/Kiritimati`; local defect reproducer |
+| `feature-schedule-timezone` | SQLite | cron/run-at execution, one-shot lifecycle, and `Pacific/Kiritimati` timezone |
 | `feature-dynamic-runner` | SQLite | webhook-launched one-off runner; defect reproducer for a process that never exits |
 | `feature-shell-output` | SQLite | regression for complete short `stdout`/`stderr` and bounded inherited pipes |
 | `feature-web-cache-safety` | SQLite | shared-cache cross-user isolation and cache-poisoning defect reproducer |
@@ -164,9 +164,15 @@ test-environment/profile up feature-schedule-timezone
 test-environment/profile test feature-schedule-timezone
 ```
 
-The profile sets `SEMAPHORE_SCHEDULE_TIMEZONE=Pacific/Kiritimati`, passes the same zone to the test JVM, and records it in the Allure environment. The tests compute the nearest cron occurrence in that zone and a separate `run_at`, then wait for the automatically created task by `schedule_id` and its successful output.
+The profile sets `SEMAPHORE_SCHEDULE_TIMEZONE=Pacific/Kiritimati`, passes the same zone to the test
+JVM, and records it in the Allure environment. It verifies recurring cron execution, a one-shot
+schedule becoming inactive, and `delete_after_run=true` removing the schedule after creating a
+successful task. Every task executes the trusted Ansible fixture with the stored message and typed
+`limit` parameter.
 
-On release `v2.19.8` the profile is currently a defect reproducer: the API stores active cron and one-shot schedules, but no task appears. It is deliberately excluded from the CI matrix until Linux confirmation and a decision on the upstream issue. The full report is in `schedule-execution-defect.md`.
+The original no-task report was a false positive caused by sending Ansible `limit` as a string
+instead of an array. The corrected scenarios pass on `v2.19.12` and current `develop`; the profile is
+part of the daily matrix. The audit trail is in `schedule-execution-defect.md`.
 
 ## Shell output feature profile
 
@@ -334,7 +340,7 @@ The profiles are wired into three GitHub Actions workflows:
 | Workflow | Trigger | Profiles |
 |---|---|---|
 | `CI` | pull request and push to `main` | API suite and Chromium UI smoke on `core-sqlite-local` after the framework quality gate |
-| `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-shell-output` |
+| `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-shell-output`, `feature-schedule-timezone` |
 | `Release upgrade` | Sunday at `03:30 UTC`, manually | `upgrade-sqlite-local`, `upgrade-postgres-local`, `upgrade-mysql-local`, `upgrade-mariadb-local` |
 
 Each matrix profile runs on its own runner, so the shared port `3000` causes no conflicts. After execution the workflow keeps JUnit/HTML/Allure artifacts, adds `profile ps` and a final snapshot of the Compose logs on failure, and then removes only the containers and volumes of the selected profile.
@@ -344,9 +350,9 @@ Profile suites run JUnit classes sequentially; task concurrency remains covered 
 isolated in `feature-shell-output` for the daily matrix. The confirmed shared-cache security
 reproducer remains isolated in `feature-web-cache-safety`.
 
-In the manual `Configuration matrix`, `include_schedule_investigation=true` adds the known-failing
-schedule profile only to the selected run. `feature-shell-output` is now a regular green matrix
-entry against the current application source.
+Both `feature-shell-output` and `feature-schedule-timezone` are regular green matrix entries against
+the current application source. Manual runs execute the same profile set and can select another
+application branch.
 
 The raw Allure results of each job are uploaded as a separate artifact. The final reusable workflow downloads them, generates an independent HTML report for each profile, and uploads the combined site as a downloadable artifact. The build runs even after a test failure, including on pull requests, so the diagnostics of a red run can be opened without GitHub Pages. Successful trusted `main` runs are also published to the public [GitHub Pages history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment runs remain artifact-only.
 

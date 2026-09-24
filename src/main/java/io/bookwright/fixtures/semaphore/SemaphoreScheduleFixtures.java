@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 
 /** Typed schedule scenarios and expectations. */
@@ -147,6 +148,14 @@ public record SemaphoreScheduleFixtures(
     }
 
     public ScheduledRunAt nextRunAt(long projectId, long templateId) {
+      return nextRunAt(projectId, templateId, false);
+    }
+
+    public ScheduledRunAt nextDeletingRunAt(long projectId, long templateId) {
+      return nextRunAt(projectId, templateId, true);
+    }
+
+    private ScheduledRunAt nextRunAt(long projectId, long templateId, boolean deleteAfterRun) {
       Instant target = Instant.now().plus(Duration.ofSeconds(15)).truncatedTo(ChronoUnit.SECONDS);
       return new ScheduledRunAt(
           new ScheduleRequest(
@@ -158,7 +167,7 @@ public record SemaphoreScheduleFixtures(
               true,
               "run_at",
               target,
-              false,
+              deleteAfterRun,
               taskParameters(taskMessage)),
           target);
     }
@@ -170,6 +179,6 @@ public record SemaphoreScheduleFixtures(
 
   private static ScheduleTaskParameters taskParameters(String message) {
     return new ScheduleTaskParameters(
-        "", null, null, message, null, null, Map.of("limit", "localhost"));
+        "", null, null, message, null, null, Map.of("limit", List.of("localhost")));
   }
 }
