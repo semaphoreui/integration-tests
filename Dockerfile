@@ -21,6 +21,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   git \
   unzip \
   bash \
+  openssh-client \
+  openssl \
+  socat \
   coreutils \
   vim \
   nano \
@@ -40,6 +43,7 @@ RUN install -m 0755 -d /etc/apt/keyrings \
   && apt-get install -y --no-install-recommends \
   docker-ce-cli \
   docker-compose-plugin \
+  docker-buildx-plugin \
   && rm -rf /var/lib/apt/lists/*
 
 
