@@ -669,7 +669,7 @@ test-environment/profile test core-sqlite-local
 `test-environment/profile` takes the image from `APP_IMAGE` if the variable is set, and from the profile
 manifest otherwise; a manifest value of `branch:<name>` is resolved and built by `scripts/app-source.sh`.
 Useful build variables: `APP_BRANCH` (defaults to `develop`),
-`APP_BUILD_PLATFORM` (defaults to `linux/amd64` in CI and to the local platform elsewhere),
+`APP_BUILD_PLATFORM` (defaults to `linux/amd64,linux/arm64` in CI and to the local platform elsewhere),
 `APP_DOCKERFILE` (defaults to `deployment/docker/server/Dockerfile`), `APP_BUILD_PUSH` (defaults to
 `true` in CI and to `false` elsewhere).
 
