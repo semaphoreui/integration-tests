@@ -17,7 +17,7 @@ done
 tty_args=
 [ ! -t 0 ] || [ ! -t 1 ] || tty_args=-it
 
-exec docker pull $IMAGE
+docker pull $IMAGE
 
 exec docker run --rm \
   --add-host host.docker.internal:host-gateway \
