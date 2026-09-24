@@ -50,4 +50,9 @@ public class RepositorySteps {
   public List<Repository> getRepositories(long projectId) {
     return Calls.body(api.getRepositories(projectId), 200, "repositories");
   }
+
+  @Step("List remote branches of repository {repositoryId} in Semaphore project {projectId}")
+  public List<String> getBranches(long projectId, long repositoryId) {
+    return Calls.body(api.getRepositoryBranches(projectId, repositoryId), 200, "branches");
+  }
 }

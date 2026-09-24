@@ -28,6 +28,7 @@ The specification covers the core product model but does not fully match the act
 | Project role | `GET /api/project/{project_id}/role` | 200 | Role and permissions of the current user |
 | Keys | CRUD `/api/project/{project_id}/keys` | 200/201/204 | Types `none`, `ssh`, `login_password`, secret hiding, refs, and deletion |
 | Repositories | CRUD `/api/project/{project_id}/repositories` | 200/201/204 | Git URL, branch/ref, access key, branches, playbooks, clone errors |
+| Host configs | CRUD `/api/project/{project_id}/host_configs` | 200/201/204/400 | `host` and `url` mappings to a project key, credential-kind rules, duplicates, key referrers, backup/restore |
 | Inventory | CRUD `/api/project/{project_id}/inventory` | 200/201/204 | `static`, `static-yaml`, `file`, links to key/repository, validation |
 | Templates | CRUD `/api/project/{project_id}/templates` | 200/201/204 | Links to repository/inventory/key, playbook, arguments, survey variables |
 | Tasks | `POST /tasks`, `GET /tasks/{id}` | 201, 200 | Queue and lifecycle, launch parameters, final status |

@@ -8,6 +8,7 @@ import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreHostConfigFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHttpsGitFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLoginSecurityFixtures;
@@ -93,7 +94,12 @@ class FixtureArchitectureTest {
           "Bookwright-OIDC-42!",
           "Bookwright-OIDC-Conflict-42!",
           "Unavailable OIDC",
-          "0 0 * * *");
+          "0 0 * * *",
+          "https://ssh-fixture/repositories/",
+          "https://git-https-fixture/",
+          "ansible_ssh_extra_args",
+          "a host mapping needs an SSH key",
+          "the credential is used by the mapping for");
 
   @Test
   void stepsAndProductTestsDoNotOwnScenarioFixtures() throws Exception {
@@ -115,6 +121,8 @@ class FixtureArchitectureTest {
     SemaphoreFixtures semaphore =
         SemaphoreFixtures.from(Configs.main(), new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreAuthLifecycleFixtures authLifecycle = SemaphoreAuthLifecycleFixtures.standard();
+    SemaphoreHostConfigFixtures hostConfig =
+        SemaphoreHostConfigFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreHttpsGitFixtures httpsGit =
         SemaphoreHttpsGitFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreLdapFixtures ldap = SemaphoreLdapFixtures.standard();
@@ -161,6 +169,20 @@ class FixtureArchitectureTest {
         "Semaphore auth lifecycle password request diagnostics",
         authLifecycle.actor().validChange().toString(),
         authLifecycle.actor().changedPassword());
+    SecretAssertions.absent(
+        "Semaphore host config fixture diagnostics", hostConfig.toString(), hostConfig.sshKey());
+    SecretAssertions.absent(
+        "Semaphore host config fixture diagnostics",
+        hostConfig.toString(),
+        hostConfig.secondSshKey());
+    SecretAssertions.absent(
+        "Semaphore host config fixture diagnostics",
+        hostConfig.toString(),
+        hostConfig.loginPasswordKey());
+    SecretAssertions.absent(
+        "Semaphore host config retype request diagnostics",
+        hostConfig.retypeToLoginPassword(1, 2).toString(),
+        hostConfig.loginPasswordKey());
     SecretAssertions.absent(
         "Semaphore HTTPS Git fixture diagnostics",
         httpsGit.toString(),
@@ -237,6 +259,7 @@ class FixtureArchitectureTest {
     assertThat(local.toString()).contains("[REDACTED]");
     assertThat(semaphore.toString()).contains("[REDACTED]");
     assertThat(authLifecycle.toString()).contains("[REDACTED]");
+    assertThat(hostConfig.toString()).contains("[REDACTED]");
     assertThat(httpsGit.toString()).contains("[REDACTED]");
     assertThat(ldap.toString()).contains("[REDACTED]");
     assertThat(oidc.toString()).contains("[REDACTED]");

@@ -23,6 +23,12 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- Project credential-mapping (`host_configs`) coverage: API contract for host and URL mappings
+  (validation, credential-kind rules, duplicates, project scoping, role checks, referrer protection
+  of the key, backup/restore by credential name) in every core profile; key-less Git clone, branch
+  listing, Ansible SSH, per-host credential selection and HTTPS-to-SSH URL rewriting on the SSH
+  profile; Basic Auth by URL prefix on the private HTTPS Git profile. Profile manifests may now
+  name several comma-separated `test_class` values.
 - Authentication lifecycle coverage for login metadata, logout invalidation/idempotency,
   self-service password changes, cross-user denial, and administrator password reset.
 - A security-gap canary and source analysis proving that password changes leave other existing

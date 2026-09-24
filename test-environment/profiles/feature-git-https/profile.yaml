@@ -4,7 +4,7 @@ compose_file: compose.yml
 compose_project: semaphore-test-feature-git-https
 readiness_url: http://localhost:3000/api/ping
 stand: semaphore
-test_class: io.bookwright.tests.semaphore.HttpsRepositoryGitTest
+test_class: io.bookwright.tests.semaphore.HttpsRepositoryGitTest,io.bookwright.tests.semaphore.HostConfigHttpsGitTest
 semaphore_version: develop
 semaphore_image: branch:develop
 edition: community
@@ -18,7 +18,7 @@ auth: password
 git_client: cmd_git
 git_https_fixture: generated
 git_fixture_image: nginx:1.27.5-alpine
-capabilities: private-git-https,basic-auth,self-signed-git-tls,git-credential-security
+capabilities: private-git-https,basic-auth,self-signed-git-tls,git-credential-security,host-config-url-login
 include:
   - path:
       - ../../compose.base.yml

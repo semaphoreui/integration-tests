@@ -146,6 +146,8 @@ The profile builds a minimal Alpine SSH fixture and mounts the local Git reposit
 
 The key pair is generated during `profile up` in the Git-ignored directory `build/test-fixtures/ssh`. Only the public key is mounted into the container, while the private key stays outside the Docker build context and is used by the Java test only for the local API. The fixture image version is recorded in the Allure environment.
 
+The profile also runs the credential-mapping scenarios: key-less repositories and inventories reach `ssh-fixture` and `ssh-fixture-rotated` only through `host_configs` entries, including a URL mapping which rewrites `https://ssh-fixture/repositories/` into an SSH clone. Inventory hosts disable host-key checking through `ansible_ssh_extra_args`, because an inventory-level `ansible_ssh_common_args` would replace the `--ssh-common-args` option through which the generated ssh configuration reaches Ansible.
+
 ## Private HTTPS Git feature profile
 
 The private HTTPS Git fixture brings up a pinned NGINX, publishes a bare repository only inside the Compose network, and requires Basic Auth. A self-signed CA is generated in the Git-ignored `build/test-fixtures/git-https` and passed to child Git processes via an allowed environment variable:
@@ -155,6 +157,8 @@ test-environment/profile down feature-ssh-local
 test-environment/profile up feature-git-https
 test-environment/profile test feature-git-https
 ```
+
+The manifest names two test classes (comma separated in `test_class`): the repository scenarios with the key attached directly, and the credential-mapping scenarios in which a URL mapping supplies the Basic Auth to a key-less repository.
 
 ## Schedule timezone feature profile
 

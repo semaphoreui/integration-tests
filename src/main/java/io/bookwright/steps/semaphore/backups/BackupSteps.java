@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.inject.Inject;
+import io.bookwright.api.model.semaphore.BackupHostConfig;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.backups.SemaphoreBackupsApi;
@@ -13,6 +14,8 @@ import io.bookwright.fixtures.semaphore.SemaphoreFixtures.SecretAccessKey;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
+import java.util.List;
+import java.util.stream.StreamSupport;
 
 public class BackupSteps {
 
@@ -82,6 +85,57 @@ public class BackupSteps {
         "Delete duplicate-repository Semaphore project " + restored.id(),
         () -> Calls.expectStatus(projectsApi.deleteProject(restored.id()), 204));
     return restored;
+  }
+
+  @Step("Read the credential mappings carried by a Semaphore project backup")
+  public List<BackupHostConfig> hostConfigsInBackup(JsonNode backup) {
+    ArrayNode hostConfigs = requiredArray(requiredObjectCopy(backup), "host_configs");
+    return StreamSupport.stream(hostConfigs.spliterator(), false)
+        .map(
+            entry ->
+                new BackupHostConfig(
+                    entry.path("type").asText(),
+                    entry.path("name").asText(),
+                    entry.hasNonNull("ssh_key") ? entry.get("ssh_key").asText() : null))
+        .toList();
+  }
+
+  @Step("Verify restore rejects a mapping referencing missing key {keyName}")
+  public void verifyMissingHostConfigKeyRejected(
+      JsonNode backup, String projectName, String keyName) {
+    ObjectNode invalid = withProjectName(backup, projectName);
+    firstHostConfig(invalid).put("ssh_key", keyName);
+    expectRejectedRestore(invalid);
+  }
+
+  @Step("Verify restore rejects a duplicate credential mapping")
+  public void verifyDuplicateHostConfigRejected(JsonNode backup, String projectName) {
+    ObjectNode invalid = withProjectName(backup, projectName);
+    ArrayNode hostConfigs = requiredArray(invalid, "host_configs");
+    hostConfigs.add(firstHostConfig(invalid).deepCopy());
+    expectRejectedRestore(invalid);
+  }
+
+  @Step("Verify restore rejects a malformed mapping host before writing anything")
+  public void verifyMalformedHostConfigRejected(
+      JsonNode backup, String projectName, String malformedHost) {
+    ObjectNode invalid = withProjectName(backup, projectName);
+    firstHostConfig(invalid).put("name", malformedHost);
+    expectRejectedRestore(invalid);
+    if (Calls.body(projectsApi.getProjects(), 200, "projects").stream()
+        .anyMatch(project -> project.name().equals(projectName))) {
+      throw new IllegalStateException(
+          "Restore with a malformed mapping created project '%s' instead of failing preflight"
+              .formatted(projectName));
+    }
+  }
+
+  private ObjectNode firstHostConfig(ObjectNode backup) {
+    ArrayNode hostConfigs = requiredArray(backup, "host_configs");
+    if (hostConfigs.isEmpty()) {
+      throw new IllegalStateException("Semaphore project backup has no host_configs to alter");
+    }
+    return requiredObject(hostConfigs.get(0), "host_configs[0]");
   }
 
   private void expectRejectedRestore(JsonNode backup) {

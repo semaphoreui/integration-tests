@@ -19,6 +19,10 @@ public interface SemaphoreRepositoriesApi {
   Call<Repository> createRepository(
       @Path("projectId") long projectId, @Body RepositoryRequest request);
 
+  @GET("project/{projectId}/repositories/{repositoryId}/branches")
+  Call<List<String>> getRepositoryBranches(
+      @Path("projectId") long projectId, @Path("repositoryId") long repositoryId);
+
   @DELETE("project/{projectId}/repositories/{repositoryId}")
   Call<Void> deleteRepository(
       @Path("projectId") long projectId, @Path("repositoryId") long repositoryId);
