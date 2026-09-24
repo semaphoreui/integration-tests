@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35981450681",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 78,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 50,
+        "skipped": 28,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 85,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 85,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #38 from semaphoreui/codex/schedule-execution",
+  "event": "push",
+  "conclusion": "success",
+  "runId": 35981450681,
+  "runAttempt": 1,
+  "runNumber": 116,
+  "createdAt": "2026-09-24T09:28:32Z",
+  "date": "2026-09-24",
+  "headSha": "e9a45e41e597936d5a23c28761035f8265a3d29b",
+  "shortSha": "e9a45e4",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/e9a45e41e597936d5a23c28761035f8265a3d29b"
+}
