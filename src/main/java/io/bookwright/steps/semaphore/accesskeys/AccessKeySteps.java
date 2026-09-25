@@ -3,6 +3,7 @@ package io.bookwright.steps.semaphore.accesskeys;
 import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.AccessKey;
 import io.bookwright.api.model.semaphore.AccessKeyRequest;
+import io.bookwright.api.model.semaphore.AccessKeyUpdateRequest;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.assertions.SecretAssertions;
@@ -116,6 +117,20 @@ public class AccessKeySteps {
     var listed = Calls.body(api.getAccessKeysDocument(projectId), 200, "access key collection");
     SecretAssertions.absent("access-key GET response", saved.toString(), fixture);
     SecretAssertions.absent("access-key collection response", listed.toString(), fixture);
+  }
+
+  @Step("Update login/password access key {keyId} and verify its secret remains masked")
+  public AccessKey updateAndVerifyMasked(
+      long projectId, long keyId, AccessKeyUpdateRequest request, SecretAccessKey fixture) {
+    Calls.expectStatus(api.updateAccessKey(projectId, keyId, request), 204);
+    verifyMasked(projectId, keyId, fixture);
+
+    var saved = Calls.body(api.getAccessKeyDocument(projectId, keyId), 200, "updated access key");
+    return new AccessKey(
+        requiredLong(saved, "id"),
+        requiredText(saved, "name"),
+        requiredText(saved, "type"),
+        saved.path("project_id").asLong());
   }
 
   @Step("Verify persisted SSH access key {keyId} remains masked")

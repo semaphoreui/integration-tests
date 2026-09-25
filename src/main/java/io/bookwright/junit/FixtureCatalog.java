@@ -20,6 +20,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreLoginSecurityFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreOidcFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreProcessCleanupFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreProjectDeletionFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreResourceCrudFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreRunnerRoutingFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreScheduleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreShellOutputFixtures;
@@ -92,6 +93,9 @@ final class FixtureCatalog {
               SemaphoreProjectDeletionFixtures.class,
               context ->
                   SemaphoreProjectDeletionFixtures.from(context.config(), context.testData())),
+          fixture(
+              SemaphoreResourceCrudFixtures.class,
+              context -> SemaphoreResourceCrudFixtures.from(context.config(), context.testData())),
           fixture(
               SemaphoreRunnerRoutingFixtures.class,
               context -> SemaphoreRunnerRoutingFixtures.from(context.testData())),

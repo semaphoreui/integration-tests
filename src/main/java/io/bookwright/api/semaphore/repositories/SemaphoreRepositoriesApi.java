@@ -2,12 +2,14 @@ package io.bookwright.api.semaphore.repositories;
 
 import io.bookwright.api.model.semaphore.Repository;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
+import io.bookwright.api.model.semaphore.RepositoryUpdateRequest;
 import java.util.List;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Path;
 
 public interface SemaphoreRepositoriesApi {
@@ -18,6 +20,16 @@ public interface SemaphoreRepositoriesApi {
   @POST("project/{projectId}/repositories")
   Call<Repository> createRepository(
       @Path("projectId") long projectId, @Body RepositoryRequest request);
+
+  @GET("project/{projectId}/repositories/{repositoryId}")
+  Call<Repository> getRepository(
+      @Path("projectId") long projectId, @Path("repositoryId") long repositoryId);
+
+  @PUT("project/{projectId}/repositories/{repositoryId}")
+  Call<Void> updateRepository(
+      @Path("projectId") long projectId,
+      @Path("repositoryId") long repositoryId,
+      @Body RepositoryUpdateRequest request);
 
   @DELETE("project/{projectId}/repositories/{repositoryId}")
   Call<Void> deleteRepository(

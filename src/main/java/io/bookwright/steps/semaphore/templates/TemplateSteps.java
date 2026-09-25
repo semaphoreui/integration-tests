@@ -3,8 +3,10 @@ package io.bookwright.steps.semaphore.templates;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.bookwright.api.model.semaphore.TaskStopRequest;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.TemplateRequest;
+import io.bookwright.api.model.semaphore.TemplateUpdateRequest;
 import io.bookwright.api.semaphore.templates.SemaphoreTemplatesApi;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
@@ -66,6 +68,17 @@ public class TemplateSteps {
   @Step("Get Semaphore template {templateId} in project {projectId}")
   public Template get(long projectId, long templateId) {
     return Calls.body(api.getTemplate(projectId, templateId), 200, "task template");
+  }
+
+  @Step("Update Semaphore template {templateId} in project {projectId}")
+  public Template update(long projectId, long templateId, TemplateUpdateRequest request) {
+    Calls.expectStatus(api.updateTemplate(projectId, templateId, request), 204);
+    return get(projectId, templateId);
+  }
+
+  @Step("Stop all active tasks for Semaphore template {templateId}")
+  public void stopAllTasks(long projectId, long templateId, boolean force) {
+    Calls.expectStatus(api.stopAllTasks(projectId, templateId, new TaskStopRequest(force)), 204);
   }
 
   @Step("Find required template {name} in Semaphore project {projectId}")

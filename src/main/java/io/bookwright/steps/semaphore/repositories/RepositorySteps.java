@@ -3,6 +3,7 @@ package io.bookwright.steps.semaphore.repositories;
 import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.Repository;
 import io.bookwright.api.model.semaphore.RepositoryRequest;
+import io.bookwright.api.model.semaphore.RepositoryUpdateRequest;
 import io.bookwright.api.semaphore.repositories.SemaphoreRepositoriesApi;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
@@ -49,5 +50,16 @@ public class RepositorySteps {
   @Step("Get repositories in Semaphore project {projectId}")
   public List<Repository> getRepositories(long projectId) {
     return Calls.body(api.getRepositories(projectId), 200, "repositories");
+  }
+
+  @Step("Get Semaphore repository {repositoryId} in project {projectId}")
+  public Repository get(long projectId, long repositoryId) {
+    return Calls.body(api.getRepository(projectId, repositoryId), 200, "repository");
+  }
+
+  @Step("Update Semaphore repository {repositoryId} in project {projectId}")
+  public Repository update(long projectId, long repositoryId, RepositoryUpdateRequest request) {
+    Calls.expectStatus(api.updateRepository(projectId, repositoryId, request), 204);
+    return get(projectId, repositoryId);
   }
 }

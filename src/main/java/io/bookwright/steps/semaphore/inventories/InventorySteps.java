@@ -37,6 +37,17 @@ public class InventorySteps {
     Calls.expectStatus(api.updateInventory(projectId, inventoryId, request), 400);
   }
 
+  @Step("Get Semaphore inventory {inventoryId} in project {projectId}")
+  public Inventory get(long projectId, long inventoryId) {
+    return Calls.body(api.getInventory(projectId, inventoryId), 200, "inventory");
+  }
+
+  @Step("Update Semaphore inventory {inventoryId} in project {projectId}")
+  public Inventory update(long projectId, long inventoryId, InventoryUpdateRequest request) {
+    Calls.expectStatus(api.updateInventory(projectId, inventoryId, request), 204);
+    return get(projectId, inventoryId);
+  }
+
   @Step("Find required inventory {name} in Semaphore project {projectId}")
   public Inventory requireByName(long projectId, String name) {
     List<Inventory> inventories = Calls.body(api.getInventories(projectId), 200, "inventories");
