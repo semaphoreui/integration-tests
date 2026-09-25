@@ -3,8 +3,10 @@ package io.bookwright.steps.semaphore.templates;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.bookwright.api.model.semaphore.TaskStopRequest;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.TemplateRequest;
+import io.bookwright.api.model.semaphore.TemplateUpdateRequest;
 import io.bookwright.api.semaphore.templates.SemaphoreTemplatesApi;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
@@ -25,13 +27,31 @@ public class TemplateSteps {
     this.teardown = teardown;
   }
 
+  @Step("Delete Semaphore template {templateId} in project {projectId}")
+  public void delete(long projectId, long templateId) {
+    Calls.expectStatus(api.deleteTemplate(projectId, templateId), 204);
+  }
+
+  @Step("Verify Semaphore template {templateId} is absent")
+  public void verifyAbsent(long projectId, long templateId) {
+    Calls.expectStatus(api.getTemplate(projectId, templateId), 404);
+    if (Calls.body(api.getTemplates(projectId), 200, "template collection").stream()
+        .anyMatch(item -> item.id() == templateId)) {
+      throw new IllegalStateException(
+          "Deleted Semaphore template %d is still listed in project %d"
+              .formatted(templateId, projectId));
+    }
+  }
+
   @Step("Create task template in Semaphore project {projectId}")
   public Template create(long projectId, TemplateRequest request) {
     Template template =
         Calls.body(api.createTemplate(projectId, request), 201, "created task template");
     teardown.push(
         "Delete Semaphore task template " + template.id(),
-        () -> Calls.expectStatus(api.deleteTemplate(projectId, template.id()), 204));
+        () ->
+            Calls.expectStatus(
+                Calls.response(api.deleteTemplate(projectId, template.id())), 204, 404));
     return template;
   }
 
@@ -66,6 +86,17 @@ public class TemplateSteps {
   @Step("Get Semaphore template {templateId} in project {projectId}")
   public Template get(long projectId, long templateId) {
     return Calls.body(api.getTemplate(projectId, templateId), 200, "task template");
+  }
+
+  @Step("Update Semaphore template {templateId} in project {projectId}")
+  public Template update(long projectId, long templateId, TemplateUpdateRequest request) {
+    Calls.expectStatus(api.updateTemplate(projectId, templateId, request), 204);
+    return get(projectId, templateId);
+  }
+
+  @Step("Stop all active tasks for Semaphore template {templateId}")
+  public void stopAllTasks(long projectId, long templateId, boolean force) {
+    Calls.expectStatus(api.stopAllTasks(projectId, templateId, new TaskStopRequest(force)), 204);
   }
 
   @Step("Find required template {name} in Semaphore project {projectId}")

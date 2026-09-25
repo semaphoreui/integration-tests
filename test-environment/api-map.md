@@ -132,6 +132,7 @@ An automated security smoke test for a `login_password` key confirms that the un
 7. Stop/force stop, project `max_parallel_tasks`, and parallel task launches.
 8. Variable Groups: mixed JSON/ENV/secret values, rename persistence, and safe task execution.
 9. Survey variables and launch-time overrides: metadata, persistence, secret masking, arguments, and Ansible params.
+10. Core project resource CRUD: independent access-key, repository, inventory, and template scenarios verify persisted updates, explicit deletion, HTTP 404 on subsequent GET, and absence from collections. Separate scenarios execute an updated template, list recent completed tasks, and stop two running tasks with one template stop-all request. Access-key security covers original and rotated credentials in API responses and task output.
 
 ### P2 — extension
 
