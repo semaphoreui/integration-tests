@@ -1,0 +1,13 @@
+---
+- name: Verify updated template execution settings
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Verify the saved template argument enabled check mode
+      ansible.builtin.assert:
+        that:
+          - ansible_check_mode
+
+    - name: Confirm the updated playbook ran in check mode
+      ansible.builtin.debug:
+        msg: semaphore-bookwright-template-check-mode-ok

@@ -21,13 +21,31 @@ public class RepositorySteps {
     this.teardown = teardown;
   }
 
+  @Step("Delete Semaphore repository {repositoryId} in project {projectId}")
+  public void delete(long projectId, long repositoryId) {
+    Calls.expectStatus(api.deleteRepository(projectId, repositoryId), 204);
+  }
+
+  @Step("Verify Semaphore repository {repositoryId} is absent")
+  public void verifyAbsent(long projectId, long repositoryId) {
+    Calls.expectStatus(api.getRepository(projectId, repositoryId), 404);
+    if (Calls.body(api.getRepositories(projectId), 200, "repository collection").stream()
+        .anyMatch(item -> item.id() == repositoryId)) {
+      throw new IllegalStateException(
+          "Deleted Semaphore repository %d is still listed in project %d"
+              .formatted(repositoryId, projectId));
+    }
+  }
+
   @Step("Create public Git repository in Semaphore project {projectId}")
   public Repository create(long projectId, RepositoryRequest request) {
     Repository repository =
         Calls.body(api.createRepository(projectId, request), 201, "created repository");
     teardown.push(
         "Delete Semaphore repository " + repository.id(),
-        () -> Calls.expectStatus(api.deleteRepository(projectId, repository.id()), 204));
+        () ->
+            Calls.expectStatus(
+                Calls.response(api.deleteRepository(projectId, repository.id())), 204, 404));
     return repository;
   }
 
