@@ -37,6 +37,7 @@ class SafeHttpReportingInterceptorTest {
             .header("Authorization", "Bearer header-secret")
             .header("Cookie", "session=cookie-secret")
             .header("X-Api-Key", "custom-header-secret")
+            .header("X-Hub-Signature-256", "sha256=webhook-signature")
             .header("X-Correlation-Id", "visible-correlation-id")
             .post(
                 RequestBody.create(
@@ -64,6 +65,7 @@ class SafeHttpReportingInterceptorTest {
             "header-secret",
             "cookie-secret",
             "custom-header-secret",
+            "webhook-signature",
             "body-secret",
             "nested-secret");
   }

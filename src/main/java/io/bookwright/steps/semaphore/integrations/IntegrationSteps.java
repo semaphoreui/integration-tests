@@ -10,14 +10,18 @@ import io.bookwright.api.model.semaphore.IntegrationMatcher;
 import io.bookwright.api.model.semaphore.IntegrationMatcherRequest;
 import io.bookwright.api.model.semaphore.IntegrationRequest;
 import io.bookwright.api.model.semaphore.IntegrationUpdateRequest;
+import io.bookwright.api.model.semaphore.WebhookHeaders;
 import io.bookwright.api.semaphore.integrations.SemaphoreIntegrationsApi;
 import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
+import io.qameta.allure.Param;
 import io.qameta.allure.Step;
+import io.qameta.allure.model.Parameter;
 import java.util.List;
-import java.util.Map;
 import okhttp3.Headers;
+import okhttp3.MediaType;
+import okhttp3.RequestBody;
 import retrofit2.Response;
 
 public class IntegrationSteps {
@@ -147,8 +151,11 @@ public class IntegrationSteps {
 
   @Step("Dispatch Semaphore webhook through {alias.url}")
   public IntegrationDispatch dispatch(
-      IntegrationAlias alias, Map<String, String> headers, Map<String, Object> payload) {
-    Response<Void> response = Calls.expectStatus(api.dispatch(alias.url(), headers, payload), 204);
+      IntegrationAlias alias,
+      @Param(mode = Parameter.Mode.HIDDEN) WebhookHeaders headers,
+      String payload) {
+    Response<Void> response =
+        Calls.expectStatus(api.dispatch(alias.url(), headers.values(), jsonBody(payload)), 204);
     IntegrationDispatch dispatch = requiredDispatch(response.headers(), alias);
     teardown.push(
         "Delete webhook-created Semaphore task " + dispatch.taskId(),
@@ -159,8 +166,11 @@ public class IntegrationSteps {
 
   @Step("Verify Semaphore ignores webhook sent through {alias.url}")
   public void verifyIgnored(
-      IntegrationAlias alias, Map<String, String> headers, Map<String, Object> payload) {
-    Response<Void> response = Calls.expectStatus(api.dispatch(alias.url(), headers, payload), 204);
+      IntegrationAlias alias,
+      @Param(mode = Parameter.Mode.HIDDEN) WebhookHeaders headers,
+      String payload) {
+    Response<Void> response =
+        Calls.expectStatus(api.dispatch(alias.url(), headers.values(), jsonBody(payload)), 204);
     if (response.headers().get("X-Semaphore-Task-ID") != null) {
       throw new IllegalStateException(
           "Semaphore unexpectedly launched task %s for webhook alias %s"
@@ -181,6 +191,10 @@ public class IntegrationSteps {
                             matcherId,
                             integrationId,
                             matchers.stream().map(IntegrationMatcher::id).toList())));
+  }
+
+  private RequestBody jsonBody(String payload) {
+    return RequestBody.create(payload, MediaType.get("application/json"));
   }
 
   private IntegrationExtractValue requireExtractValue(
