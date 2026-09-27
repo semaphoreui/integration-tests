@@ -7,6 +7,7 @@ import io.bookwright.api.model.semaphore.TaskRequest;
 import io.bookwright.api.model.semaphore.TaskStopRequest;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
+import io.bookwright.teardown.SemaphoreTaskCleanup;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.bookwright.util.Waits;
@@ -35,9 +36,7 @@ public class TaskSteps {
   @Step("Start Semaphore task from template {request.templateId} with launch parameters")
   public Task startTask(long projectId, TaskRequest request) {
     Task task = Calls.body(api.startTask(projectId, request), 201, "started task");
-    teardown.push(
-        "Delete Semaphore task " + task.id(),
-        () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
+    registerCleanup(projectId, task.id());
     return task;
   }
 
@@ -75,9 +74,7 @@ public class TaskSteps {
     Task task =
         Calls.body(
             session.tasks().startTask(projectId, new TaskRequest(templateId)), 201, "started task");
-    teardown.push(
-        "Delete Semaphore task " + task.id(),
-        () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
+    registerCleanup(projectId, task.id());
     return waitUntilTaskSucceeds(projectId, task.id());
   }
 
@@ -150,9 +147,7 @@ public class TaskSteps {
             .filter(candidate -> belongsTo(candidate, scheduleId, templateId))
             .findFirst()
             .orElseThrow();
-    teardown.push(
-        "Delete scheduled Semaphore task " + task.id(),
-        () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
+    registerCleanup(projectId, task.id());
     return waitUntilTaskSucceeds(projectId, task.id());
   }
 
@@ -194,10 +189,12 @@ public class TaskSteps {
                     candidate.templateId() == templateId && message.equals(candidate.message()))
             .findFirst()
             .orElseThrow();
-    teardown.push(
-        "Delete Semaphore task " + task.id(),
-        () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
+    registerCleanup(projectId, task.id());
     return waitUntilTaskSucceeds(projectId, task.id());
+  }
+
+  private void registerCleanup(long projectId, long taskId) {
+    SemaphoreTaskCleanup.register(api, teardown, projectId, taskId);
   }
 
   private boolean belongsTo(Task task, long scheduleId, long templateId) {

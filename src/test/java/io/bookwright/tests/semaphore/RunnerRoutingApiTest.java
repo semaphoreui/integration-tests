@@ -24,8 +24,8 @@ class RunnerRoutingApiTest {
 
   @Test
   @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
-  @DisplayName("Runner tag, availability and capacity control task dispatch")
-  void runnerTagAvailabilityAndCapacityControlDispatch(
+  @DisplayName("Matching runner capacity queues tasks until an execution slot is released")
+  void runnerCapacityControlsQueueAdmission(
       ApiSteps api, SemaphoreFixtures core, SemaphoreRunnerRoutingFixtures fixture) {
     var runner = api.semaphore().runners().waitUntilDefaultRunnerIsOnline();
     runner =
@@ -73,6 +73,36 @@ class RunnerRoutingApiTest {
                 .usedRunnerId())
         .isEqualTo(runner.id());
     api.semaphore().tasks().stopAndWait(project.id(), capacityQueued.id(), true);
+  }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Disabled runner rejects dispatch and resumes execution after re-enabling")
+  void disabledRunnerCanRecover(
+      ApiSteps api, SemaphoreFixtures core, SemaphoreRunnerRoutingFixtures fixture) {
+    var runner = api.semaphore().runners().waitUntilDefaultRunnerIsOnline();
+    runner =
+        api.semaphore()
+            .runners()
+            .configureTemporarily(runner.id(), fixture.runnerRequest(runner, true));
+    api.semaphore().runners().waitUntilTagIsAvailable(fixture.matchingTag());
+    var project = api.semaphore().projects().createProject(fixture.projectRequest());
+    var key =
+        api.semaphore().accessKeys().create(project.id(), core.accessKey().request(project.id()));
+    var repository =
+        api.semaphore()
+            .repositories()
+            .create(project.id(), core.repositories().primary().request(project.id(), key.id()));
+    var inventory =
+        api.semaphore()
+            .inventories()
+            .create(project.id(), core.inventory().request(project.id(), key.id()));
+    var template =
+        api.semaphore()
+            .templates()
+            .create(
+                project.id(),
+                fixture.matchingTemplateRequest(project.id(), repository.id(), inventory.id()));
 
     api.semaphore().runners().updateRunner(runner.id(), fixture.runnerRequest(runner, false));
     var unavailable = api.semaphore().tasks().startAndWaitForFailure(project.id(), template.id());
@@ -96,7 +126,29 @@ class RunnerRoutingApiTest {
                 .usedRunnerId())
         .isEqualTo(runner.id());
     api.semaphore().tasks().stopAndWait(project.id(), recovered.id(), true);
+  }
 
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Unmatched runner tag fails dispatch with an actionable diagnostic")
+  void unmatchedRunnerTagIsRejected(
+      ApiSteps api, SemaphoreFixtures core, SemaphoreRunnerRoutingFixtures fixture) {
+    var runner = api.semaphore().runners().waitUntilDefaultRunnerIsOnline();
+    api.semaphore()
+        .runners()
+        .configureTemporarily(runner.id(), fixture.runnerRequest(runner, true));
+    api.semaphore().runners().waitUntilTagIsAvailable(fixture.matchingTag());
+    var project = api.semaphore().projects().createProject(fixture.projectRequest());
+    var key =
+        api.semaphore().accessKeys().create(project.id(), core.accessKey().request(project.id()));
+    var repository =
+        api.semaphore()
+            .repositories()
+            .create(project.id(), core.repositories().primary().request(project.id(), key.id()));
+    var inventory =
+        api.semaphore()
+            .inventories()
+            .create(project.id(), core.inventory().request(project.id(), key.id()));
     var unmatchedTemplate =
         api.semaphore()
             .templates()

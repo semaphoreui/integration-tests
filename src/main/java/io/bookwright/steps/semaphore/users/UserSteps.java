@@ -67,6 +67,11 @@ public class UserSteps {
     }
   }
 
+  @Step("Register cleanup before enabling TOTP in the browser for Semaphore user {user.id}")
+  public void disableTotpAfterTest(User user) {
+    teardown.push("Disable TOTP for Semaphore user " + user.id(), () -> ensureTotpDisabled(user));
+  }
+
   private void disableTotpIfPresent(long userId, long totpId) {
     var response = Calls.response(api.disableTotp(userId, totpId));
     if (response.code() != 204 && response.code() != 400) {

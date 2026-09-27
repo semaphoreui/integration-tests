@@ -8,6 +8,7 @@ import io.bookwright.api.model.semaphore.User;
 import io.bookwright.config.Configs;
 import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTotpFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.util.TestData;
 import java.util.function.BiConsumer;
@@ -67,6 +68,27 @@ public enum Precondition implements IPrecondition {
         store.putSemaphoreTemplate(template);
       }),
 
+  SEMAPHORE_TOTP_API_USER_EXISTS(
+      "Create a disposable Semaphore TOTP API user",
+      (api, store) ->
+          store.putSemaphoreTotpUser(
+              api.semaphore()
+                  .users()
+                  .createDisposable(
+                      SemaphoreTotpFixtures.from(store.testData()).apiAccount().userRequest()))),
+
+  SEMAPHORE_TOTP_UI_USER_EXISTS(
+      "Create a disposable Semaphore TOTP UI user and register binding cleanup",
+      (api, store) -> {
+        User user =
+            api.semaphore()
+                .users()
+                .createDisposable(
+                    SemaphoreTotpFixtures.from(store.testData()).uiAccount().userRequest());
+        store.putSemaphoreTotpUser(user);
+        api.semaphore().users().disableTotpAfterTest(user);
+      }),
+
   SEMAPHORE_RBAC_USER_EXISTS(
       "Ensure the Semaphore RBAC fixture user exists",
       (api, store) -> {
@@ -103,6 +125,7 @@ public enum Precondition implements IPrecondition {
   static final String BOOKING_KEY = "createdBooking";
   static final String SEMAPHORE_PROJECT_KEY = "semaphoreProject";
   static final String SEMAPHORE_TEMPLATE_KEY = "semaphoreTemplate";
+  static final String SEMAPHORE_TOTP_USER_KEY = "semaphoreTotpUser";
   static final String SEMAPHORE_RBAC_USER_KEY = "semaphoreRbacUser";
   static final String SEMAPHORE_AUTH_LIFECYCLE_USERS_KEY = "semaphoreAuthLifecycleUsers";
 

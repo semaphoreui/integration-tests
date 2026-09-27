@@ -299,6 +299,96 @@ Preliminary directions:
 - installation and upgrade;
 - load and security checks.
 
+### P1: independent scenarios and reliable failure cleanup
+
+**Risk:** several tests combine unrelated contracts in one method, so an early failure prevents
+later checks from running. Incomplete task teardown can leave executor capacity occupied after a
+failure or let a queued task start after its dependencies have been deleted.
+
+**Test level:** framework HTTP-contract tests plus focused API/UI regressions on the existing profiles.
+
+**Priority:** P1. **Status:** all seven blocks are implemented and locally validated on
+`codex/p1-task-cleanup`, grouped for review in one PR. CI/review and merge remain outstanding.
+
+| Order | Block | Scope and completion criteria | Status |
+| --- | --- | --- | --- |
+| 1 | Task cleanup | Send stop requests for all owned tasks before waiting/deleting; handle completion/pool-release races without accepting unexpected API errors. Verify running and queued task cleanup, completed tasks, and preservation of the primary test failure. | Implemented; local cleanup regression and quality gate passed |
+| 2 | Backup/restore and project smoke | Separate successful restore, restore permissions, malformed backup validation, and the duplicate-repository canary. Keep the core execution smoke focused; move unrelated auth, schedules, and RBAC assertions to their own scenarios. | Implemented locally; four independent restore tests, focused execution smoke, and domain-specific smoke checks |
+| 3 | Terraform/OpenTofu and static inventories | Run each engine and each INI/YAML format as an independent parameterized case with isolated state and a separate Allure result. | Implemented locally; all four profile cases and quality gate passed |
+| 4 | Runner routing and concurrency | Separate capacity/queue admission, disabled/recovered runner, unmatched tag, and serial/parallel project limits. Preserve shared-runner isolation and guaranteed restoration. | Implemented locally; five PostgreSQL/runner cases, two SQLite cases, and quality gate passed |
+| 5 | Webhook configuration | Separate integration settings, aliases, matchers, and extractors; isolate invalid authentication, unmatched routing, and successful dispatch. | Implemented locally; all eight cases passed on SQLite and PostgreSQL/runner, quality gate passed |
+| 6 | TOTP API/UI | Separate enrollment, invalid OTP, successful challenge, recovery, and recovery-code reuse. Prepare each scenario independently and preserve secret-safe diagnostics. | Implemented locally; four API and four UI cases passed, including a random-order rerun; quality gate passed |
+| 7 | Negative validation cases | Separate invalid cron, missing/past run time, unsupported schedule type, and invalid survey definitions into independent cases. | Implemented; four schedule and two survey negative cases; both affected classes passed on SQLite and PostgreSQL/runner, quality gate passed |
+
+Use existing preconditions and domain fixtures for setup; do not introduce a generic scenario
+framework merely to shorten tests. Keep meaningful dependent flows, such as Build → Deploy and
+secret rename → execution, together. Preserve assertions, cleanup, and profile coverage when splitting.
+Each completed block must pass the affected profile tests and the framework quality gate.
+
+Block 2 reuses the existing project/template preconditions for independent backup state. The
+successful restore retains the meaningful export → restore → execution flow and resource-link,
+secret-masking, and task-history assertions. Health, schedule read/list, and non-member visibility
+have their own tests; the existing stronger invalid-login and guest-role tests retain those smoke
+contracts without duplicate cases. All extracted checks retain `smoke` selection. Validation uses
+`core-sqlite-local` on `develop@232bfb24`; this refactor does not claim validation of newer images.
+On 2026-09-25, all 18 tests in the six affected API classes passed, as did the six selected smoke
+cases and `qualityGate`.
+
+Block 3 uses typed fixture enums with `@EnumSource`, without a shared scenario runner or test-side
+fixture literals. Each invocation creates and cleans up its own project; Terraform/OpenTofu also
+use separate workspace and secret data. Existing workspace, inventory type/content, host-limit,
+and structured/raw output secret checks are retained. A framework regression verifies independent
+API facades, test seeds, and teardown queues across parameterized invocations. All four API cases
+passed on the same local image on 2026-09-25; Allure results have distinct history IDs and test seeds.
+Profile eligibility is unchanged; external execution was not run for this refactor.
+
+Block 4 splits runner capacity, disabled/recovered runner, and unmatched-tag dispatch into three
+tests, and serial/updated-parallel project limits into two. Every case owns a separate project;
+shared-executor `@Isolated` guards remain. The parallel case still updates the limit through the
+API, and the disabled-runner case keeps the meaningful disable → failed dispatch → recovery flow.
+Three framework regressions cover restoring all runner settings, restoration after a failed
+configuration request, and restoration despite another cleanup failure while preserving the
+primary test failure. On 2026-09-26, all five cases passed on `prod-postgres-runner` using
+`develop@232bfb24`, and `qualityGate` passed. A post-run API check confirmed the runner was active
+and default again, with capacity `2`, no temporary tags, and no remaining projects from these tests.
+Both concurrency cases also passed on `core-sqlite-local` with the same image. Other profiles and
+external environments were not rerun for this block.
+
+Block 5 separates integration settings, the two alias scopes, matcher CRUD, extractor CRUD,
+invalid-token rejection, unmatched-event rejection, and successful execution into eight tests.
+Every case owns its project; the existing setup helper now returns the integration directly,
+without a redundant context wrapper. Negative cases also query project tasks to confirm there
+was no dispatch. An unexpected task ID is registered for cleanup before the rejection assertion
+fails; two framework regressions cover both the ignored and unexpectedly accepted responses.
+The successful case retains task/integration/template linkage and real playbook output checks.
+On 2026-09-26, all eight cases passed on both `core-sqlite-local` and `prod-postgres-runner` using
+`develop@232bfb24`; `qualityGate` passed, including 23 task-cleanup cases. Other profiles and
+external environments were not rerun for this block.
+
+Block 6 separates TOTP into four API and four browser cases. Each test receives a disposable,
+seed-scoped account through preconditions; browser challenge/recovery cases prepare enrollment
+through the API. The dependent recovery → re-enrollment → old-code rejection flow stays together.
+Browser enrollment registers binding cleanup before interacting with Security settings, so even
+a failure after enrollment but before reading the QR code still disables TOTP before user deletion.
+Three framework regressions cover enrolled/unenrolled cleanup and continued deletion after a
+binding-cleanup failure. Secret-safe HTTP reporting and sensitive-UI artifact suppression remain.
+On 2026-09-27, all eight cases passed on `feature-totp-local` using `develop@232bfb24`, including
+a random-method-order rerun with seed `260927`; `qualityGate` passed. A post-run API check found
+no remaining disposable TOTP accounts. External environments were not run for this block.
+
+Block 7 separates four schedule validation failures and two invalid survey definitions into
+independent tests with their own projects and dependencies. Schedule setup uses existing
+preconditions; cron validation no longer creates an unnecessary executable template. Rejected
+schedule creation also verifies that nothing was persisted. Fixture payloads and expected error
+messages remain outside the tests, and the positive survey execution/secret checks are unchanged.
+On 2026-09-27, both complete affected classes passed on `core-sqlite-local` and
+`prod-postgres-runner` using `develop@232bfb24`: 11 passed and one expected profile-specific skip
+per profile. `qualityGate` passed. Other profiles and external environments were not rerun.
+
+The cleanup work exposed a queued-task force-stop boundary on `develop@232bfb24`: a task marked
+`stopped` can remain queued and start after capacity is released. Evidence and the two-phase cleanup
+workaround are recorded in `test-environment/queued-force-stop-cleanup-defect.md`.
+
 ### Completed P1 conditional security block: web-cache safety
 
 Semaphore does not provide a shared HTTP cache, and the documented NGINX configuration does not

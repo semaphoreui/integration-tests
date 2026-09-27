@@ -5,23 +5,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.bookwright.annotations.Api;
 import io.bookwright.annotations.OwnerDanil;
 import io.bookwright.fixtures.semaphore.SemaphoreStaticInventoryFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreStaticInventoryFixtures.Format;
 import io.bookwright.junit.Precondition;
 import io.bookwright.junit.Preconditions;
 import io.bookwright.steps.ApiSteps;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 @Api
 @OwnerDanil
 @Feature("Semaphore static inventories")
 class StaticInventoryApiTest {
 
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @EnumSource(Format.class)
   @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
-  @DisplayName("INI and YAML static inventories execute only their selected group")
+  @DisplayName("Static inventory executes only its selected group")
   void staticInventoryFormatsExecuteSelectedGroup(
-      ApiSteps api, SemaphoreStaticInventoryFixtures fixtures) {
+      Format format, ApiSteps api, SemaphoreStaticInventoryFixtures fixtures) {
+    var inventoryData = fixtures.inventory(format);
     var project = api.semaphore().projects().createProject(fixtures.project());
     var key =
         api.semaphore()
@@ -31,46 +35,26 @@ class StaticInventoryApiTest {
         api.semaphore()
             .repositories()
             .create(project.id(), fixtures.repository().request(project.id(), key.id()));
-    var iniInventory =
+    var inventory =
         api.semaphore()
             .inventories()
-            .create(project.id(), fixtures.iniInventory().request(project.id(), key.id()));
-    var iniTemplate =
+            .create(project.id(), inventoryData.request(project.id(), key.id()));
+    var template =
         api.semaphore()
             .templates()
             .create(
                 project.id(),
-                fixtures.iniTemplate().request(project.id(), repository.id(), iniInventory.id()));
-    var iniTask = api.semaphore().tasks().startAndWait(project.id(), iniTemplate.id());
-    var yamlInventory =
-        api.semaphore()
-            .inventories()
-            .create(project.id(), fixtures.yamlInventory().request(project.id(), key.id()));
-    var yamlTemplate =
-        api.semaphore()
-            .templates()
-            .create(
-                project.id(),
-                fixtures.yamlTemplate().request(project.id(), repository.id(), yamlInventory.id()));
-    var yamlTask = api.semaphore().tasks().startAndWait(project.id(), yamlTemplate.id());
-    var iniOutput =
+                fixtures.template(format).request(project.id(), repository.id(), inventory.id()));
+    var task = api.semaphore().tasks().startAndWait(project.id(), template.id());
+    var output =
         api.semaphore()
             .tasks()
-            .waitUntilTaskOutputContains(project.id(), iniTask.id(), fixtures.outputMarker());
-    var yamlOutput =
-        api.semaphore()
-            .tasks()
-            .waitUntilTaskOutputContains(project.id(), yamlTask.id(), fixtures.outputMarker());
+            .waitUntilTaskOutputContains(project.id(), task.id(), fixtures.outputMarker());
 
-    assertThat(iniOutput)
-        .contains(fixtures.outputMarker(), fixtures.iniInventory().selectedHost())
-        .doesNotContain(fixtures.iniInventory().excludedHost());
-    assertThat(yamlOutput)
-        .contains(fixtures.outputMarker(), fixtures.yamlInventory().selectedHost())
-        .doesNotContain(fixtures.yamlInventory().excludedHost());
-    assertThat(iniInventory.inventory()).isEqualTo(fixtures.iniInventory().content());
-    assertThat(iniInventory.type()).isEqualTo(fixtures.iniInventory().type());
-    assertThat(yamlInventory.inventory()).isEqualTo(fixtures.yamlInventory().content());
-    assertThat(yamlInventory.type()).isEqualTo(fixtures.yamlInventory().type());
+    assertThat(output)
+        .contains(fixtures.outputMarker(), inventoryData.selectedHost())
+        .doesNotContain(inventoryData.excludedHost());
+    assertThat(inventory.inventory()).isEqualTo(inventoryData.content());
+    assertThat(inventory.type()).isEqualTo(inventoryData.type());
   }
 }
