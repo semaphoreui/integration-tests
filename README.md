@@ -120,6 +120,8 @@ test-environment/profile test feature-ssh-local
 
 Two isolated SSH servers are reachable only inside the Compose network and accept different generated keys. The positive scenario confirms remote playbook execution, the negative one confirms useful clone diagnostics with a wrong key. The rotation scenario first gets a rejection from the second server with the old key, updates the secret of the same access key through the API and then confirms a successful Git clone and Ansible SSH. All scenarios verify that the private key and passphrase are absent from the API and task output.
 
+The same profile verifies project credential mappings (`/api/project/{id}/host_configs`): repositories and inventories carry a key of type `none`, and a host mapping is the only thing binding the generated key to `ssh-fixture`. The scenarios confirm that one mapping serves Git clone, remote branch listing and the Ansible connection, that two mappings select a different key for each server within one task, that a URL mapping rewrites an HTTPS repository URL into an SSH clone with the mapped key, that a mapped key the server rejects fails the clone without exposing the key, and that a key-less repository without a mapping has no credential at all. The API contract of the mappings — validation, credential-kind rules, duplicate detection, project scoping, role checks, referrer protection of the key, and backup/restore by credential name — runs in every core profile.
+
 A private Git over HTTPS is verified separately, through a local NGINX with self-signed TLS and mandatory Basic Auth:
 
 ```bash
@@ -128,7 +130,7 @@ test-environment/profile up feature-git-https
 test-environment/profile test feature-git-https
 ```
 
-The profile passes the trusted CA to Git processes through the standard `SEMAPHORE_FORWARDED_ENV_VARS`. The positive scenario runs a playbook after an authenticated clone, the negative one confirms rejection without an access key. The password does not leak into API/Allure diagnostics, and the login and password are absent from the structured/raw task output.
+The profile passes the trusted CA to Git processes through the standard `SEMAPHORE_FORWARDED_ENV_VARS`. The positive scenario runs a playbook after an authenticated clone, the negative one confirms rejection without an access key. The password does not leak into API/Allure diagnostics, and the login and password are absent from the structured/raw task output. A second class on the same profile maps the login/password credential onto the repository by URL prefix: the repository carries no key, the mapping supplies the Basic Auth, and a mapping of another prefix is confirmed not to apply.
 
 The OIDC feature profile performs a full browser login through a local Dex and verifies the callback, session, return path, external user provisioning, repeated login, logout, a conflict with a local email and rejection of an unavailable provider:
 

@@ -3,6 +3,7 @@ package io.bookwright.api.semaphore;
 import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.api.semaphore.auth.SemaphoreAuthApi;
 import io.bookwright.api.semaphore.backups.SemaphoreBackupsApi;
+import io.bookwright.api.semaphore.hostconfigs.SemaphoreHostConfigsApi;
 import io.bookwright.api.semaphore.projects.SemaphoreProjectsApi;
 import io.bookwright.api.semaphore.schedules.SemaphoreSchedulesApi;
 import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
@@ -16,6 +17,7 @@ public record SemaphoreSessionApis(
     SemaphoreBackupsApi backups,
     SemaphoreProjectsApi projects,
     SemaphoreAccessKeysApi accessKeys,
+    SemaphoreHostConfigsApi hostConfigs,
     SemaphoreSchedulesApi schedules,
     SemaphoreTasksApi tasks,
     SemaphoreUsersApi users,
@@ -27,6 +29,7 @@ public record SemaphoreSessionApis(
         retrofit.create(SemaphoreBackupsApi.class),
         retrofit.create(SemaphoreProjectsApi.class),
         retrofit.create(SemaphoreAccessKeysApi.class),
+        retrofit.create(SemaphoreHostConfigsApi.class),
         retrofit.create(SemaphoreSchedulesApi.class),
         retrofit.create(SemaphoreTasksApi.class),
         retrofit.create(SemaphoreUsersApi.class),
