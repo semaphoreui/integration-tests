@@ -307,7 +307,8 @@ failure or let a queued task start after its dependencies have been deleted.
 
 **Test level:** framework HTTP-contract tests plus focused API/UI regressions on the existing profiles.
 
-**Priority:** P1. **Status:** in progress; blocks 1–6 are implemented locally. Remaining blocks follow in independent PRs.
+**Priority:** P1. **Status:** all seven blocks are implemented and locally validated on
+`codex/p1-task-cleanup`, grouped for review in one PR. CI/review and merge remain outstanding.
 
 | Order | Block | Scope and completion criteria | Status |
 | --- | --- | --- | --- |
@@ -317,7 +318,7 @@ failure or let a queued task start after its dependencies have been deleted.
 | 4 | Runner routing and concurrency | Separate capacity/queue admission, disabled/recovered runner, unmatched tag, and serial/parallel project limits. Preserve shared-runner isolation and guaranteed restoration. | Implemented locally; five PostgreSQL/runner cases, two SQLite cases, and quality gate passed |
 | 5 | Webhook configuration | Separate integration settings, aliases, matchers, and extractors; isolate invalid authentication, unmatched routing, and successful dispatch. | Implemented locally; all eight cases passed on SQLite and PostgreSQL/runner, quality gate passed |
 | 6 | TOTP API/UI | Separate enrollment, invalid OTP, successful challenge, recovery, and recovery-code reuse. Prepare each scenario independently and preserve secret-safe diagnostics. | Implemented locally; four API and four UI cases passed, including a random-order rerun; quality gate passed |
-| 7 | Negative validation cases | Separate invalid cron, missing/past run time, unsupported schedule type, and invalid survey definitions into independent cases. | Planned |
+| 7 | Negative validation cases | Separate invalid cron, missing/past run time, unsupported schedule type, and invalid survey definitions into independent cases. | Implemented; four schedule and two survey negative cases; both affected classes passed on SQLite and PostgreSQL/runner, quality gate passed |
 
 Use existing preconditions and domain fixtures for setup; do not introduce a generic scenario
 framework merely to shorten tests. Keep meaningful dependent flows, such as Build → Deploy and
@@ -374,6 +375,15 @@ binding-cleanup failure. Secret-safe HTTP reporting and sensitive-UI artifact su
 On 2026-09-27, all eight cases passed on `feature-totp-local` using `develop@232bfb24`, including
 a random-method-order rerun with seed `260927`; `qualityGate` passed. A post-run API check found
 no remaining disposable TOTP accounts. External environments were not run for this block.
+
+Block 7 separates four schedule validation failures and two invalid survey definitions into
+independent tests with their own projects and dependencies. Schedule setup uses existing
+preconditions; cron validation no longer creates an unnecessary executable template. Rejected
+schedule creation also verifies that nothing was persisted. Fixture payloads and expected error
+messages remain outside the tests, and the positive survey execution/secret checks are unchanged.
+On 2026-09-27, both complete affected classes passed on `core-sqlite-local` and
+`prod-postgres-runner` using `develop@232bfb24`: 11 passed and one expected profile-specific skip
+per profile. `qualityGate` passed. Other profiles and external environments were not rerun.
 
 The cleanup work exposed a queued-task force-stop boundary on `develop@232bfb24`: a task marked
 `stopped` can remain queued and start after capacity is released. Evidence and the two-phase cleanup

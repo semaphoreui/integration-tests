@@ -350,7 +350,11 @@ when launching the deploy. Semaphore assigns the build a `start_version`, passes
 safe version markers. The deploy detail API stores the link, while the displayed version is taken from the
 nested `build_task` in the task history — the deploy task has no `version` field of its own.
 
-The survey/task override suite saves enum, integer, string, env-target and secret survey variables in the template, then runs `survey-overrides.yml` with overridden values, template/task arguments and Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. The task really runs with local execution and through the persistent runner, the secret is verified by SHA-256 under `no_log` and is absent from the structured/raw output. Unsupported survey targets and enum defaults outside their allowed values receive diagnosable `400` responses. The historical remote-dispatch and enum-default defects remain documented separately.
+The survey/task override suite saves enum, integer, string, env-target and secret survey variables in the template, then runs `survey-overrides.yml` with overridden values, template/task arguments and Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. The task really runs with local execution and through the persistent runner, the secret is verified by SHA-256 under `no_log` and is absent from the structured/raw output. Unsupported survey targets and enum defaults outside their allowed values receive diagnosable `400` responses in two independent tests, each with its own project and dependencies. The historical remote-dispatch and enum-default defects remain documented separately.
+
+Schedule validation has four independent negative cases: invalid cron, missing run time, past run
+time, and unsupported schedule type. Existing project/template preconditions isolate each case;
+cron validation only creates a project. Rejected creation also checks that no schedule was saved.
 
 The webhook integration suite creates a token-authenticated searchable integration, a project alias, a header matcher and extractors from the JSON body/header. Requests with a wrong token or event do not launch a task, while a valid webhook returns task identifiers, saves the link through `integration_id` and really passes the extracted values to the Ansible playbook. The token is stored in a `login_password` access key and is redacted in API/Allure diagnostics.
 
