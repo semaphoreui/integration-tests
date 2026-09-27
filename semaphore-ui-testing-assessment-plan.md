@@ -113,11 +113,12 @@ fully confirmed in Linux CI on 2026-09-04, and the current-source SQLite/API/UI 
 each test pull request. At the same time,
 Linux CI confirmed that `v2.19.12` loses one of the short `stdout`/`stderr` streams after the terminal `success`;
 the current `develop` fixes are protected by the strict SQLite PR contract and the daily
-`feature-shell-output` profile. `feature-schedule-timezone` reproduces
-the absence of tasks for an active cron/`run_at`, and `feature-dynamic-runner` reproduces a one-off
-runner that never exits after a successful task and the `finish` webhook. The still-failing schedule
-and dynamic-runner profiles are excluded from the stable CI matrix. The reports are located in `test-environment/v2.19.8-regression-report.md`,
-`test-environment/schedule-execution-defect.md`, and
+`feature-shell-output` profile.
+`feature-schedule-timezone` now passes cron and `run_at` lifecycle checks after correcting an
+invalid string-valued Ansible `limit` in the test fixture; the former BUG-003 is withdrawn and the
+profile joins the daily matrix. `feature-dynamic-runner` still reproduces a one-off runner that never
+exits after a successful task and the `finish` webhook. The investigation records are located in
+`test-environment/v2.19.8-regression-report.md`, `test-environment/schedule-execution-defect.md`, and
 `test-environment/dynamic-runner-one-off-exit-defect.md`, and the new release defect is in
 `test-environment/shell-output-loss-defect.md`.
 
@@ -133,7 +134,7 @@ I verify:
 - which external dependencies the tests will need;
 - whether the environment can be run identically locally and in CI.
 
-The initial configuration matrix and the way to extend it are recorded in `test-environment/configuration-testing-overview.md`. Instead of a full combinatorial sweep, fast configuration checks, several reference end-to-end profiles, and standalone feature profiles are used. Five DB/execution profiles have been implemented, along with SSH, a schedule reproducer, OIDC via pinned Dex, OIDC via HTTPS NGINX/subpath on PostgreSQL, LDAPS via pinned OpenLDAP, TOTP MFA, database encryption keyring rotation, and a dynamic one-off runner reproducer. On `v2.19.8`, the core API suite passes in all five reference configurations; OIDC and LDAP cover positive login, provisioning/reuse, logout, and negative account/provider/credential paths. TOTP covers API self-enrollment, challenge, invalid/valid passcode, recovery, and single-use recovery codes, while the browser flow covers Security settings, QR rendering, the challenge screen, and the recovery form. OTP material does not end up in HTTP/Allure artifacts, and sensitive UI screenshots/HTML/traces are not published on failure. Proxy OIDC additionally confirms TLS, `/semaphore` routing, and the `Secure`/`HttpOnly` session cookie. The encryption lifecycle verifies hot reload of a new primary, mixed-key reads, backup/rekey, and removal of the retired key without losing the task fixture. The dynamic runner executes the task but does not terminate the one-off process due to a confirmed logic error in the runner lifecycle. HA has been investigated and deferred until an Enterprise test subscription: the community build does not contain Redis-backed coordination and cannot provide an honest active-active check.
+The initial configuration matrix and the way to extend it are recorded in `test-environment/configuration-testing-overview.md`. Instead of a full combinatorial sweep, fast configuration checks, several reference end-to-end profiles, and standalone feature profiles are used. Five DB/execution profiles have been implemented, along with SSH, a green schedule lifecycle profile, OIDC via pinned Dex, OIDC via HTTPS NGINX/subpath on PostgreSQL, LDAPS via pinned OpenLDAP, TOTP MFA, database encryption keyring rotation, and a dynamic one-off runner reproducer. On `v2.19.8`, the core API suite passes in all five reference configurations; OIDC and LDAP cover positive login, provisioning/reuse, logout, and negative account/provider/credential paths. TOTP covers API self-enrollment, challenge, invalid/valid passcode, recovery, and single-use recovery codes, while the browser flow covers Security settings, QR rendering, the challenge screen, and the recovery form. OTP material does not end up in HTTP/Allure artifacts, and sensitive UI screenshots/HTML/traces are not published on failure. Proxy OIDC additionally confirms TLS, `/semaphore` routing, and the `Secure`/`HttpOnly` session cookie. The schedule profile verifies cron, one-shot deactivation, delete-after-run, task parameters, and a non-UTC timezone. The encryption lifecycle verifies hot reload of a new primary, mixed-key reads, backup/rekey, and removal of the retired key without losing the task fixture. The dynamic runner executes the task but does not terminate the one-off process due to a confirmed logic error in the runner lifecycle. HA has been investigated and deferred until an Enterprise test subscription: the community build does not contain Redis-backed coordination and cannot provide an honest active-active check.
 
 **Result:** a working test environment and a documented launch command.
 
@@ -262,11 +263,11 @@ quality gate, the API baseline, and a short Chromium UI smoke on `core-sqlite-lo
 suite verifies password login, launching an API-prepared executable template, and client-side
 project-name validation without sending a create request. The daily matrix runs the PostgreSQL,
 MySQL, MariaDB, persistent runner, SSH, private HTTPS Git, direct OIDC, HTTPS/subpath OIDC, LDAPS,
-TOTP, encryption-rotation, and shell-output profiles. The weekly/manual release workflow covers SQLite,
+TOTP, encryption-rotation, shell-output, and schedule-timezone profiles. The weekly/manual release workflow covers SQLite,
 PostgreSQL, MySQL, and MariaDB upgrades; all four completed successfully in Linux CI by 2026-09-11.
 Jobs have timeouts, `fail-fast: false` for matrices, preserve JUnit/HTML/Allure and Compose
-diagnostics, and always clean up. Manual investigation runs confirm the known schedule,
-dynamic-runner, and shared-cache defects and are not part of the stable gate. After
+diagnostics, and always clean up. Manual investigation runs retain the dynamic-runner and
+shared-cache defects outside the stable gate. After
 each run, the individual profile Allure reports are assembled into a self-contained single-file
 HTML artifact. Successful trusted `main` runs are published to the public [GitHub Pages
 history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment

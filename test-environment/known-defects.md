@@ -1,18 +1,18 @@
 # Semaphore UI known defects
 
-**Last reviewed:** 2026-09-21
+**Last reviewed:** 2026-09-24
 **Core runtime baseline:** `semaphoreui/semaphore:v2.19.12`
 
-**Runner and scheduler defect baseline:** `semaphoreui/semaphore:v2.19.12`
+**Runner defect baseline:** `semaphoreui/semaphore:v2.19.12`
 
 **Current stable release checked:** [`v2.19.12`](https://github.com/semaphoreui/semaphore/releases/tag/v2.19.12)
 
 This document consolidates product defects found by the integration test suite. Runtime behaviour was
 initially reproduced on `v2.19.8`. The core and persistent-runner suites were rerun on `v2.19.12` in
-Linux CI on 2026-09-04; the schedule and dynamic one-off runner reproducers were rerun locally on the
-same release. Affected source paths were also compared with the `v2.19.12` tag and current `develop`.
+Linux CI on 2026-09-04; the dynamic one-off runner reproducer was rerun locally on the same release.
+Affected source paths were also compared with the `v2.19.12` tag and current `develop`.
 
-The defects are API, scheduler and runner failures rather than rendering problems. Screenshots would
+The active defects are API and runner failures rather than rendering problems. Screenshots would
 not add useful evidence; request/response contracts, process state and server log excerpts are included
 instead. All reproducers use generated fixtures and do not expose credentials or secret values.
 
@@ -22,7 +22,7 @@ instead. All reproducers use generated fixtures and do not expose credentials or
 |---|---|---:|---|---|
 | BUG-001 | Project deletion succeeds while a task is still running | High | Projects / task execution | Confirmed in Linux CI on `v2.19.12` |
 | BUG-002 | File inventory creation accepts a path outside its repository | High | Inventory API / path validation | Confirmed in Linux CI on `v2.19.12` |
-| BUG-003 | Active schedules do not create tasks | High | Scheduler | Confirmed locally on `v2.19.12`; both `run_at` and cron fail |
+| BUG-003 | Active schedules do not create tasks | Withdrawn | Test fixture | False positive: invalid `limit` type; corrected cron and `run_at` pass |
 | BUG-004 | Remote runner loses secret survey variables | High | Remote runner dispatch / secrets | Historical on `v2.19.12`; fixed and covered on `develop` |
 | BUG-005 | Tasks fail when no matching runner is temporarily available | High | Runner routing / task queue | Confirmed in Linux CI on `v2.19.12`; product-contract decision required |
 | BUG-006 | One-off runner does not exit after a completed task | Medium | Runner lifecycle | Confirmed locally on `v2.19.12`; defective condition remains on `develop` |
@@ -111,46 +111,17 @@ test-environment/profile test core-sqlite-local \
 
 **Detailed evidence:** [file-inventory-path-validation-defect.md](file-inventory-path-validation-defect.md)
 
-## BUG-003 — Active schedules do not create tasks
+## BUG-003 — Withdrawn: active schedules do create tasks
 
-**Description**
+The original reproducer sent Ansible `params.limit` as the string `"localhost"`; the execution
+contract requires the array `["localhost"]`. The scheduler fired, then logged a task-parameter
+deserialization error before a task row could be created. The test only observed the empty task
+collection and incorrectly attributed it to the scheduler.
 
-An active schedule is persisted and returned by the API, but Semaphore creates no task when either a
-cron occurrence or one-shot `run_at` time is reached. Manual execution of the same template succeeds.
-
-**Impact**
-
-Schedules appear correctly configured while unattended automation silently does not run. This is a
-core reliability failure for scheduled infrastructure operations.
-
-**Steps to reproduce: one-shot schedule**
-
-1. Create a project with a valid repository, inventory and runnable template.
-2. Prove that manual execution of the template succeeds.
-3. Create an active `run_at` schedule for 15 seconds in the future.
-4. Read the schedule back and confirm its timestamp and `active=true`.
-5. Poll project tasks through the scheduled time and for another 90 seconds.
-
-The cron variant uses an occurrence 15–75 seconds in the future in the configured
-`Pacific/Kiritimati` timezone and produces the same result.
-
-**Expected:** Semaphore creates exactly one task linked to the schedule and the task completes
-successfully.
-
-**Actual:** the schedule remains active, the task collection stays empty and the server log contains
-no task-creation attempt or scheduler error.
-
-**Automated reproducer**
-
-```bash
-test-environment/profile up feature-schedule-timezone
-test-environment/profile test feature-schedule-timezone
-```
-
-**Current-stable evidence:** both the one-shot and cron scenarios timed out locally on
-`v2.19.12` on 2026-09-04; no task linked to either active schedule was created.
-
-**Detailed evidence:** [schedule-execution-defect.md](schedule-execution-defect.md)
+With the corrected payload, cron, regular `run_at`, and `run_at` with `delete_after_run=true` all
+pass on a clean `v2.19.12` profile and on `develop@e95560fd`. BUG-003 is not an active product
+defect. The audit trail and diagnostic log are retained in
+[schedule-execution-defect.md](schedule-execution-defect.md).
 
 ## BUG-004 — Remote runner loses secret survey variables
 
@@ -461,6 +432,6 @@ as an upgrade baseline. Both scenarios passed locally against `develop@e95560fd`
 
 1. Confirm the intended unavailable-runner queue contract with the product team before filing
    BUG-005 as an unconditional product defect.
-2. Create or link upstream issues for BUG-001, BUG-002, BUG-003, BUG-006 and BUG-007, preserving
+2. Create or link upstream issues for BUG-001, BUG-002, BUG-006 and BUG-007, preserving
    Allure results and sanitized server logs as evidence.
 3. Rerun every open canary when the next stable image replaces `v2.19.12`.
