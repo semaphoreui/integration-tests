@@ -21,6 +21,25 @@ public record SemaphoreStaticInventoryFixtures(
     Template yamlTemplate,
     String outputMarker) {
 
+  public enum Format {
+    INI,
+    YAML
+  }
+
+  public StaticInventory inventory(Format format) {
+    return switch (format) {
+      case INI -> iniInventory;
+      case YAML -> yamlInventory;
+    };
+  }
+
+  public Template template(Format format) {
+    return switch (format) {
+      case INI -> iniTemplate;
+      case YAML -> yamlTemplate;
+    };
+  }
+
   public static SemaphoreStaticInventoryFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreStaticInventoryFixtures(

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.bookwright.annotations.Api;
 import io.bookwright.annotations.OwnerDanil;
 import io.bookwright.annotations.Regression;
+import io.bookwright.annotations.Smoke;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreScheduleFixtures;
 import io.bookwright.junit.Precondition;
@@ -20,6 +21,31 @@ import org.junit.jupiter.api.Test;
 @OwnerDanil
 @Feature("Semaphore schedules")
 class ScheduleApiTest {
+
+  @Test
+  @Smoke
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS
+  })
+  @DisplayName("Created cron schedule is readable individually and in the project list")
+  void createdScheduleIsReadable(ApiSteps api, TestStore store, SemaphoreFixtures fixtures) {
+    var project = store.semaphoreProject();
+    var template = store.semaphoreTemplate();
+    var schedule =
+        api.semaphore()
+            .schedules()
+            .create(project.id(), fixtures.schedule().request(project.id(), template.id()));
+    var saved = api.semaphore().schedules().getSchedule(project.id(), schedule.id());
+
+    assertThat(saved.templateId()).isEqualTo(template.id());
+    assertThat(saved.cronFormat()).isEqualTo(fixtures.schedule().cronFormat());
+    assertThat(saved.active()).isEqualTo(fixtures.schedule().active());
+    assertThat(api.semaphore().schedules().getSchedules(project.id()))
+        .extracting(item -> item.id())
+        .contains(schedule.id());
+  }
 
   @Test
   @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)

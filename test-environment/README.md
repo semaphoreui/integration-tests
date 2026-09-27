@@ -247,9 +247,9 @@ test-environment/profile up feature-totp-local
 test-environment/profile test feature-totp-local
 ```
 
-The profile explicitly enables TOTP and recovery and runs the shared `totpTest`. The API scenario creates a separate non-admin user, performs self-enrollment, obtains the `otpauth://` material, verifies the `TOTP_REQUIRED` state, the rejection of a tampered passcode, and a successful login with an RFC 6238 code. Then a recovery code restores the session and removes the old TOTP binding; a repeated enrollment issues a new recovery code, while the old one receives `INVALID_RECOVERY_CODE`.
+The profile explicitly enables TOTP and recovery and runs the shared `totpTest`. Four independent API cases cover enrollment material, invalid passcodes, successful verification, and the linked recovery → re-enrollment → rejection of a consumed recovery code flow. Every case gets its own disposable non-admin user through a precondition; no successful login or recovery check depends on an earlier test.
 
-An independent browser scenario enables TOTP via the Security tab, verifies that the QR loads and the recovery code is shown, logs out, goes through the password → challenge flow with negative and positive passcode checks, and then uses the UI recovery form. After recovery, the API confirms that the TOTP binding has been removed.
+Four browser cases separately verify Security-tab enrollment with QR/recovery-code rendering, an invalid passcode, a valid passcode, and the recovery form. Each uses a disposable admin account. Challenge and recovery cases enable TOTP through the API instead of repeating the browser enrollment workflow. After recovery, the API confirms that the binding was removed. Browser binding cleanup is registered before enrollment can change state, so even a failure while checking QR rendering still triggers cleanup before user deletion.
 
 The OTP secret, passcode, and recovery code never end up in HTTP attachments or raw Allure result JSON. Steps accept redacted request objects: Allure's visual `hidden` mode alone is not enough, since it leaves the original value inside the downloadable artifact. For the browser scenario, only safe browser diagnostics are saved on failure; screenshot, HTML, and Playwright trace are disabled because they may contain the QR, the recovery code, or the entered passcode.
 

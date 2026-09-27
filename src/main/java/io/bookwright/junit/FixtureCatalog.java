@@ -113,7 +113,9 @@ final class FixtureCatalog {
           fixture(
               SemaphoreTerraformFixtures.class,
               context -> SemaphoreTerraformFixtures.from(context.config(), context.testData())),
-          fixture(SemaphoreTotpFixtures.class, context -> SemaphoreTotpFixtures.standard()),
+          fixture(
+              SemaphoreTotpFixtures.class,
+              context -> SemaphoreTotpFixtures.from(context.testData())),
           fixture(
               SemaphoreTokenFixtures.class,
               context -> SemaphoreTokenFixtures.from(context.testData())),

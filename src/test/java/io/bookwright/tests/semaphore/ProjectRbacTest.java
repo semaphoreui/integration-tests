@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.bookwright.annotations.Api;
 import io.bookwright.annotations.OwnerDanil;
+import io.bookwright.annotations.Smoke;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.junit.Precondition;
 import io.bookwright.junit.Preconditions;
@@ -130,6 +131,7 @@ class ProjectRbacTest {
     Precondition.SEMAPHORE_RBAC_USER_EXISTS
   })
   @DisplayName("Guest can read the project but cannot change it or start tasks")
+  @Smoke
   void guestPermissionsMatchRoleContract(
       ApiSteps api, TestStore store, SemaphoreFixtures fixtures) {
     var project = store.semaphoreProject();
@@ -157,5 +159,18 @@ class ProjectRbacTest {
     api.semaphore()
         .users()
         .verifyCannotRemoveFromProject(session, project.id(), account.user().id());
+  }
+
+  @Test
+  @Smoke
+  @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_RBAC_USER_EXISTS})
+  @DisplayName("Project is hidden from a non-member")
+  void projectIsHiddenFromNonMember(ApiSteps api, TestStore store, SemaphoreFixtures fixtures) {
+    var hidden = api.semaphore().projects().createProject(fixtures.projects().hidden());
+
+    api.semaphore()
+        .users()
+        .verifyProjectHidden(
+            api.semaphore().auth().loginAs(store.semaphoreRbacUser()), hidden.id());
   }
 }

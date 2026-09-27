@@ -32,7 +32,8 @@ class StateOwnershipArchitectureTest {
             "semaphoreRbacUser",
             "semaphoreAuthLifecycleUsers",
             "semaphoreProject",
-            "semaphoreTemplate")
+            "semaphoreTemplate",
+            "semaphoreTotpUser")
         .doesNotContain("get", "put", "getRequired");
   }
 
