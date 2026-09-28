@@ -3,6 +3,60 @@
   "runs": [
     {
       "schemaVersion": 1,
+      "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/36396402974",
+      "versions": [
+        "develop"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 97,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 62,
+            "skipped": 35,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 86,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 86,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "Merge pull request #40 from semaphoreui/codex/webhook-authentication-…",
+      "event": "push",
+      "conclusion": "success",
+      "runId": 36396402974,
+      "runAttempt": 1,
+      "runNumber": 122,
+      "createdAt": "2026-09-28T08:16:39Z",
+      "date": "2026-09-28",
+      "headSha": "ffc5a590ca38d7a75248f5f0bd06916446bfa434",
+      "shortSha": "ffc5a59",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/ffc5a590ca38d7a75248f5f0bd06916446bfa434",
+      "path": "reports/2026-09-28/ci/36396402974-1"
+    },
+    {
+      "schemaVersion": 1,
       "title": "Semaphore configuration matrix",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/36391457880",
       "versions": [
