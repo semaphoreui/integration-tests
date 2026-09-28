@@ -28,6 +28,7 @@ The specification covers the core product model but does not fully match the act
 | Project role | `GET /api/project/{project_id}/role` | 200 | Role and permissions of the current user |
 | Keys | CRUD `/api/project/{project_id}/keys` | 200/201/204 | Types `none`, `ssh`, `login_password`, secret hiding, refs, and deletion |
 | Repositories | CRUD `/api/project/{project_id}/repositories` | 200/201/204 | Git URL, branch/ref, access key, branches, playbooks, clone errors |
+| Host configs | CRUD `/api/project/{project_id}/host_configs` | 200/201/204/400 | `host` and `url` mappings to a project key, credential-kind rules, duplicates, key referrers, backup/restore |
 | Inventory | CRUD `/api/project/{project_id}/inventory` | 200/201/204 | `static`, `static-yaml`, `file`, links to key/repository, validation |
 | Templates | CRUD `/api/project/{project_id}/templates` | 200/201/204 | Links to repository/inventory/key, playbook, arguments, survey variables |
 | Tasks | `POST /tasks`, `GET /tasks/{id}` | 201, 200 | Queue and lifecycle, launch parameters, final status |
@@ -137,12 +138,12 @@ An automated security smoke test for a `login_password` key confirms that the un
 ### P2 — extension
 
 1. Secret storage. External storage management is a Pro feature; the Community API reports a disabled feature flag and does not allow an honest Vault/OpenBao/AWS/Azure scenario without a test subscription.
-2. Integrations and webhooks. Token auth, project/integration alias lifecycle, integration CRUD,
+2. Integrations and webhooks. Token, GitHub SHA-256, generic HMAC-SHA256/HMAC-SHA512, Bitbucket
+   SHA-256, and Basic auth; project/integration alias lifecycle, integration CRUD,
    matcher and extracted-value lifecycle, matcher routing, body/header extraction, and real task
    execution are automated. Matcher update/delete and extracted-value delete are positive
    regressions for the historical `v2.19.12` false-success defect documented in
-   `integration-child-mutation-false-success-defect.md`. HMAC/GitHub/Bitbucket/Basic auth remain an
-   extension.
+   `integration-child-mutation-false-success-defect.md`.
 3. Runners. Registration/default/heartbeat, exact tag routing, and capacity are automated; unavailable recovery and one-off remain known defects.
 4. Workflows. DAG execution is a Pro feature: the Community controller is a documented stub, so e2e is postponed until a test subscription is available.
 5. Backup/restore and migration scenarios. The project backup/restore round trip is automated; the SQLite/PostgreSQL release upgrade is covered separately.
@@ -221,6 +222,10 @@ the extracted values into Ansible variables. The access-key secret remains maske
 HTTP/Allure diagnostics. Matcher update, matcher delete, and extracted-value delete are asserted as
 positive persistence contracts on the current application source, protecting upstream fix
 `1af4c105` from regression.
+The authentication matrix additionally verifies GitHub and Bitbucket `sha256=` signatures, generic
+HMAC-SHA256/HMAC-SHA512 with a configurable header, and Basic credentials. Each mode rejects
+invalid authentication without starting a task, accepts the exact signed JSON payload, executes the
+integration template, and keeps authorization/signature headers out of HTTP and Allure diagnostics.
 With this lifecycle included, the local coverage report observes 19/19 documented integration
 operations and 71/99 documented operations overall.
 

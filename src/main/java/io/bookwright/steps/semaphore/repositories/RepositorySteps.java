@@ -80,4 +80,9 @@ public class RepositorySteps {
     Calls.expectStatus(api.updateRepository(projectId, repositoryId, request), 204);
     return get(projectId, repositoryId);
   }
+
+  @Step("List remote branches of repository {repositoryId} in Semaphore project {projectId}")
+  public List<String> getBranches(long projectId, long repositoryId) {
+    return Calls.body(api.getRepositoryBranches(projectId, repositoryId), 200, "branches");
+  }
 }

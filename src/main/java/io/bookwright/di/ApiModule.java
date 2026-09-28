@@ -10,6 +10,7 @@ import io.bookwright.api.restfulbooker.health.HealthApi;
 import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.api.semaphore.auth.SemaphoreAuthApi;
 import io.bookwright.api.semaphore.backups.SemaphoreBackupsApi;
+import io.bookwright.api.semaphore.hostconfigs.SemaphoreHostConfigsApi;
 import io.bookwright.api.semaphore.integrations.SemaphoreIntegrationsApi;
 import io.bookwright.api.semaphore.inventories.SemaphoreInventoriesApi;
 import io.bookwright.api.semaphore.projects.SemaphoreProjectsApi;
@@ -143,6 +144,12 @@ public class ApiModule extends AbstractModule {
   @Singleton
   SemaphoreRepositoriesApi semaphoreRepositoriesApi(@Named("semaphore") Retrofit retrofit) {
     return retrofit.create(SemaphoreRepositoriesApi.class);
+  }
+
+  @Provides
+  @Singleton
+  SemaphoreHostConfigsApi semaphoreHostConfigsApi(@Named("semaphore") Retrofit retrofit) {
+    return retrofit.create(SemaphoreHostConfigsApi.class);
   }
 
   @Provides

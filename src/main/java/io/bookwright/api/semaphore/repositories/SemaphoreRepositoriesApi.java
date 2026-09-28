@@ -31,6 +31,10 @@ public interface SemaphoreRepositoriesApi {
       @Path("repositoryId") long repositoryId,
       @Body RepositoryUpdateRequest request);
 
+  @GET("project/{projectId}/repositories/{repositoryId}/branches")
+  Call<List<String>> getRepositoryBranches(
+      @Path("projectId") long projectId, @Path("repositoryId") long repositoryId);
+
   @DELETE("project/{projectId}/repositories/{repositoryId}")
   Call<Void> deleteRepository(
       @Path("projectId") long projectId, @Path("repositoryId") long repositoryId);
