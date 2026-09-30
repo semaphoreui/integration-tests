@@ -71,8 +71,8 @@ class SurveyAndTaskOverridesApiTest {
   @Test
   @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_PROJECT_EXISTS})
   @EnabledIfSystemProperty(named = "SEMAPHORE_PROFILE", matches = "prod-postgres-runner")
-  @DisplayName("Remote runner loses secret survey values before upstream fix #4086")
-  void remoteRunnerLosesSurveySecret(
+  @DisplayName("Remote runner receives and protects secret survey values")
+  void remoteRunnerReceivesSurveySecret(
       ApiSteps api, TestStore store, SemaphoreFixtures core, SemaphoreSurveyFixtures fixture) {
     var project = store.semaphoreProject();
     var key =
@@ -91,24 +91,27 @@ class SurveyAndTaskOverridesApiTest {
             .create(
                 project.id(),
                 fixture.templateRequest(project.id(), repository.id(), inventory.id()));
-    var failed =
+    var task =
+        api.semaphore().tasks().startAndWait(project.id(), fixture.taskRequest(template.id()));
+    var structuredOutput =
         api.semaphore()
             .tasks()
-            .startAndWaitForFailure(project.id(), fixture.taskRequest(template.id()));
-    var output =
-        api.semaphore()
-            .tasks()
-            .waitUntilTaskOutputContains(project.id(), failed.id(), fixture.taskSecret().name());
+            .waitUntilTaskOutputContains(project.id(), task.id(), fixture.outputMarker());
+    var rawOutput = api.semaphore().tasks().getTaskRawOutput(project.id(), task.id());
 
-    assertThat(output).contains(fixture.taskSecret().name(), "is undefined");
+    assertThat(structuredOutput).contains(fixture.outputMarker());
     SecretAssertions.absent(
-        "remote runner survey task output", output, fixture.taskSecret().value());
+        "structured remote runner survey task output",
+        structuredOutput,
+        fixture.taskSecret().value());
+    SecretAssertions.absent(
+        "raw remote runner survey task output", rawOutput, fixture.taskSecret().value());
   }
 
   @Test
   @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_PROJECT_EXISTS})
-  @DisplayName("Template rejects an unsupported survey variable target")
-  void invalidSurveyTargetIsRejected(
+  @DisplayName("Template rejects invalid survey variable definitions")
+  void invalidSurveyDefinitionsAreRejected(
       ApiSteps api, TestStore store, SemaphoreFixtures core, SemaphoreSurveyFixtures fixture) {
     var project = store.semaphoreProject();
     var key =
@@ -128,5 +131,12 @@ class SurveyAndTaskOverridesApiTest {
             project.id(),
             fixture.invalidTemplateRequest(project.id(), repository.id(), inventory.id()),
             fixture.expectedValidationError());
+    api.semaphore()
+        .templates()
+        .verifyRejected(
+            project.id(),
+            fixture.invalidEnumDefaultTemplateRequest(
+                project.id(), repository.id(), inventory.id()),
+            fixture.expectedEnumDefaultValidationError());
   }
 }

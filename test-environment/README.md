@@ -22,9 +22,9 @@ Five baseline profiles and thirteen feature profiles are available:
 | `feature-ldap-tls` | SQLite | LDAPS bind/search, user provisioning/reuse, logout, and negative credential/account scenarios |
 | `feature-totp-local` | SQLite | API and browser TOTP: Security/QR, challenge, invalid passcode, and recovery lifecycle |
 | `feature-encryption-rotation` | PostgreSQL 14.3 | keyring hot reload, mixed-key reads, vault rekey, and retired key removal |
-| `feature-schedule-timezone` | SQLite | cron/run-at execution in `Pacific/Kiritimati`; local defect reproducer |
+| `feature-schedule-timezone` | SQLite | cron/run-at execution, one-shot lifecycle, and `Pacific/Kiritimati` timezone |
 | `feature-dynamic-runner` | SQLite | webhook-launched one-off runner; defect reproducer for a process that never exits |
-| `feature-shell-output` | SQLite | strict defect reproducer for the loss of `stdout`/`stderr` in a short task |
+| `feature-shell-output` | SQLite | regression for complete short `stdout`/`stderr` and bounded inherited pipes |
 | `feature-web-cache-safety` | SQLite | shared-cache cross-user isolation and cache-poisoning defect reproducer |
 | `external` | user-managed | the `core-sqlite-local` suite against an existing Semaphore; only the fixture services are started |
 
@@ -113,7 +113,9 @@ The MySQL 8.4 and MariaDB 10.11 versions are pinned in the test matrix and passe
 
 ## Remote runner
 
-The production-like profile uses the same PostgreSQL overlay, enables `SEMAPHORE_USE_REMOTE_RUNNER`, and starts `semaphoreui/runner:v2.19.12` as a separate service:
+The production-like profile uses the same PostgreSQL overlay, enables
+`SEMAPHORE_USE_REMOTE_RUNNER`, and starts the persistent runner as a separate service from the same
+resolved application image as the server:
 
 ```bash
 test-environment/profile down core-postgres-local
@@ -127,7 +129,10 @@ The Git fixture is not mounted into the server or the runner: both clone it from
 
 The API suite additionally verifies that the runner is active, registered, assigned as default, has `online` status, and sends heartbeats. Successful task/output and stop/force-stop scenarios with remote mode enabled confirm actual execution on the runner.
 
-On `v2.19.8` the profile also contains a known-defect canary: a secret survey variable is lost before remote dispatch, although the same launch passes with local execution. The canary does not print the secret value; the upstream fix #4086 and the criterion for removing the workaround are described in `remote-runner-survey-secrets-defect.md`.
+The profile runs the server and persistent runner from the same resolved application image. Its
+positive survey regression proves that a secret value reaches the remote executor, produces only a
+safe hash marker, and remains absent from API, structured, raw, and Allure diagnostics. Older
+release evidence is preserved in `remote-runner-survey-secrets-defect.md`.
 
 ## SSH feature profile
 
@@ -141,6 +146,8 @@ The profile builds a minimal Alpine SSH fixture and mounts the local Git reposit
 
 The key pair is generated during `profile up` in the Git-ignored directory `build/test-fixtures/ssh`. Only the public key is mounted into the container, while the private key stays outside the Docker build context and is used by the Java test only for the local API. The fixture image version is recorded in the Allure environment.
 
+The profile also runs the credential-mapping scenarios: key-less repositories and inventories reach `ssh-fixture` and `ssh-fixture-rotated` only through `host_configs` entries, including a URL mapping which rewrites `https://ssh-fixture/repositories/` into an SSH clone. Inventory hosts disable host-key checking through `ansible_ssh_extra_args`, because an inventory-level `ansible_ssh_common_args` would replace the `--ssh-common-args` option through which the generated ssh configuration reaches Ansible.
+
 ## Private HTTPS Git feature profile
 
 The private HTTPS Git fixture brings up a pinned NGINX, publishes a bare repository only inside the Compose network, and requires Basic Auth. A self-signed CA is generated in the Git-ignored `build/test-fixtures/git-https` and passed to child Git processes via an allowed environment variable:
@@ -151,6 +158,8 @@ test-environment/profile up feature-git-https
 test-environment/profile test feature-git-https
 ```
 
+The manifest names two test classes (comma separated in `test_class`): the repository scenarios with the key attached directly, and the credential-mapping scenarios in which a URL mapping supplies the Basic Auth to a key-less repository.
+
 ## Schedule timezone feature profile
 
 ```bash
@@ -159,9 +168,15 @@ test-environment/profile up feature-schedule-timezone
 test-environment/profile test feature-schedule-timezone
 ```
 
-The profile sets `SEMAPHORE_SCHEDULE_TIMEZONE=Pacific/Kiritimati`, passes the same zone to the test JVM, and records it in the Allure environment. The tests compute the nearest cron occurrence in that zone and a separate `run_at`, then wait for the automatically created task by `schedule_id` and its successful output.
+The profile sets `SEMAPHORE_SCHEDULE_TIMEZONE=Pacific/Kiritimati`, passes the same zone to the test
+JVM, and records it in the Allure environment. It verifies recurring cron execution, a one-shot
+schedule becoming inactive, and `delete_after_run=true` removing the schedule after creating a
+successful task. Every task executes the trusted Ansible fixture with the stored message and typed
+`limit` parameter.
 
-On release `v2.19.8` the profile is currently a defect reproducer: the API stores active cron and one-shot schedules, but no task appears. It is deliberately excluded from the CI matrix until Linux confirmation and a decision on the upstream issue. The full report is in `schedule-execution-defect.md`.
+The original no-task report was a false positive caused by sending Ansible `limit` as a string
+instead of an array. The corrected scenarios pass on `v2.19.12` and current `develop`; the profile is
+part of the daily matrix. The audit trail is in `schedule-execution-defect.md`.
 
 ## Shell output feature profile
 
@@ -171,10 +186,11 @@ test-environment/profile up feature-shell-output
 test-environment/profile test feature-shell-output
 ```
 
-On release `v2.19.12` a short, successfully completed Bash task may retain only one of the
-process streams: `stdout` or `stderr`. The profile runs only the strict `ShellOutputTest`,
-including the background-child scenario, and remains a manual red reproducer until the already
-existing upstream fixes land in stable. The full report is in `shell-output-loss-defect.md`.
+Release `v2.19.12` may retain only one process stream for a short successful Bash task. On the
+current `develop` application source, the focused profile is a green regression: it requires both
+`stdout` and `stderr`, and verifies that an inherited pipe from a background child does not delay
+completion indefinitely. The same contract runs in `core-sqlite-local` on pull requests. Historical
+evidence for the release defect is preserved in `shell-output-loss-defect.md`.
 
 ## Web-cache safety feature profile
 
@@ -328,21 +344,19 @@ The profiles are wired into three GitHub Actions workflows:
 | Workflow | Trigger | Profiles |
 |---|---|---|
 | `CI` | pull request and push to `main` | API suite and Chromium UI smoke on `core-sqlite-local` after the framework quality gate |
-| `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation` |
+| `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-shell-output`, `feature-schedule-timezone` |
 | `Release upgrade` | Sunday at `03:30 UTC`, manually | `upgrade-sqlite-local`, `upgrade-postgres-local`, `upgrade-mysql-local`, `upgrade-mariadb-local` |
 
 Each matrix profile runs on its own runner, so the shared port `3000` causes no conflicts. After execution the workflow keeps JUnit/HTML/Allure artifacts, adds `profile ps` and a final snapshot of the Compose logs on failure, and then removes only the containers and volumes of the selected profile.
 
-On stable `v2.19.12` the `profile test` command runs JUnit classes sequentially because of a
-confirmed race in the product output collector. This does not disable concurrent execution checks:
-`ProjectConcurrencyApiTest` itself launches several Semaphore tasks and verifies queue admission.
-The strict concurrent/short-output contract is isolated in `feature-shell-output`. The confirmed
-shared-cache security reproducer is isolated in `feature-web-cache-safety`.
+Profile suites run JUnit classes sequentially; task concurrency remains covered explicitly inside
+`ProjectConcurrencyApiTest`. The short-output contract also runs in the SQLite PR gate and is
+isolated in `feature-shell-output` for the daily matrix. The confirmed shared-cache security
+reproducer remains isolated in `feature-web-cache-safety`.
 
-In the manual `Configuration matrix`, the inputs `include_schedule_investigation=true` and
-`include_shell_output_investigation=true` add the corresponding defect profiles only to the
-selected run. Their failure, expected until the fix, does not pollute the daily gate but preserves
-Linux diagnostics for confirming the defects.
+Both `feature-shell-output` and `feature-schedule-timezone` are regular green matrix entries against
+the current application source. Manual runs execute the same profile set and can select another
+application branch.
 
 The raw Allure results of each job are uploaded as a separate artifact. The final reusable workflow downloads them, generates an independent HTML report for each profile, and uploads the combined site as a downloadable artifact. The build runs even after a test failure, including on pull requests, so the diagnostics of a red run can be opened without GitHub Pages. Successful trusted `main` runs are also published to the public [GitHub Pages history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment runs remain artifact-only.
 

@@ -104,7 +104,11 @@ The runner registers automatically, stores a long-lived token in a separate volu
 
 When no suitable active runner is available, the behaviour differs from the capacity case: `v2.19.8` moves the task to `error: no runners available` instead of keeping it in the queue. This was reproduced for a temporarily disabled matching runner and for a non-existent tag; details are in `test-environment/runner-unavailable-routing-defect.md`.
 
-Another remote execution difference: `v2.19.8` loses secret survey variables before dispatch, so the task receives an undefined variable. The profile contains a safe known-defect canary that does not print the value; the upstream fix #4086 is already included in `v2.20.0-alpha1`. The evidence and the criterion for switching to a positive regression are described in `test-environment/remote-runner-survey-secrets-defect.md`.
+Older releases lose secret survey variables before remote dispatch. The current-source profile runs
+the server and persistent runner from the same resolved application image and positively verifies
+successful secret delivery without exposing plaintext. Historical evidence for `v2.19.12` and the
+two-sided compatibility boundary are described in
+`test-environment/remote-runner-survey-secrets-defect.md`.
 
 The SSH feature profile verifies an encrypted access key on two client boundaries at once: Git clone over SSH and an Ansible connection to a remote target:
 
@@ -116,6 +120,8 @@ test-environment/profile test feature-ssh-local
 
 Two isolated SSH servers are reachable only inside the Compose network and accept different generated keys. The positive scenario confirms remote playbook execution, the negative one confirms useful clone diagnostics with a wrong key. The rotation scenario first gets a rejection from the second server with the old key, updates the secret of the same access key through the API and then confirms a successful Git clone and Ansible SSH. All scenarios verify that the private key and passphrase are absent from the API and task output.
 
+The same profile verifies project credential mappings (`/api/project/{id}/host_configs`): repositories and inventories carry a key of type `none`, and a host mapping is the only thing binding the generated key to `ssh-fixture`. The scenarios confirm that one mapping serves Git clone, remote branch listing and the Ansible connection, that two mappings select a different key for each server within one task, that a URL mapping rewrites an HTTPS repository URL into an SSH clone with the mapped key, that a mapped key the server rejects fails the clone without exposing the key, and that a key-less repository without a mapping has no credential at all. The API contract of the mappings — validation, credential-kind rules, duplicate detection, project scoping, role checks, referrer protection of the key, and backup/restore by credential name — runs in every core profile.
+
 A private Git over HTTPS is verified separately, through a local NGINX with self-signed TLS and mandatory Basic Auth:
 
 ```bash
@@ -124,7 +130,7 @@ test-environment/profile up feature-git-https
 test-environment/profile test feature-git-https
 ```
 
-The profile passes the trusted CA to Git processes through the standard `SEMAPHORE_FORWARDED_ENV_VARS`. The positive scenario runs a playbook after an authenticated clone, the negative one confirms rejection without an access key. The password does not leak into API/Allure diagnostics, and the login and password are absent from the structured/raw task output.
+The profile passes the trusted CA to Git processes through the standard `SEMAPHORE_FORWARDED_ENV_VARS`. The positive scenario runs a playbook after an authenticated clone, the negative one confirms rejection without an access key. The password does not leak into API/Allure diagnostics, and the login and password are absent from the structured/raw task output. A second class on the same profile maps the login/password credential onto the repository by URL prefix: the repository carries no key, the mapping supplies the Basic Auth, and a mapping of another prefix is confirmed not to apply.
 
 The OIDC feature profile performs a full browser login through a local Dex and verifies the callback, session, return path, external user provisioning, repeated login, logout, a conflict with a local email and rejection of an unavailable provider:
 
@@ -188,9 +194,9 @@ test-environment/profile up feature-shell-output
 test-environment/profile test feature-shell-output
 ```
 
-On `v2.19.12` the task gets `success`, but the saved output may lose the whole `stdout` or
-`stderr`. The strict test of both streams is kept as a manual red reproducer and is not part of the stable
-PR/nightly gate. The cause, CI evidence and two upstream fixes are described in
+`v2.19.12` may report `success` while losing the whole `stdout` or `stderr` stream. The fixes are
+present on `develop`, so the strict contract now runs in the regular SQLite PR gate and the focused
+profile runs in the daily matrix. The historical failure, CI evidence, and upstream fixes remain in
 `test-environment/shell-output-loss-defect.md`.
 
 The web-cache safety profile checks the deployment boundary created when a customer enables a
@@ -209,7 +215,7 @@ query. Public versioned assets and `/swagger/api-docs.yml` remain intentionally 
 profile is a manual red reproducer; evidence and the safe proxy configuration are in
 `test-environment/web-cache-authenticated-response-leak-defect.md`.
 
-The experimental schedule profile reproduces real cron/`run_at` execution in a non-UTC timezone:
+The schedule profile verifies real cron/`run_at` execution in a non-UTC timezone:
 
 ```bash
 test-environment/profile down feature-ssh-local
@@ -217,7 +223,11 @@ test-environment/profile up feature-schedule-timezone
 test-environment/profile test feature-schedule-timezone
 ```
 
-On `v2.19.8` both scenarios reproduce the defect locally: the active schedule is saved, but no task is created. The profile is not yet included in the CI matrix; the evidence and expected behaviour are in `test-environment/schedule-execution-defect.md`.
+The suite covers recurring cron execution, one-shot deactivation, and `delete_after_run` cleanup.
+The original apparent no-task defect was an invalid test payload: Ansible `limit` was sent as a
+string instead of an array. Corrected scenarios pass on `v2.19.12` and current `develop`; the
+investigation record is in `test-environment/schedule-execution-defect.md`. The profile now runs in
+the daily configuration matrix.
 
 Verification of upgrading the published images on a preserved database is launched by a separate command:
 
@@ -284,10 +294,9 @@ when an image for that commit does not exist yet. A change to the tests alone do
 rebuild. The full description, including branch mode, auto-triggering, authorization and cleanup of
 temporary images, is in [`docs/application-pr-testing.md`](docs/application-pr-testing.md).
 
-When `Configuration matrix` is launched manually, the inputs `include_schedule_investigation`
-and/or `include_shell_output_investigation` can be enabled. Then, for that run only, the corresponding
-known red defect profiles are added to the matrix to confirm the problem on Linux and collect the
-standard artifacts; the daily run remains a green gate without expected failures.
+The fixed `feature-shell-output` and corrected `feature-schedule-timezone` profiles are regular
+daily entries. Manual runs use the same green matrix and can optionally select another application
+branch.
 
 After every CI, nightly matrix or release-upgrade run, Allure is automatically assembled into a ready-made HTML site and uploaded as the artifact `allure-html-<run>-<attempt>`. Every Allure report is built in single-file mode: after downloading, it is enough to unpack the archive and open `index.html` with a double click — no local HTTP server is needed. For a matrix run the start page contains a separate report for each profile, so the results of different DBMSs are not mixed in retries.
 
@@ -332,7 +341,7 @@ when launching the deploy. Semaphore assigns the build a `start_version`, passes
 safe version markers. The deploy detail API stores the link, while the displayed version is taken from the
 nested `build_task` in the task history — the deploy task has no `version` field of its own.
 
-The survey/task override suite saves enum, integer, string, env-target and secret survey variables in the template, then runs `survey-overrides.yml` with overridden values, template/task arguments and Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. The task really runs on SQLite and PostgreSQL with local execution, the secret is verified by SHA-256 under `no_log` and is absent from the structured/raw output. The persistent runner on `v2.19.8` loses the survey secret before dispatch; this is covered by a separate canary until the move to upstream #4086. An unsupported survey target gets `400`. A `v2.19.8` gap is also recorded: an enum default outside the list is accepted by the backend; the fix is already in upstream `v2.20.0-alpha1`.
+The survey/task override suite saves enum, integer, string, env-target and secret survey variables in the template, then runs `survey-overrides.yml` with overridden values, template/task arguments and Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. The task really runs with local execution and through the persistent runner, the secret is verified by SHA-256 under `no_log` and is absent from the structured/raw output. Unsupported survey targets and enum defaults outside their allowed values receive diagnosable `400` responses. The historical remote-dispatch and enum-default defects remain documented separately.
 
 The webhook integration suite creates a token-authenticated searchable integration, a project alias, a header matcher and extractors from the JSON body/header. Requests with a wrong token or event do not launch a task, while a valid webhook returns task identifiers, saves the link through `integration_id` and really passes the extracted values to the Ansible playbook. The token is stored in a `login_password` access key and is redacted in API/Allure diagnostics.
 
@@ -367,7 +376,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 - `test-environment/configuration-testing-overview.md` — matrix of client configurations and reference profiles;
 - `test-environment/smoke-report.md` — environment verification results.
 - `test-environment/known-defects.md` — summary of current defects with priorities and reproduction steps.
-- `test-environment/schedule-execution-defect.md` — reproducible cron/run-at execution defect.
+- `test-environment/schedule-execution-defect.md` — resolved schedule investigation and corrected regression coverage.
 - `test-environment/dynamic-runner-one-off-exit-defect.md` — reproducible one-off runner exit defect.
 - `test-environment/runner-unavailable-routing-defect.md` — fail-fast instead of a recoverable queue when no matching runner is available.
 - `test-environment/remote-runner-survey-secrets-defect.md` — loss of secret survey variables on remote dispatch.
@@ -666,7 +675,7 @@ test-environment/profile test core-sqlite-local
 `test-environment/profile` takes the image from `APP_IMAGE` if the variable is set, and from the profile
 manifest otherwise; a manifest value of `branch:<name>` is resolved and built by `scripts/app-source.sh`.
 Useful build variables: `APP_BRANCH` (defaults to `develop`),
-`APP_BUILD_PLATFORM` (defaults to `linux/amd64` in CI and to the local platform elsewhere),
+`APP_BUILD_PLATFORM` (defaults to `linux/amd64,linux/arm64` in CI and to the local platform elsewhere),
 `APP_DOCKERFILE` (defaults to `deployment/docker/server/Dockerfile`), `APP_BUILD_PUSH` (defaults to
 `true` in CI and to `false` elsewhere).
 

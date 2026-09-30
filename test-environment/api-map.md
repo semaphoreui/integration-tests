@@ -28,6 +28,7 @@ The specification covers the core product model but does not fully match the act
 | Project role | `GET /api/project/{project_id}/role` | 200 | Role and permissions of the current user |
 | Keys | CRUD `/api/project/{project_id}/keys` | 200/201/204 | Types `none`, `ssh`, `login_password`, secret hiding, refs, and deletion |
 | Repositories | CRUD `/api/project/{project_id}/repositories` | 200/201/204 | Git URL, branch/ref, access key, branches, playbooks, clone errors |
+| Host configs | CRUD `/api/project/{project_id}/host_configs` | 200/201/204/400 | `host` and `url` mappings to a project key, credential-kind rules, duplicates, key referrers, backup/restore |
 | Inventory | CRUD `/api/project/{project_id}/inventory` | 200/201/204 | `static`, `static-yaml`, `file`, links to key/repository, validation |
 | Templates | CRUD `/api/project/{project_id}/templates` | 200/201/204 | Links to repository/inventory/key, playbook, arguments, survey variables |
 | Tasks | `POST /tasks`, `GET /tasks/{id}` | 201, 200 | Queue and lifecycle, launch parameters, final status |
@@ -136,12 +137,12 @@ An automated security smoke test for a `login_password` key confirms that the un
 ### P2 — extension
 
 1. Secret storage. External storage management is a Pro feature; the Community API reports a disabled feature flag and does not allow an honest Vault/OpenBao/AWS/Azure scenario without a test subscription.
-2. Integrations and webhooks. Token auth, project/integration alias lifecycle, integration CRUD,
+2. Integrations and webhooks. Token, GitHub SHA-256, generic HMAC-SHA256/HMAC-SHA512, Bitbucket
+   SHA-256, and Basic auth; project/integration alias lifecycle, integration CRUD,
    matcher and extracted-value lifecycle, matcher routing, body/header extraction, and real task
    execution are automated. Matcher update/delete and extracted-value delete are positive
    regressions for the historical `v2.19.12` false-success defect documented in
-   `integration-child-mutation-false-success-defect.md`. HMAC/GitHub/Bitbucket/Basic auth remain an
-   extension.
+   `integration-child-mutation-false-success-defect.md`.
 3. Runners. Registration/default/heartbeat, exact tag routing, and capacity are automated; unavailable recovery and one-off remain known defects.
 4. Workflows. DAG execution is a Pro feature: the Community controller is a documented stub, so e2e is postponed until a test subscription is available.
 5. Backup/restore and migration scenarios. The project backup/restore round trip is automated; the SQLite/PostgreSQL release upgrade is covered separately.
@@ -200,15 +201,15 @@ deletes the project and its related resources, and detail/list confirm their abs
 logs foreign-key errors. The canary and the analysis of the controller/service/store boundary are in
 `project-deletion-running-task-defect.md`.
 
-A persistent remote runner is automated as a separate API group with a production-like PostgreSQL profile. Registration, `active`, `is_default`, `online`, heartbeat, and execution of the task suite outside the server process are verified. The exact tag is persisted and selects the expected `used_runner_id`; with capacity `1`, the second matching task returns to `waiting` and starts after the slot is freed. When no matching active runner is present, `v2.19.8` finishes the task with `error: no runners available` instead of a recoverable waiting; the evidence and code boundary are in `runner-unavailable-routing-defect.md`. Secret survey variables are also lost at the remote dispatch boundary; the canary and upstream #4086 are described in `remote-runner-survey-secrets-defect.md`.
+A persistent remote runner is automated as a separate API group with a production-like PostgreSQL profile. Registration, `active`, `is_default`, `online`, heartbeat, and execution of the task suite outside the server process are verified. The exact tag is persisted and selects the expected `used_runner_id`; with capacity `1`, the second matching task returns to `waiting` and starts after the slot is freed. When no matching active runner is present, `v2.19.8` finishes the task with `error: no runners available` instead of a recoverable waiting; the evidence and code boundary are in `runner-unavailable-routing-defect.md`. The current-source server and runner share the same resolved image, and the positive survey regression verifies encrypted secret dispatch, successful execution, and plaintext absence. The historical release defect is described in `remote-runner-survey-secrets-defect.md`.
 
 Project concurrency is covered independently of runner capacity: a parallel-capable template with a project limit of `1` holds the second task in `waiting`, and after a stop the first one frees the slot; updating the project to `2` allows two tasks to reach the running marker simultaneously. This protects create/update persistence and queue admission without a timing assumption about the moment of the POST.
 
-The schedule P1 is extended with a separate API set: backend cron validation, diagnosable errors for invalid cron/type/run-at, CRUD/update, active toggle, persistence of `run_at`, `delete_after_run`, and task parameters, creation denied for `task_runner`, as well as the system timezone contract. Real cron and `run_at` execution is covered by a separate `feature-schedule-timezone`, but on `v2.19.8` both scenarios reproduce the absence of an automatically created task. Until confirmed on Linux, the profile is left out of the CI matrix; the evidence is collected in `schedule-execution-defect.md`.
+The schedule P1 is extended with a separate API set: backend cron validation, diagnosable errors for invalid cron/type/run-at, CRUD/update, active toggle, persistence of `run_at`, `delete_after_run`, and task parameters, creation denied for `task_runner`, as well as the system timezone contract. The `feature-schedule-timezone` profile additionally executes real cron and `run_at` schedules, verifies one-shot deactivation and deletion, and runs daily. The former missing-task report was caused by a string-valued Ansible `limit`; the corrected array payload passes on `v2.19.12` and current `develop`, as recorded in `schedule-execution-defect.md`.
 
 Variable Groups are covered by a separate API set: create/get/list, mixed JSON extra vars and ENV, secrets of types `var`/`env`, renaming a secret while preserving its value, backend validation of an empty name, and real Ansible execution. Secrets are verified inside the playbook by SHA-256 under `no_log` and are absent from API responses, structured/raw output, and Allure diagnostics. A browser regression for #2293 additionally renames an existing secret in the Variable Group form, verifies the safe `update` payload, reopens the form, reads the persisted API state, and executes the original value without exposing it. The API set is green on SQLite and PostgreSQL; the browser scenario runs in `core-sqlite-local`.
 
-The survey/task override API set persists enum/int/string/env/secret definitions and executes a task with a launch environment/secret, template/task arguments, and Ansible params on SQLite and PostgreSQL local execution. The persisted template/task payloads, the real marker, and the absence of the survey secret in structured/raw output are verified. On the persistent runner `v2.19.8`, the positive path is replaced by a known-defect canary: the secret does not reach the executor; fix #4086 is already in `v2.20.0-alpha1`. An unsupported target is rejected with `400`. `v2.19.8` also accepts an enum default outside of the values; the defect and upstream fix `eb29c3e8` are described in `survey-default-validation-defect.md`.
+The survey/task override API set persists enum/int/string/env/secret definitions and executes a task with a launch environment/secret, template/task arguments, and Ansible params on local execution and the persistent runner. The persisted template/task payloads, the real marker, and the absence of the survey secret in structured/raw output are verified. An unsupported target and an enum default outside the declared values are rejected with diagnosable `400` responses. Historical evidence for the fixed remote-dispatch and enum-default defects remains in `remote-runner-survey-secrets-defect.md` and `survey-default-validation-defect.md`.
 
 Webhook integrations are covered by a separate domain API and steps. The configuration lifecycle
 verifies integration list/get/update, project and integration aliases, matcher and extracted-value
@@ -220,6 +221,10 @@ the extracted values into Ansible variables. The access-key secret remains maske
 HTTP/Allure diagnostics. Matcher update, matcher delete, and extracted-value delete are asserted as
 positive persistence contracts on the current application source, protecting upstream fix
 `1af4c105` from regression.
+The authentication matrix additionally verifies GitHub and Bitbucket `sha256=` signatures, generic
+HMAC-SHA256/HMAC-SHA512 with a configurable header, and Basic credentials. Each mode rejects
+invalid authentication without starting a task, accepts the exact signed JSON payload, executes the
+integration template, and keeps authorization/signature headers out of HTTP and Allure diagnostics.
 With this lifecycle included, the local coverage report observes 19/19 documented integration
 operations and 71/99 documented operations overall.
 
@@ -227,4 +232,8 @@ Project backup/restore is covered by a separate domain API and steps. The round 
 
 The negative restore contract verifies `401` for a non-admin and `400` for a missing repository reference. A separate canary records a `v2.19.8` defect: a backup with two identical repository names is accepted with `200` because of the `n > 2` condition in the shared duplicate validator; the restored project indeed contains both objects. Details are in `project-backup-restore-validation-defect.md`.
 
-The schedule execution defect is confirmed in Linux CI: `v2.19.8` creates no task for either an active cron or `run_at`. SSH key rotation is automated. Strict `known_hosts` remains a version-gated scenario: the corresponding configuration is absent from `v2.19.8` and must be added after moving to a release that contains the current upstream implementation.
+The schedule investigation is resolved: the original fixture sent an invalid string-valued Ansible
+`limit`. Cron, regular `run_at`, and delete-after-run pass with the corrected array payload on
+`v2.19.12` and current `develop`. SSH key rotation is automated. Strict `known_hosts` remains a
+version-gated scenario: the corresponding configuration is absent from `v2.19.8` and must be added
+after moving to a release that contains the current upstream implementation.

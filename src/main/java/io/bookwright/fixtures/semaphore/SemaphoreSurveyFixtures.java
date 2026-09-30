@@ -27,7 +27,9 @@ public record SemaphoreSurveyFixtures(
     String taskMessage,
     String outputMarker,
     String invalidTarget,
-    String expectedValidationError) {
+    String expectedValidationError,
+    String invalidEnumDefault,
+    String expectedEnumDefaultValidationError) {
 
   public static SemaphoreSurveyFixtures from(TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
@@ -93,7 +95,9 @@ public record SemaphoreSurveyFixtures(
         "bookwright survey launch " + suffix,
         "semaphore-bookwright-survey-overrides-ok",
         "process",
-        "invalid survey variable target: process");
+        "invalid survey variable target: process",
+        "qa",
+        "survey variable \"deployment_env\": default_value \"qa\" is not in values list");
   }
 
   public TemplateRequest templateRequest(long projectId, long repositoryId, long inventoryId) {
@@ -129,6 +133,36 @@ public record SemaphoreSurveyFixtures(
             valid.defaultValue());
     return new TemplateRequest(
         templateName + "-invalid",
+        projectId,
+        inventoryId,
+        repositoryId,
+        0,
+        playbook,
+        "ansible",
+        "",
+        templateArguments,
+        true,
+        List.of(invalid),
+        templateParameters,
+        null,
+        false);
+  }
+
+  public TemplateRequest invalidEnumDefaultTemplateRequest(
+      long projectId, long repositoryId, long inventoryId) {
+    SurveyVariable valid = surveyVariables.getFirst();
+    SurveyVariable invalid =
+        new SurveyVariable(
+            valid.name(),
+            valid.title(),
+            valid.required(),
+            valid.type(),
+            valid.target(),
+            valid.description(),
+            valid.values(),
+            invalidEnumDefault);
+    return new TemplateRequest(
+        templateName + "-invalid-enum-default",
         projectId,
         inventoryId,
         repositoryId,

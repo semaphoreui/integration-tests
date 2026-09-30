@@ -156,6 +156,50 @@ public class TaskSteps {
     return waitUntilTaskSucceeds(projectId, task.id());
   }
 
+  @Step("Wait for Semaphore template {templateId} to create a task with message {message}")
+  public Task waitForTemplateTaskToSucceed(long projectId, long templateId, String message) {
+    List<Task> tasks;
+    try {
+      tasks =
+          Waits.awaitSlow("Semaphore template %d creates a task".formatted(templateId))
+              .until(
+                  () -> Calls.body(api.getTasks(projectId), 200, "template tasks"),
+                  candidates ->
+                      candidates.stream()
+                          .anyMatch(
+                              candidate ->
+                                  candidate.templateId() == templateId
+                                      && message.equals(candidate.message())));
+    } catch (ConditionTimeoutException timeout) {
+      List<Task> observed = Calls.body(api.getTasks(projectId), 200, "tasks after timeout");
+      throw new IllegalStateException(
+          "Template %d did not create a task with message '%s' in project %d. Observed tasks: %s"
+              .formatted(
+                  templateId,
+                  message,
+                  projectId,
+                  observed.stream()
+                      .map(
+                          task ->
+                              "%d:template=%d:message=%s:status=%s"
+                                  .formatted(
+                                      task.id(), task.templateId(), task.message(), task.status()))
+                      .toList()),
+          timeout);
+    }
+    Task task =
+        tasks.stream()
+            .filter(
+                candidate ->
+                    candidate.templateId() == templateId && message.equals(candidate.message()))
+            .findFirst()
+            .orElseThrow();
+    teardown.push(
+        "Delete Semaphore task " + task.id(),
+        () -> Calls.expectStatus(api.deleteTask(projectId, task.id()), 204));
+    return waitUntilTaskSucceeds(projectId, task.id());
+  }
+
   private boolean belongsTo(Task task, long scheduleId, long templateId) {
     return task.scheduleId() != null
         && task.scheduleId() == scheduleId

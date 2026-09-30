@@ -5,12 +5,14 @@ services:
       SEMAPHORE_RUNNER_REGISTRATION_TOKEN: bookwright-local-runner-registration-token
 
   runner:
-    image: semaphoreui/runner:v2.19.12
+    image: ${SEMAPHORE_RUNNER_IMAGE:-semaphoreui/runner:v2.19.12}
+    command: ["/usr/local/bin/semaphore", "runner", "start", "--no-config", "--register"]
     restart: unless-stopped
     environment:
       SEMAPHORE_WEB_ROOT: http://semaphore:3000
       SEMAPHORE_RUNNER_API_URL: http://semaphore:3000/internal
       SEMAPHORE_RUNNER_REGISTRATION_TOKEN: bookwright-local-runner-registration-token
+      SEMAPHORE_RUNNER_TOKEN_FILE: /var/lib/semaphore/runner_token.txt
       SEMAPHORE_RUNNER_NAME: bookwright-persistent-runner
       SEMAPHORE_RUNNER_ENABLED: "true"
       SEMAPHORE_RUNNER_MAX_PARALLEL_TASKS: "2"
@@ -26,7 +28,7 @@ services:
       - runner-data:/var/lib/semaphore
 
   runner-configure:
-    image: semaphoreui/runner:v2.19.12
+    image: ${SEMAPHORE_RUNNER_IMAGE:-semaphoreui/runner:v2.19.12}
     entrypoint: ["python3", "/configure-runner.py"]
     environment:
       SEMAPHORE_API_URL: http://semaphore:3000/api

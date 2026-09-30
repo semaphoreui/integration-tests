@@ -27,7 +27,13 @@ public interface SemaphoreAccessKeysApi {
       @Path("projectId") long projectId, @Body AccessKeyRequest request);
 
   @GET("project/{projectId}/keys/{keyId}")
+  Call<AccessKey> getAccessKey(@Path("projectId") long projectId, @Path("keyId") long keyId);
+
+  @GET("project/{projectId}/keys/{keyId}")
   Call<JsonNode> getAccessKeyDocument(@Path("projectId") long projectId, @Path("keyId") long keyId);
+
+  @GET("project/{projectId}/keys/{keyId}/refs")
+  Call<JsonNode> getAccessKeyRefs(@Path("projectId") long projectId, @Path("keyId") long keyId);
 
   @GET("project/{projectId}/keys")
   Call<JsonNode> getAccessKeysDocument(@Path("projectId") long projectId);

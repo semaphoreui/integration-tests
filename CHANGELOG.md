@@ -6,6 +6,15 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Changed
 
+- Promoted the fixed shell-output, remote survey-secret, and enum-default canaries to positive
+  regressions on the current application source. The SQLite gate now protects complete task output
+  and enum validation; the daily persistent-runner profile protects remote secret delivery.
+- Made the production-like profile run its server and persistent runner from the same resolved
+  application image so two-sided application fixes are tested without mixing release versions.
+- Corrected the schedule fixture to send Ansible `limit` as an array, withdrawing the former
+  BUG-003 false positive after cron and `run_at` passed on `v2.19.12` and current `develop`.
+- Test tasks no longer reuse Gradle `UP-TO-DATE` results from a different mutable application
+  environment.
 - Centralized test-parameter fixture construction in a type-safe `FixtureCatalog`, replacing the
   growing fixture-specific condition chain in `StepsParameterResolver` without reflection or marker
   interfaces.
@@ -19,6 +28,14 @@ All notable changes to the Semaphore UI test automation project are documented i
 ### Added
 
 - Source filter (`GitHub` / `Orbantix`) on the Allure Pages history and an `archive --source` option that records where each run was executed; Orbantix runs are stored and redirected under `orbantix-<workflow>` keys so they never collide with GitHub runs.
+- Project credential-mapping (`host_configs`) coverage: API contract for host and URL mappings
+  (validation, credential-kind rules, duplicates, project scoping, role checks, referrer protection
+  of the key, backup/restore by credential name) in every core profile; key-less Git clone, branch
+  listing, Ansible SSH, per-host credential selection and HTTPS-to-SSH URL rewriting on the SSH
+  profile; Basic Auth by URL prefix on the private HTTPS Git profile. Profile manifests may now
+  name several comma-separated `test_class` values.
+- Daily schedule lifecycle coverage for non-UTC cron execution, one-shot deactivation,
+  `delete_after_run` cleanup, stored task parameters, and successful playbook output.
 - Authentication lifecycle coverage for login metadata, logout invalidation/idempotency,
   self-service password changes, cross-user denial, and administrator password reset.
 - A security-gap canary and source analysis proving that password changes leave other existing
