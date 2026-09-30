@@ -10,11 +10,11 @@
 #
 # Environment:
 #   GH_TOKEN          token with Contents and Actions read/write on the repository (required)
-#   RUN_ID            numeric run id on the external server (required)
+#   RUN_ID            numeric run id (default: generated from the current time)
 #   RUN_URL           link to the run on the external server (required)
 #   RUN_CONCLUSION    success, failure, cancelled, timed_out, neutral or skipped (required)
 #   RUN_WORKFLOW      workflow name on the Pages site (default: Orbantix)
-#   RUN_TITLE         run card title (default: Orbantix run <RUN_ID>)
+#   RUN_TITLE         run card title (default: Orbantix run <UTC start time>)
 #   GITHUB_REPOSITORY owner/name (default: semaphoreui/integration-tests)
 #   HEAD_SHA          tested commit (default: HEAD of this checkout)
 
@@ -31,14 +31,19 @@ fail() {
 [ "$#" -gt 0 ] || fail "usage: $0 <profile>=<allure results dir> [<profile>=<dir>...]"
 
 : "${GH_TOKEN:?Set GH_TOKEN to a token with Contents and Actions read/write on the repository}"
-: "${RUN_ID:?Set RUN_ID to the numeric run id on the external server}"
 : "${RUN_URL:?Set RUN_URL to the link of the run on the external server}"
 : "${RUN_CONCLUSION:?Set RUN_CONCLUSION to the final status of the run}"
 repository=${GITHUB_REPOSITORY:-semaphoreui/integration-tests}
 workflow_name=${RUN_WORKFLOW:-Orbantix}
-display_title=${RUN_TITLE:-"Orbantix run $RUN_ID"}
 head_sha=${HEAD_SHA:-$(git -C "$repository_dir" rev-parse HEAD)}
 created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+display_title=${RUN_TITLE:-"Orbantix run $(date -u '+%Y-%m-%d %H:%M UTC')"}
+# Epoch seconds plus three random digits: numeric as the Pages history requires, and unique
+# enough that two servers publishing in the same second do not share a results branch.
+if [ -z "${RUN_ID:-}" ]; then
+  RUN_ID=$(date -u '+%s')$(printf '%03d' "$(( $(od -An -N2 -tu2 /dev/urandom | tr -d ' ') % 1000 ))")
+  printf 'Generated RUN_ID=%s\n' "$RUN_ID"
+fi
 results_ref="orbantix-results/$RUN_ID"
 
 case "$RUN_ID" in
