@@ -20,7 +20,7 @@ Docker image; this repository never contains application source code.
   - [8. Test fixtures (playbooks, scripts)](#8-test-fixtures-playbooks-scripts)
   - [9. Testing an existing Semaphore instance](#9-testing-an-existing-semaphore-instance)
   - [10. Standalone checks](#10-standalone-checks)
-  - [11. Docker-wrapped runner (experimental)](#11-docker-wrapped-runner-experimental)
+  - [11. Running without Java on the host (`run.sh`, experimental)](#11-running-without-java-on-the-host-runsh-experimental)
   - [12. Reports](#12-reports)
   - [13. Troubleshooting](#13-troubleshooting)
 - [Making changes](#making-changes)
@@ -47,6 +47,9 @@ Docker image; this repository never contains application source code.
 Notes:
 
 - Gradle is provided by the wrapper (`./gradlew`); do not install it separately.
+- On an arm64 machine with only Docker installed you can skip Java and the other host tools and
+  use the containerised runner instead; see
+  [section 11](#11-running-without-java-on-the-host-runsh-experimental).
 - On macOS, `test-environment/profile` falls back to `/opt/homebrew/opt/openjdk@21` if
   `JAVA_HOME` is not set. For direct Gradle calls set it yourself, for example
   `export JAVA_HOME=/opt/homebrew/opt/openjdk@21`.
@@ -136,8 +139,8 @@ Use `clean --yes` when you need a truly fresh database.
 | `core-mysql-local` | MySQL 8.4 | same suite on MySQL | `up` + `test` |
 | `core-mariadb-local` | MariaDB 10.11 | same suite on MariaDB | `up` + `test` |
 | `prod-postgres-runner` | PostgreSQL 14.3 | server → DB → persistent remote runner | `up` + `test` |
-| `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target, key rotation | `up` + `test` |
-| `feature-git-https` | SQLite | private Git over HTTPS with Basic Auth and self-signed CA | `up` + `test` |
+| `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target, key rotation, SSH credential mappings (`host_configs`) | `up` + `test` |
+| `feature-git-https` | SQLite | private Git over HTTPS with Basic Auth and self-signed CA, URL credential mapping | `up` + `test` |
 | `feature-parallel-tasks-cmd-git` | SQLite | parallel task isolation, command-line Git client | `up` + `test` |
 | `feature-parallel-tasks-go-git` | SQLite | parallel task isolation, Go Git client | `up` + `test` |
 | `feature-oidc-local` | SQLite | browser OIDC login through Dex | `up` + `test` (runs `uiTest`) |
@@ -168,6 +171,11 @@ arguments after the profile id are passed to Gradle:
 test-environment/profile test core-sqlite-local --tests 'io.bookwright.tests.semaphore.ScheduleApiTest'
 test-environment/profile test core-sqlite-local --tests 'io.bookwright.tests.semaphore.TaskStopTest.runningTaskCanBeStopped'
 ```
+
+If the profile manifest has its own `test_class` (for example `feature-git-https`,
+`feature-shell-output`), those filters are appended after yours. Gradle runs the union of
+all `--tests` filters, so your filter widens the run instead of narrowing it. On such profiles use
+direct Gradle, as shown next.
 
 Directly with Gradle, when the environment is already up (faster feedback while writing a test):
 
@@ -251,7 +259,14 @@ so that you can inspect them with `ps` / `logs`.
 By default every profile tests the **HEAD commit of the application `develop` branch**
 (`semaphore_image: branch:develop` in the manifest). `scripts/app-source.sh` resolves the commit,
 reuses a local or registry image for it, and builds one only when none exists. Locally the image is
-built for your platform and kept in the local Docker store; it is never pushed.
+built for the architecture of your Docker daemon and kept in the local Docker store; it is never
+pushed.
+
+CI publishes branch and PR images for both `linux/amd64` and `linux/arm64`, so a local run on
+either architecture can usually pull the image instead of building it. An image of the wrong
+architecture — a local one, or an older amd64-only tag in the registry — does not count as
+existing. The script builds a native one instead of starting a container that would fail with
+`exec format error`.
 
 | Goal | Command |
 | --- | --- |
@@ -286,7 +301,8 @@ it; run `clean --yes` before `up` if you change `APP_BRANCH` / `APP_IMAGE` for a
 already been started.
 
 Build knobs for `scripts/app-source.sh`: `APP_BRANCH` (default `develop`), `APP_REPOSITORY`,
-`APP_BUILD_PLATFORM`, `APP_DOCKERFILE` (default `deployment/docker/server/Dockerfile`),
+`APP_BUILD_PLATFORM` (pushed builds default to `linux/amd64,linux/arm64`; set it locally only to
+force a platform), `APP_DOCKERFILE` (default `deployment/docker/server/Dockerfile`),
 `APP_BUILD_PUSH` (default `false` outside GitHub Actions), `APP_IMAGE_REPOSITORY`,
 `APP_IMAGE_TAG_PREFIX`. Full reference:
 [Testing Pull Requests of the Application Repository](docs/application-pr-testing.md).
@@ -376,21 +392,45 @@ CONFIG_CONTRACT_IMAGE=semaphoreui/semaphore:v2.19.14 python3 test-environment/co
 ./gradlew semaphoreApiCoverageReport                                   # re-print from the last run
 ```
 
-### 11. Docker-wrapped runner (experimental)
+### 11. Running without Java on the host (`run.sh`, experimental)
 
-`run.sh` with the root `docker-compose.yml` / `Dockerfile` runs `test-environment/profile` inside a
-`test-runner` container that talks to the host Docker socket:
+`run.sh` runs `test-environment/profile` inside a prebuilt runner container
+(`lowswoo/semaphore-test-container`, built from the root `Dockerfile`: JDK 21, Docker CLI with
+Compose and Buildx, `git`, `openssl`, `ssh-keygen`, `socat`). Only Docker is needed on the host. It
+takes exactly the same arguments as `test-environment/profile`:
 
 ```bash
-./run.sh help
-./run.sh sqlite          # up → test → down for core-sqlite-local
-./run.sh mysql:up        # individual steps: sqlite|mysql|mariadb|prod : up|test|down|clean
-./run.sh clean:all
+./run.sh list
+./run.sh up core-sqlite-local
+./run.sh test core-sqlite-local --tests 'io.bookwright.tests.semaphore.ScheduleApiTest'
+./run.sh down core-sqlite-local
+APP_IMAGE=semaphoreui/semaphore:v2.19.14 ./run.sh up core-sqlite-local
 ```
 
-This path is **not used by CI and is not maintained to the same standard** — some commands
-(`test:external`, `external:*`, `publish:s3`) are known to be broken. Prefer running
-`test-environment/profile` on the host. Fixes are welcome.
+How it works:
+
+- the runner starts the stand through the host Docker socket, so containers and volumes are the same
+  ones you would get from a host run. `profile ps`, `logs` and `down` work from either side;
+- the repository is mounted at its host path, so Compose bind mounts and `build/` outputs (reports,
+  generated fixtures) land in your working tree;
+- `scripts/runner-entrypoint.sh` forwards the runner's `localhost` ports `3000`, `3003`, `3443`,
+  `5556` and `FIXTURE_GIT_PORT` (default `3080`) to the host, so manifests and tests keep
+  addressing the stand as `localhost`;
+- only these host variables are forwarded, by name, so values never appear in the command line:
+  `API_BASE_URL`, `API_USERNAME`, `API_PASSWORD`, `UI_BASE_URL`, `TEST_REPOSITORY`,
+  `FIXTURE_GIT_PORT`, `APP_IMAGE`, `APP_SOURCE`, `APP_BRANCH`, `APP_REPOSITORY`, `APP_PR`,
+  `APP_SHA`, `GH_TOKEN`, `GITHUB_TOKEN`. Anything else (for example `TEST_BRANCH`) has to be passed
+  as a Gradle `-D` argument to `test`.
+
+Limitations:
+
+- the published runner image is currently built for **arm64 only** (Apple Silicon, arm64 Linux).
+  On x86_64 hosts, run `test-environment/profile` natively;
+- every call runs `docker pull` for the runner image, so it needs registry access;
+- the Gradle cache lives in the throwaway container, so each call starts Gradle cold;
+- the path is not used by CI. Prefer the native run when you have Java 21 installed.
+
+The root `docker-compose.yml` is a leftover of the previous wrapper and is not used by `run.sh`.
 
 ### 12. Reports
 
@@ -425,6 +465,8 @@ it and open `index.html`. Runs of `main` are also published to
 | SSH / TLS / encryption errors after deleting `build/` | generated keys were regenerated but old volumes kept the previous ones: `profile clean <profile> --yes` |
 | Wrong application version after changing `APP_*` | `profile clean <profile> --yes`, then `up` again |
 | Browser tests fail to launch | `./gradlew playwrightInstallChromium` |
+| `exec format error` when the stand starts | the image was built for another architecture: `profile clean <profile> --yes`, then `up` again so a native image is resolved; with `APP_IMAGE`, pick a tag published for your platform |
+| `run.sh` fails to pull or start the runner | the runner image is arm64-only; on x86_64 use `test-environment/profile` directly |
 | Tests silently skipped | profile gating via `SEMAPHORE_PROFILE`; see [section 4](#4-running-a-subset-of-tests) |
 | Unexpected failure on current `develop` | the suite tracks a moving target; check `test-environment/known-defects.md`, then reproduce with `APP_IMAGE=<last release>` to tell a test bug from a product regression |
 
@@ -464,7 +506,9 @@ quality gate.
 ### Adding a profile
 
 Create `test-environment/profiles/<id>/profile.yaml` and a `compose.yml` that `include:`s
-`../../compose.base.yml` plus overlays. Manifest keys must be top-level `key: value` lines. Add the
+`../../compose.base.yml` plus overlays. Manifest keys must be top-level `key: value` lines. To
+restrict a profile to specific test classes, set `test_class` to one fully-qualified class name or
+several separated by commas (each becomes a `--tests` filter). Add the
 profile to `configuration-matrix.yml` only once it is green, and document it in `README.md` and
 `test-environment/README.md`.
 
