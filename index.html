@@ -20,7 +20,7 @@
     .day { margin-top:34px; } .day h2 { display:flex; align-items:baseline; justify-content:space-between; margin:0 0 13px; font-size:24px; } .day h2 span { color:var(--muted); font-size:13px; font-weight:500; }
     .runs { display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:15px; }
     .run-card { display:flex; min-height:245px; flex-direction:column; padding:20px; border:1px solid var(--line); border-radius:15px; background:var(--paper); box-shadow:0 9px 26px rgba(30,41,59,.05); }
-    .card-top,.card-bottom { display:flex; align-items:center; justify-content:space-between; gap:12px; } .workflow { color:var(--accent); font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; }
+    .card-top,.card-bottom { display:flex; align-items:center; justify-content:space-between; gap:12px; } .workflow { color:var(--accent); font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; } .source { margin-left:8px; color:var(--muted); font-weight:700; }
     .status { padding:5px 9px; border-radius:999px; background:#eef1f5; color:#475467; font-size:12px; font-weight:800; } .status.success { color:var(--success); background:#e8f7ef; } .status.failure { color:var(--danger); background:#fff0ee; }
     h3 { margin:21px 0 10px; font-size:20px; line-height:1.3; } .version { margin:0 0 8px; font-weight:750; } .profiles,.counts { margin:0 0 8px; color:var(--muted); font-size:14px; line-height:1.45; }
     .card-bottom { margin-top:auto; padding-top:18px; border-top:1px solid #edf0f4; color:var(--muted); font-size:13px; } a { color:var(--accent); } .report-link { font-weight:800; text-decoration:none; white-space:nowrap; }
@@ -30,410 +30,417 @@
   </style>
 </head>
 <body>
-  <header><p class="eyebrow">Semaphore UI · Integration tests</p><h1>Allure report history</h1><p class="intro">Reports from trusted main-branch CI, configuration-matrix and release-upgrade runs, grouped by day and retained for 30 days.</p><div class="summary"><span>58 published runs</span><span>4 version labels</span><span>Updated 2026-09-30 07:21 UTC</span></div></header>
+  <header><p class="eyebrow">Semaphore UI · Integration tests</p><h1>Allure report history</h1><p class="intro">Reports from trusted main-branch CI, configuration-matrix and release-upgrade runs on GitHub runners and from Orbantix runs, grouped by day and retained for 30 days.</p><div class="summary"><span>59 published runs</span><span>4 version labels</span><span>Updated 2026-09-30 08:46 UTC</span></div></header>
   <main>
-    <div class="filters"><label>Workflow<select id="workflow"><option value="">All workflows</option><option value="ci">CI</option><option value="configuration-matrix">Configuration matrix</option><option value="release-upgrade">Release upgrade</option></select></label><label>Semaphore version<select id="version"><option value="">All versions</option><option value="develop">develop</option><option value="v2.19.12">v2.19.12</option><option value="v2.19.8 → develop">v2.19.8 → develop</option><option value="v2.19.8 → v2.19.12">v2.19.8 → v2.19.12</option></select></label></div>
-    <div id="history"><section class="day"><h2><time datetime="2026-09-30">2026-09-30</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="develop">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+    <div class="filters"><label>Workflow<select id="workflow"><option value="">All workflows</option><option value="ci" data-sources="github">CI</option><option value="configuration-matrix" data-sources="github">Configuration matrix</option><option value="release-upgrade" data-sources="github">Release upgrade</option></select></label><label>Semaphore version<select id="version"><option value="">All versions</option><option value="develop">develop</option><option value="v2.19.12">v2.19.12</option><option value="v2.19.8 → develop">v2.19.8 → develop</option><option value="v2.19.8 → v2.19.12">v2.19.8 → v2.19.12</option></select></label><label>Source<select id="source"><option value="">All sources</option><option value="github">GitHub</option><option value="orbantix">Orbantix</option></select></label></div>
+    <div id="history"><section class="day"><h2><time datetime="2026-09-30">2026-09-30</time><span>3 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
+  <h3>CI</h3>
+  <p class="version">develop</p>
+  <p class="profiles">core-sqlite-local, quality</p>
+  <p class="counts">183 tests · 148 passed · 35 skipped</p>
+  <div class="card-bottom"><span>08:37 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/4b45a7c1c6ee191e8b731985cd194735798ed5b5">4b45a7c</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36690882409">Actions</a></span><a class="report-link" href="reports/2026-09-30/ci/36690882409-1/index.html">Open report →</a></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="develop">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">develop</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +9</p>
   <p class="counts">566 tests · 58 broken · 278 passed · 230 skipped</p>
   <div class="card-bottom"><span>07:10 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/212108922f49bcf3014448a59e5e6993694b4e38">2121089</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36682226114">Actions</a></span><a class="report-link" href="reports/2026-09-30/configuration-matrix/36682226114-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="develop">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #46 from semaphoreui/fix/multiarch-build</h3>
   <p class="version">develop</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">183 tests · 148 passed · 35 skipped</p>
   <div class="card-bottom"><span>06:55 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/212108922f49bcf3014448a59e5e6993694b4e38">2121089</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36680834029">Actions</a></span><a class="report-link" href="reports/2026-09-30/ci/36680834029-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-29">2026-09-29</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="develop">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-29">2026-09-29</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="develop">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">develop</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +9</p>
   <p class="counts">566 tests · 58 broken · 278 passed · 230 skipped</p>
   <div class="card-bottom"><span>07:20 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/ffc5a590ca38d7a75248f5f0bd06916446bfa434">ffc5a59</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36536056513">Actions</a></span><a class="report-link" href="reports/2026-09-29/configuration-matrix/36536056513-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-28">2026-09-28</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-workflow="ci" data-versions="develop">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-28">2026-09-28</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #40 from semaphoreui/codex/webhook-authentication-…</h3>
   <p class="version">develop</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">183 tests · 148 passed · 35 skipped</p>
   <div class="card-bottom"><span>08:16 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/ffc5a590ca38d7a75248f5f0bd06916446bfa434">ffc5a59</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36396402974">Actions</a></span><a class="report-link" href="reports/2026-09-28/ci/36396402974-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="develop">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="develop">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">develop</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +9</p>
   <p class="counts">536 tests · 53 broken · 253 passed · 230 skipped</p>
   <div class="card-bottom"><span>07:24 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/1164c312517ada1d28ef970b430c0db40d8c3a11">1164c31</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36391457880">Actions</a></span><a class="report-link" href="reports/2026-09-28/configuration-matrix/36391457880-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-27">2026-09-27</time><span>3 runs</span></h2><div class="runs"><article class="run-card" data-workflow="ci" data-versions="develop">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-27">2026-09-27</time><span>3 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #43 from semaphoreui/sem-272-host-config-page</h3>
   <p class="version">develop</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">177 tests · 142 passed · 35 skipped</p>
   <div class="card-bottom"><span>17:16 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/1164c312517ada1d28ef970b430c0db40d8c3a11">1164c31</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36336308177">Actions</a></span><a class="report-link" href="reports/2026-09-27/ci/36336308177-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="release-upgrade" data-versions="v2.19.8 → develop">
-  <div class="card-top"><span class="workflow">Release upgrade</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="release-upgrade" data-versions="v2.19.8 → develop">
+  <div class="card-top"><span class="workflow">Release upgrade<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Release upgrade</h3>
   <p class="version">v2.19.8 → develop</p>
   <p class="profiles">upgrade-mariadb-local, upgrade-mysql-local, upgrade-postgres-local, upgrade-sqlite-local</p>
   <p class="counts">292 tests · 160 passed · 132 skipped</p>
   <div class="card-bottom"><span>09:24 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/e9a45e41e597936d5a23c28761035f8265a3d29b">e9a45e4</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36309265068">Actions</a></span><a class="report-link" href="reports/2026-09-27/release-upgrade/36309265068-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="develop">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="develop">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">develop</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +9</p>
   <p class="counts">450 tests · 45 broken · 212 passed · 193 skipped</p>
   <div class="card-bottom"><span>06:55 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/e9a45e41e597936d5a23c28761035f8265a3d29b">e9a45e4</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36301553691">Actions</a></span><a class="report-link" href="reports/2026-09-27/configuration-matrix/36301553691-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-26">2026-09-26</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="develop">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-26">2026-09-26</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="develop">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">develop</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +9</p>
   <p class="counts">450 tests · 45 broken · 212 passed · 193 skipped</p>
   <div class="card-bottom"><span>06:29 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/e9a45e41e597936d5a23c28761035f8265a3d29b">e9a45e4</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36223881537">Actions</a></span><a class="report-link" href="reports/2026-09-26/configuration-matrix/36223881537-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-25">2026-09-25</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="develop">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-25">2026-09-25</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="develop">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">develop</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +9</p>
   <p class="counts">450 tests · 45 broken · 212 passed · 193 skipped</p>
   <div class="card-bottom"><span>06:27 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/e9a45e41e597936d5a23c28761035f8265a3d29b">e9a45e4</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/36102931392">Actions</a></span><a class="report-link" href="reports/2026-09-25/configuration-matrix/36102931392-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-24">2026-09-24</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-workflow="ci" data-versions="develop">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-24">2026-09-24</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #38 from semaphoreui/codex/schedule-execution</h3>
   <p class="version">develop</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">163 tests · 135 passed · 28 skipped</p>
   <div class="card-bottom"><span>09:28 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/e9a45e41e597936d5a23c28761035f8265a3d29b">e9a45e4</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35981450681">Actions</a></span><a class="report-link" href="reports/2026-09-24/ci/35981450681-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="develop">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="develop">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">develop</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +8</p>
   <p class="counts">441 tests · 47 broken · 207 passed · 187 skipped</p>
   <div class="card-bottom"><span>06:33 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/401f7299134f855f2460e5c765ebd3efc4d290b2">401f729</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35965075963">Actions</a></span><a class="report-link" href="reports/2026-09-24/configuration-matrix/35965075963-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-23">2026-09-23</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-workflow="ci" data-versions="develop">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-23">2026-09-23</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #37 from semaphoreui/codex/shell-output-regression</h3>
   <p class="version">develop</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">162 tests · 135 passed · 27 skipped</p>
   <div class="card-bottom"><span>07:15 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/401f7299134f855f2460e5c765ebd3efc4d290b2">401f729</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35830791187">Actions</a></span><a class="report-link" href="reports/2026-09-23/ci/35830791187-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="develop">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="develop">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">develop</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">439 tests · 47 broken · 205 passed · 187 skipped</p>
   <div class="card-bottom"><span>06:26 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/33ff8558c7d25e76f5e7a5a06836e98014bdb24e">33ff855</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35826747405">Actions</a></span><a class="report-link" href="reports/2026-09-23/configuration-matrix/35826747405-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-22">2026-09-22</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="develop">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-22">2026-09-22</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="develop">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">develop</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">439 tests · 47 broken · 205 passed · 187 skipped</p>
   <div class="card-bottom"><span>06:38 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/33ff8558c7d25e76f5e7a5a06836e98014bdb24e">33ff855</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35695740390">Actions</a></span><a class="report-link" href="reports/2026-09-22/configuration-matrix/35695740390-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-21">2026-09-21</time><span>5 runs</span></h2><div class="runs"><article class="run-card" data-workflow="ci" data-versions="develop">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-21">2026-09-21</time><span>5 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #32 from semaphoreui/codex/auth-session-password-l…</h3>
   <p class="version">develop</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">162 tests · 133 passed · 29 skipped</p>
   <div class="card-bottom"><span>16:45 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/33ff8558c7d25e76f5e7a5a06836e98014bdb24e">33ff855</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35627676144">Actions</a></span><a class="report-link" href="reports/2026-09-21/ci/35627676144-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="develop">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #33 from semaphoreui/codex/typed-fixture-catalog</h3>
   <p class="version">develop</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">156 tests · 127 passed · 29 skipped</p>
   <div class="card-bottom"><span>15:42 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/f85f5ae3c334b6a31b26ceafd82f16cb03571d7f">f85f5ae</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35620740943">Actions</a></span><a class="report-link" href="reports/2026-09-21/ci/35620740943-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="develop">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #35 from semaphoreui/codex/config-contract-checks</h3>
   <p class="version">develop</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">153 tests · 124 passed · 29 skipped</p>
   <div class="card-bottom"><span>10:16 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/7e760c9c12cea110bd5fa07def56815e063fdd3e">7e760c9</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35587859628">Actions</a></span><a class="report-link" href="reports/2026-09-21/ci/35587859628-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="develop">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #36 from semaphoreui/feat/default-semaphore-image</h3>
   <p class="version">develop</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">153 tests · 124 passed · 29 skipped</p>
   <div class="card-bottom"><span>09:09 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/8e871a1a8c54bbd832acdbb45e58ab9714b0b4d1">8e871a1</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35581727416">Actions</a></span><a class="report-link" href="reports/2026-09-21/ci/35581727416-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">403 tests · 216 passed · 187 skipped</p>
   <div class="card-bottom"><span>06:52 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/16f8ad2ff9592412f8ccd4cec21b93b7afb5800d">16f8ad2</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35570321207">Actions</a></span><a class="report-link" href="reports/2026-09-21/configuration-matrix/35570321207-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-20">2026-09-20</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-workflow="release-upgrade" data-versions="v2.19.8 → v2.19.12">
-  <div class="card-top"><span class="workflow">Release upgrade</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-20">2026-09-20</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="release-upgrade" data-versions="v2.19.8 → v2.19.12">
+  <div class="card-top"><span class="workflow">Release upgrade<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Release upgrade</h3>
   <p class="version">v2.19.8 → v2.19.12</p>
   <p class="profiles">upgrade-mariadb-local, upgrade-mysql-local, upgrade-postgres-local, upgrade-sqlite-local</p>
   <p class="counts">264 tests · 136 passed · 128 skipped</p>
   <div class="card-bottom"><span>08:43 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/16f8ad2ff9592412f8ccd4cec21b93b7afb5800d">16f8ad2</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35500328192">Actions</a></span><a class="report-link" href="reports/2026-09-20/release-upgrade/35500328192-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">403 tests · 216 passed · 187 skipped</p>
   <div class="card-bottom"><span>06:45 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/16f8ad2ff9592412f8ccd4cec21b93b7afb5800d">16f8ad2</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35495066048">Actions</a></span><a class="report-link" href="reports/2026-09-20/configuration-matrix/35495066048-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-19">2026-09-19</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-19">2026-09-19</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">403 tests · 216 passed · 187 skipped</p>
   <div class="card-bottom"><span>06:22 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/16f8ad2ff9592412f8ccd4cec21b93b7afb5800d">16f8ad2</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35426440085">Actions</a></span><a class="report-link" href="reports/2026-09-19/configuration-matrix/35426440085-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-18">2026-09-18</time><span>3 runs</span></h2><div class="runs"><article class="run-card" data-workflow="ci" data-versions="develop">
-  <div class="card-top"><span class="workflow">CI</span><span class="status failure">Failure</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-18">2026-09-18</time><span>3 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="develop">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>feat: develop branch</h3>
   <p class="version">develop</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">144 tests · 2 failed · 26 broken · 92 passed · 24 skipped</p>
   <div class="card-bottom"><span>16:29 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/16f8ad2ff9592412f8ccd4cec21b93b7afb5800d">16f8ad2</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35368813814">Actions</a></span><a class="report-link" href="reports/2026-09-18/ci/35368813814-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status failure">Failure</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Merge pull request #22 from semaphoreui/prod-5</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">144 tests · 5 failed · 115 passed · 24 skipped</p>
   <div class="card-bottom"><span>15:48 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/c3ffd6f7e5c1a36d2265fe39065629a19f382dfa">c3ffd6f</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35364665811">Actions</a></span><a class="report-link" href="reports/2026-09-18/ci/35364665811-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">373 tests · 216 passed · 157 skipped</p>
   <div class="card-bottom"><span>06:24 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/59e3fc33994d82e4e51b01ca22141123185de92a">59e3fc3</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35314765500">Actions</a></span><a class="report-link" href="reports/2026-09-18/configuration-matrix/35314765500-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-17">2026-09-17</time><span>4 runs</span></h2><div class="runs"><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-17">2026-09-17</time><span>4 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #29 from semaphoreui/codex/variable-group-ui</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">148 tests · 119 passed · 29 skipped</p>
   <div class="card-bottom"><span>15:26 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/59e3fc33994d82e4e51b01ca22141123185de92a">59e3fc3</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35240256141">Actions</a></span><a class="report-link" href="reports/2026-09-17/ci/35240256141-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status other">Cancelled</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status other">Cancelled</span></div>
   <h3>Merge pull request #28 from semaphoreui/codex/web-cache-safety</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">139 tests · 115 passed · 24 skipped</p>
   <div class="card-bottom"><span>15:20 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/4e665cbc7139576937ca94c9318268930687a2a5">4e665cb</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35239575526">Actions</a></span><a class="report-link" href="reports/2026-09-17/ci/35239575526-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #27 from semaphoreui/feat/external-profile</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">147 tests · 118 passed · 29 skipped</p>
   <div class="card-bottom"><span>08:20 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/7ff422476e7de220ed23a5d4fbedabe9bba6a6ab">7ff4224</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35199131769">Actions</a></span><a class="report-link" href="reports/2026-09-17/ci/35199131769-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">371 tests · 216 passed · 155 skipped</p>
   <div class="card-bottom"><span>06:30 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f">da052e8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35190090315">Actions</a></span><a class="report-link" href="reports/2026-09-17/configuration-matrix/35190090315-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-16">2026-09-16</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-16">2026-09-16</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">371 tests · 216 passed · 155 skipped</p>
   <div class="card-bottom"><span>06:30 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f">da052e8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/35063989662">Actions</a></span><a class="report-link" href="reports/2026-09-16/configuration-matrix/35063989662-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-15">2026-09-15</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-15">2026-09-15</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">371 tests · 216 passed · 155 skipped</p>
   <div class="card-bottom"><span>06:30 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f">da052e8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34937273100">Actions</a></span><a class="report-link" href="reports/2026-09-15/configuration-matrix/34937273100-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-14">2026-09-14</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-14">2026-09-14</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">371 tests · 216 passed · 155 skipped</p>
   <div class="card-bottom"><span>06:49 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f">da052e8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34815069732">Actions</a></span><a class="report-link" href="reports/2026-09-14/configuration-matrix/34815069732-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-13">2026-09-13</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-workflow="release-upgrade" data-versions="v2.19.8 → v2.19.12">
-  <div class="card-top"><span class="workflow">Release upgrade</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-13">2026-09-13</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="release-upgrade" data-versions="v2.19.8 → v2.19.12">
+  <div class="card-top"><span class="workflow">Release upgrade<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Release upgrade</h3>
   <p class="version">v2.19.8 → v2.19.12</p>
   <p class="profiles">upgrade-mariadb-local, upgrade-mysql-local, upgrade-postgres-local, upgrade-sqlite-local</p>
   <p class="counts">244 tests · 136 passed · 108 skipped</p>
   <div class="card-bottom"><span>08:26 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f">da052e8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34747696350">Actions</a></span><a class="report-link" href="reports/2026-09-13/release-upgrade/34747696350-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">371 tests · 216 passed · 155 skipped</p>
   <div class="card-bottom"><span>06:37 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f">da052e8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34743210132">Actions</a></span><a class="report-link" href="reports/2026-09-13/configuration-matrix/34743210132-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-12">2026-09-12</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-12">2026-09-12</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">371 tests · 216 passed · 155 skipped</p>
   <div class="card-bottom"><span>06:15 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f">da052e8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34677668106">Actions</a></span><a class="report-link" href="reports/2026-09-12/configuration-matrix/34677668106-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-11">2026-09-11</time><span>5 runs</span></h2><div class="runs"><article class="run-card" data-workflow="release-upgrade" data-versions="v2.19.8 → v2.19.12">
-  <div class="card-top"><span class="workflow">Release upgrade</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-11">2026-09-11</time><span>5 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="release-upgrade" data-versions="v2.19.8 → v2.19.12">
+  <div class="card-top"><span class="workflow">Release upgrade<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Release upgrade</h3>
   <p class="version">v2.19.8 → v2.19.12</p>
   <p class="profiles">upgrade-mariadb-local, upgrade-mysql-local, upgrade-postgres-local, upgrade-sqlite-local</p>
   <p class="counts">244 tests · 136 passed · 108 skipped</p>
   <div class="card-bottom"><span>11:13 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f">da052e8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34592947550">Actions</a></span><a class="report-link" href="reports/2026-09-11/release-upgrade/34592947550-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">371 tests · 216 passed · 155 skipped</p>
   <div class="card-bottom"><span>11:13 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f">da052e8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34592943978">Actions</a></span><a class="report-link" href="reports/2026-09-11/configuration-matrix/34592943978-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #23 from semaphoreui/codex/fix-ssh-fixture-playboo…</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">147 tests · 118 passed · 29 skipped</p>
   <div class="card-bottom"><span>09:16 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f">da052e8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34583388199">Actions</a></span><a class="report-link" href="reports/2026-09-11/ci/34583388199-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #17 from semaphoreui/feat/add-concurent-task-branc…</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">147 tests · 118 passed · 29 skipped</p>
   <div class="card-bottom"><span>08:46 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/d396bdfe4a8161628521501c48500ccb4530726d">d396bdf</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34580800105">Actions</a></span><a class="report-link" href="reports/2026-09-11/ci/34580800105-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">365 tests · 2 broken · 214 passed · 149 skipped</p>
   <div class="card-bottom"><span>06:29 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/15f80de89dd01f5f5b9260dc98de4707e3969e81">15f80de</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34570131007">Actions</a></span><a class="report-link" href="reports/2026-09-11/configuration-matrix/34570131007-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-10">2026-09-10</time><span>4 runs</span></h2><div class="runs"><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-10">2026-09-10</time><span>4 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #18 from semaphoreui/codex/upgrade-mysql-mariadb</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">146 tests · 118 passed · 28 skipped</p>
   <div class="card-bottom"><span>12:57 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/15f80de89dd01f5f5b9260dc98de4707e3969e81">15f80de</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34479700278">Actions</a></span><a class="report-link" href="reports/2026-09-10/ci/34479700278-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #20 from semaphoreui/codex/api-coverage-mvp</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">144 tests · 116 passed · 28 skipped</p>
   <div class="card-bottom"><span>08:26 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/d28258ff35a1892112ffe3555f9d9eb8b36eccc3">d28258f</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34455127950">Actions</a></span><a class="report-link" href="reports/2026-09-10/ci/34455127950-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #21 from semaphoreui/codex/plan-web-cache-safety</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">135 tests · 107 passed · 28 skipped</p>
   <div class="card-bottom"><span>07:28 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/c4d8f94a24b2ec9466b2cb5c9510ec7872f9eec6">c4d8f94</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34450118686">Actions</a></span><a class="report-link" href="reports/2026-09-10/ci/34450118686-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">353 tests · 2 broken · 202 passed · 149 skipped</p>
   <div class="card-bottom"><span>06:27 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/bdecad4d31f386bc14faf292cdf32297296dd027">bdecad4</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34445258170">Actions</a></span><a class="report-link" href="reports/2026-09-10/configuration-matrix/34445258170-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-09">2026-09-09</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-09">2026-09-09</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">353 tests · 2 broken · 202 passed · 149 skipped</p>
   <div class="card-bottom"><span>06:28 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/bdecad4d31f386bc14faf292cdf32297296dd027">bdecad4</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34319208849">Actions</a></span><a class="report-link" href="reports/2026-09-09/configuration-matrix/34319208849-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-08">2026-09-08</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status failure">Failure</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-08">2026-09-08</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">353 tests · 2 broken · 202 passed · 149 skipped</p>
   <div class="card-bottom"><span>06:22 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/bdecad4d31f386bc14faf292cdf32297296dd027">bdecad4</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34194370256">Actions</a></span><a class="report-link" href="reports/2026-09-08/configuration-matrix/34194370256-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-07">2026-09-07</time><span>6 runs</span></h2><div class="runs"><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-07">2026-09-07</time><span>6 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #16 from semaphoreui/fix/repository_path</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">135 tests · 107 passed · 28 skipped</p>
   <div class="card-bottom"><span>19:22 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/bdecad4d31f386bc14faf292cdf32297296dd027">bdecad4</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34155342318">Actions</a></span><a class="report-link" href="reports/2026-09-07/ci/34155342318-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #14 from semaphoreui/feat/readme_update</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">135 tests · 107 passed · 28 skipped</p>
   <div class="card-bottom"><span>14:40 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/9ac1516d217916a02b99eff0409204cda528bf53">9ac1516</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34134243100">Actions</a></span><a class="report-link" href="reports/2026-09-07/ci/34134243100-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>docs: translate to English</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">135 tests · 107 passed · 28 skipped</p>
   <div class="card-bottom"><span>07:33 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/0dce975b7ddb20da431e1747f46ad9a04b06f840">0dce975</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34096060508">Actions</a></span><a class="report-link" href="reports/2026-09-07/ci/34096060508-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #13 from semaphoreui/feat/chain_test</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">135 tests · 107 passed · 28 skipped</p>
   <div class="card-bottom"><span>06:47 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/edc88ca8628e2538163a9844835248175f8934e1">edc88ca</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34092435291">Actions</a></span><a class="report-link" href="reports/2026-09-07/ci/34092435291-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #12 from semaphoreui/feat/custom_git</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">135 tests · 107 passed · 28 skipped</p>
   <div class="card-bottom"><span>06:47 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/b8803f68baa9525753bec8317f72b9e22a87dd43">b8803f6</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34092418316">Actions</a></span><a class="report-link" href="reports/2026-09-07/ci/34092418316-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">353 tests · 204 passed · 149 skipped</p>
   <div class="card-bottom"><span>06:30 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/2a1dd9a163fbd4ae52abc0f3fd381d8b4d815823">2a1dd9a</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34091151471">Actions</a></span><a class="report-link" href="reports/2026-09-07/configuration-matrix/34091151471-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-06">2026-09-06</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-workflow="release-upgrade" data-versions="v2.19.8 → v2.19.12">
-  <div class="card-top"><span class="workflow">Release upgrade</span><span class="status failure">Failure</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-06">2026-09-06</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="release-upgrade" data-versions="v2.19.8 → v2.19.12">
+  <div class="card-top"><span class="workflow">Release upgrade<span class="source">GitHub</span></span><span class="status failure">Failure</span></div>
   <h3>Release upgrade</h3>
   <p class="version">v2.19.8 → v2.19.12</p>
   <p class="profiles">upgrade-postgres-local, upgrade-sqlite-local</p>
   <p class="counts">116 tests · 1 broken · 63 passed · 52 skipped</p>
   <div class="card-bottom"><span>08:00 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/2a1dd9a163fbd4ae52abc0f3fd381d8b4d815823">2a1dd9a</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34020635238">Actions</a></span><a class="report-link" href="reports/2026-09-06/release-upgrade/34020635238-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">353 tests · 204 passed · 149 skipped</p>
   <div class="card-bottom"><span>06:22 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/2a1dd9a163fbd4ae52abc0f3fd381d8b4d815823">2a1dd9a</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/34016312973">Actions</a></span><a class="report-link" href="reports/2026-09-06/configuration-matrix/34016312973-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-05">2026-09-05</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-workflow="configuration-matrix" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">Configuration matrix</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-05">2026-09-05</time><span>1 run</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="configuration-matrix" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">Configuration matrix<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Configuration matrix</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-mariadb-local, core-mysql-local, core-postgres-local, feature-encryption-rotation +7</p>
   <p class="counts">353 tests · 204 passed · 149 skipped</p>
   <div class="card-bottom"><span>06:09 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/2a1dd9a163fbd4ae52abc0f3fd381d8b4d815823">2a1dd9a</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/33949067231">Actions</a></span><a class="report-link" href="reports/2026-09-05/configuration-matrix/33949067231-1/index.html">Open report →</a></div>
-</article></div></section><section class="day"><h2><time datetime="2026-09-04">2026-09-04</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article></div></section><section class="day"><h2><time datetime="2026-09-04">2026-09-04</time><span>2 runs</span></h2><div class="runs"><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #9 from semaphoreui/feat/docker-runner</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
   <p class="counts">135 tests · 107 passed · 28 skipped</p>
   <div class="card-bottom"><span>13:25 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/436efc8555df39b9b5232ff87cc9697602df8198">436efc8</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/33878022377">Actions</a></span><a class="report-link" href="reports/2026-09-04/ci/33878022377-1/index.html">Open report →</a></div>
-</article><article class="run-card" data-workflow="ci" data-versions="v2.19.12">
-  <div class="card-top"><span class="workflow">CI</span><span class="status success">Success</span></div>
+</article><article class="run-card" data-source="github" data-workflow="ci" data-versions="v2.19.12">
+  <div class="card-top"><span class="workflow">CI<span class="source">GitHub</span></span><span class="status success">Success</span></div>
   <h3>Merge pull request #5 from semaphoreui/codex/allure-pages</h3>
   <p class="version">v2.19.12</p>
   <p class="profiles">core-sqlite-local, quality</p>
@@ -441,11 +448,12 @@
   <div class="card-bottom"><span>13:14 UTC · <a href="https://github.com/semaphoreui/integration-tests/commit/974470e892fec2a76786c4248d71f282cd6976e9">974470e</a> · <a href="https://github.com/semaphoreui/integration-tests/actions/runs/33876966009">Actions</a></span><a class="report-link" href="reports/2026-09-04/ci/33876966009-1/index.html">Open report →</a></div>
 </article></div></section></div><p class="empty">No published reports match these filters.</p>
   </main>
-  <footer>Generated from GitHub Actions artifacts. Pull-request and external-environment runs are intentionally excluded.</footer>
+  <footer>Generated from GitHub Actions and Orbantix artifacts. Pull-request runs are intentionally excluded.</footer>
   <script>
-    const workflow=document.querySelector('#workflow'),version=document.querySelector('#version'),empty=document.querySelector('.empty');
-    function filterRuns(){let visible=0;document.querySelectorAll('.run-card').forEach(card=>{const show=(!workflow.value||card.dataset.workflow===workflow.value)&&(!version.value||card.dataset.versions.split('|').includes(version.value));card.hidden=!show;if(show)visible++;});document.querySelectorAll('.day').forEach(day=>day.hidden=![...day.querySelectorAll('.run-card')].some(card=>!card.hidden));empty.style.display=visible?'none':'block';}
-    workflow.addEventListener('change',filterRuns);version.addEventListener('change',filterRuns);
+    const workflow=document.querySelector('#workflow'),version=document.querySelector('#version'),source=document.querySelector('#source'),empty=document.querySelector('.empty');
+    function filterWorkflows(){[...workflow.options].forEach(option=>{option.hidden=option.disabled=!!option.value&&!!source.value&&!option.dataset.sources.split('|').includes(source.value);});if(workflow.selectedOptions[0].hidden)workflow.value='';}
+    function filterRuns(){let visible=0;document.querySelectorAll('.run-card').forEach(card=>{const show=(!source.value||card.dataset.source===source.value)&&(!workflow.value||card.dataset.workflow===workflow.value)&&(!version.value||card.dataset.versions.split('|').includes(version.value));card.hidden=!show;if(show)visible++;});document.querySelectorAll('.day').forEach(day=>day.hidden=![...day.querySelectorAll('.run-card')].some(card=>!card.hidden));empty.style.display=visible?'none':'block';}
+    source.addEventListener('change',()=>{filterWorkflows();filterRuns();});workflow.addEventListener('change',filterRuns);version.addEventListener('change',filterRuns);
   </script>
 </body>
 </html>

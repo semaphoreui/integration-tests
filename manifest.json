@@ -3,6 +3,61 @@
   "runs": [
     {
       "schemaVersion": 1,
+      "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/36690882409",
+      "versions": [
+        "develop"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 97,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 62,
+            "skipped": 35,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 86,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 86,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "source": "github",
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "CI",
+      "event": "push",
+      "conclusion": "success",
+      "runId": 36690882409,
+      "runAttempt": 1,
+      "runNumber": 133,
+      "createdAt": "2026-09-30T08:37:42Z",
+      "date": "2026-09-30",
+      "headSha": "4b45a7c1c6ee191e8b731985cd194735798ed5b5",
+      "shortSha": "4b45a7c",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/4b45a7c1c6ee191e8b731985cd194735798ed5b5",
+      "path": "reports/2026-09-30/ci/36690882409-1"
+    },
+    {
+      "schemaVersion": 1,
       "title": "Semaphore configuration matrix",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/36682226114",
       "versions": [
