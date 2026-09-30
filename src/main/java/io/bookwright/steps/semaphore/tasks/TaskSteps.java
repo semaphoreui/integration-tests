@@ -86,6 +86,61 @@ public class TaskSteps {
     Calls.expectStatus(session.tasks().startTask(projectId, new TaskRequest(templateId)), 403);
   }
 
+  @Step("Verify task {taskId} cannot be read through project {projectId}")
+  public void verifyTaskHidden(
+      SemaphoreSessionApis session, long projectId, long taskId, int expectedStatus) {
+    Calls.expectStatus(session.tasks().getTask(projectId, taskId), expectedStatus);
+  }
+
+  @Step("Verify task {taskId} structured output is hidden through project {projectId}")
+  public void verifyOutputHidden(
+      SemaphoreSessionApis session, long projectId, long taskId, int expectedStatus) {
+    Calls.expectStatus(session.tasks().getTaskOutput(projectId, taskId), expectedStatus);
+  }
+
+  @Step("Verify task {taskId} raw output is hidden through project {projectId}")
+  public void verifyRawOutputHidden(
+      SemaphoreSessionApis session, long projectId, long taskId, int expectedStatus) {
+    var response = Calls.response(session.tasks().getTaskRawOutput(projectId, taskId));
+    try (var ignored = response.body();
+        var ignoredError = response.errorBody()) {
+      Calls.expectStatus(response, expectedStatus);
+    }
+  }
+
+  @Step("Verify task {taskId} cannot be stopped through project {projectId}")
+  public void verifyStopHidden(
+      SemaphoreSessionApis session, long projectId, long taskId, int expectedStatus) {
+    Calls.expectStatus(
+        session.tasks().stopTask(projectId, taskId, new TaskStopRequest(false)), expectedStatus);
+  }
+
+  @Step("Verify template {templateId} cannot be launched through project {projectId}")
+  public void verifyLaunchHidden(SemaphoreSessionApis session, long projectId, long templateId) {
+    var response =
+        Calls.response(session.tasks().startTask(projectId, new TaskRequest(templateId)));
+    if (response.isSuccessful() && response.body() != null) {
+      Task unexpected = response.body();
+      teardown.push(
+          "Delete unexpectedly created task " + unexpected.id(),
+          () -> Calls.expectStatus(api.deleteTask(unexpected.projectId(), unexpected.id()), 204));
+      awaitCompletionAfterTest(unexpected.projectId(), unexpected.id());
+    }
+    Calls.expectStatus(response, 404);
+  }
+
+  /** Allow a finite fixture to finish before its registered task/resource deletion on failure. */
+  @Step("Register completion wait before cleanup of finite task {taskId}")
+  public void awaitCompletionAfterTest(long projectId, long taskId) {
+    teardown.push(
+        "Wait for finite Semaphore task " + taskId,
+        () ->
+            Waits.awaitSlow("Finite task %d completes before cleanup".formatted(taskId))
+                .until(
+                    () -> getTask(projectId, taskId),
+                    task -> List.of("success", "error", "stopped").contains(task.status())));
+  }
+
   @Step("Start Semaphore task from template {templateId} and wait for failure")
   public Task startAndWaitForFailure(long projectId, long templateId) {
     return waitUntilTaskFails(projectId, startTask(projectId, templateId).id());
@@ -229,6 +284,11 @@ public class TaskSteps {
   @Step("Get Semaphore task {taskId}")
   public Task getTask(long projectId, long taskId) {
     return Calls.body(api.getTask(projectId, taskId), 200, "task");
+  }
+
+  @Step("Read Semaphore task {taskId} through an isolated session")
+  public Task getTask(SemaphoreSessionApis session, long projectId, long taskId) {
+    return Calls.body(session.tasks().getTask(projectId, taskId), 200, "session-visible task");
   }
 
   @Step("Get tasks in Semaphore project {projectId}")
