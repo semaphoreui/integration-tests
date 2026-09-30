@@ -8,6 +8,49 @@ on:
       - Release upgrade
     types:
       - completed
+  # Started by scripts/publish-external-results.sh after it pushes raw Allure results of a run
+  # outside GitHub runners to an orbantix-results/<run id> branch.
+  workflow_dispatch:
+    inputs:
+      results_ref:
+        description: Branch with the raw results, orbantix-results/<run id>
+        required: true
+        type: string
+      run_id:
+        description: Numeric run id on the external server
+        required: true
+        type: string
+      run_url:
+        description: Link to the run on the external server
+        required: true
+        type: string
+      workflow_name:
+        description: Name shown as the workflow of the run
+        required: true
+        type: string
+      display_title:
+        description: Title of the run card
+        required: true
+        type: string
+      conclusion:
+        description: Final status of the run
+        required: true
+        type: choice
+        options:
+          - success
+          - failure
+          - cancelled
+          - timed_out
+          - neutral
+          - skipped
+      head_sha:
+        description: Tested commit of this repository
+        required: true
+        type: string
+      created_at:
+        description: Run start time in ISO 8601 UTC; defaults to the dispatch time
+        required: false
+        type: string
 
 permissions:
   actions: read
@@ -23,6 +66,7 @@ jobs:
   publish:
     name: Archive and deploy report
     if: >-
+      github.event_name == 'workflow_run' &&
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
@@ -111,3 +155,126 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  publish-external:
+    name: Build, archive and deploy external report
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      RESULTS_REF: ${{ inputs.results_ref }}
+      SOURCE_RUN_ID: ${{ inputs.run_id }}
+      SOURCE_RUN_URL: ${{ inputs.run_url }}
+      SOURCE_WORKFLOW: ${{ inputs.workflow_name }}
+      SOURCE_TITLE: ${{ inputs.display_title }}
+      SOURCE_CONCLUSION: ${{ inputs.conclusion }}
+      SOURCE_HEAD_SHA: ${{ inputs.head_sha }}
+      SOURCE_CREATED_AT: ${{ inputs.created_at }}
+    steps:
+      - name: Validate the dispatch inputs
+        run: |
+          set -eu
+          case "$SOURCE_RUN_ID" in
+            ''|*[!0-9]*) printf 'run_id must be numeric: %s\n' "$SOURCE_RUN_ID" >&2; exit 1 ;;
+          esac
+          [ "$RESULTS_REF" = "orbantix-results/$SOURCE_RUN_ID" ] || {
+            printf 'results_ref must be orbantix-results/%s: %s\n' "$SOURCE_RUN_ID" "$RESULTS_REF" >&2
+            exit 1
+          }
+          printf '%s' "$SOURCE_HEAD_SHA" | grep -Eq '^[0-9a-f]{40}$' || {
+            printf 'head_sha must be a full commit SHA: %s\n' "$SOURCE_HEAD_SHA" >&2
+            exit 1
+          }
+          case "$SOURCE_RUN_URL" in
+            http://*|https://*) ;;
+            *) printf 'run_url must use http(s): %s\n' "$SOURCE_RUN_URL" >&2; exit 1 ;;
+          esac
+          [ -n "$SOURCE_CREATED_AT" ] || SOURCE_CREATED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          printf 'SOURCE_CREATED_AT=%s\n' "$SOURCE_CREATED_AT" >> "$GITHUB_ENV"
+
+      - name: Checkout tooling
+        uses: actions/checkout@v7
+
+      - name: Checkout raw results
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.results_ref }}
+          path: external-results
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Download pinned Allure CLI
+        run: ./gradlew --no-daemon downloadAllure
+
+      - name: Build Allure site
+        run: bash scripts/build-allure-pages.sh external-results "$SOURCE_TITLE" "$SOURCE_RUN_URL"
+
+      - name: Checkout Pages history storage
+        uses: actions/checkout@v7
+        with:
+          path: pages-history
+          fetch-depth: 0
+
+      - name: Prepare generated history branch
+        run: |
+          if git -C pages-history fetch origin gh-pages:refs/remotes/origin/gh-pages; then
+            git -C pages-history checkout --force -B gh-pages refs/remotes/origin/gh-pages
+          else
+            git -C pages-history switch --orphan gh-pages
+          fi
+
+      - name: Add report to bounded history
+        run: >-
+          python3 scripts/allure_pages.py archive
+          --source-dir build/pages-site
+          --site-dir pages-history
+          --source orbantix
+          --workflow "$SOURCE_WORKFLOW"
+          --display-title "$SOURCE_TITLE"
+          --event external
+          --conclusion "$SOURCE_CONCLUSION"
+          --run-id "$SOURCE_RUN_ID"
+          --run-attempt 1
+          --run-number "$SOURCE_RUN_ID"
+          --created-at "$SOURCE_CREATED_AT"
+          --head-sha "$SOURCE_HEAD_SHA"
+          --repository "${{ github.repository }}"
+          --run-url "$SOURCE_RUN_URL"
+          --retention-days 30
+          --max-runs 60
+
+      - name: Persist generated history
+        run: |
+          git -C pages-history config user.name github-actions[bot]
+          git -C pages-history config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git -C pages-history add --all
+          git -C pages-history commit -m "Publish Orbantix run $SOURCE_RUN_ID"
+          git -C pages-history push origin gh-pages
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: pages-history
+          include-hidden-files: true
+
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+      # The raw results are in the published report now; a failed run keeps the branch so the
+      # dispatch can be repeated.
+      - name: Delete raw results branch
+        run: git push origin --delete "$RESULTS_REF"
