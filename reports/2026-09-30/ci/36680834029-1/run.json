@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/36680834029",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 97,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 62,
+        "skipped": 35,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 86,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 86,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #46 from semaphoreui/fix/multiarch-build",
+  "event": "push",
+  "conclusion": "success",
+  "runId": 36680834029,
+  "runAttempt": 1,
+  "runNumber": 130,
+  "createdAt": "2026-09-30T06:55:41Z",
+  "date": "2026-09-30",
+  "headSha": "212108922f49bcf3014448a59e5e6993694b4e38",
+  "shortSha": "2121089",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/212108922f49bcf3014448a59e5e6993694b4e38"
+}
