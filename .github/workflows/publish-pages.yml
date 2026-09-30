@@ -74,6 +74,7 @@ jobs:
           python3 scripts/allure_pages.py archive
           --source-dir current-report
           --site-dir pages-history
+          --source github
           --workflow "$SOURCE_WORKFLOW"
           --display-title "$SOURCE_TITLE"
           --event "$SOURCE_EVENT"

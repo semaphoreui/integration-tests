@@ -18,6 +18,7 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- Source filter (`GitHub` / `Orbantix`) on the Allure Pages history and an `archive --source` option that records where each run was executed; Orbantix runs are stored and redirected under `orbantix-<workflow>` keys so they never collide with GitHub runs.
 - Authentication lifecycle coverage for login metadata, logout invalidation/idempotency,
   self-service password changes, cross-user denial, and administrator password reset.
 - A security-gap canary and source analysis proving that password changes leave other existing
