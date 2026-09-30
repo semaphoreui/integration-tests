@@ -300,7 +300,16 @@ branch.
 
 After every CI, nightly matrix or release-upgrade run, Allure is automatically assembled into a ready-made HTML site and uploaded as the artifact `allure-html-<run>-<attempt>`. Every Allure report is built in single-file mode: after downloading, it is enough to unpack the archive and open `index.html` with a double click — no local HTTP server is needed. For a matrix run the start page contains a separate report for each profile, so the results of different DBMSs are not mixed in retries.
 
-Completed runs of the trusted `main` branch are additionally published on [GitHub Pages](https://semaphoreui.github.io/integration-tests/). The mini-site keeps at most 60 runs from the last 30 days, groups them by date and allows filtering by workflow and Semaphore version. For each run the final status, commit, profiles, test distribution and individual Allure reports are available. PR and external-environment runs are deliberately not published. The generated history is stored in the `gh-pages` branch; it should not be edited manually. Before the first deployment the repository owner must select `Settings → Pages → Source → GitHub Actions` once.
+Completed runs of the trusted `main` branch are additionally published on [GitHub Pages](https://semaphoreui.github.io/integration-tests/). The mini-site keeps at most 60 runs from the last 30 days, groups them by date and allows filtering by workflow, Semaphore version and source: `GitHub` for workflows on GitHub runners, `Orbantix` for runs outside GitHub runners, archived with `scripts/allure_pages.py archive --source orbantix`. For each run the final status, commit, profiles, test distribution and individual Allure reports are available. PR runs are deliberately not published. The generated history is stored in the `gh-pages` branch; it should not be edited manually. Before the first deployment the repository owner must select `Settings → Pages → Source → GitHub Actions` once.
+
+Runs outside GitHub runners (Orbantix) are published with `scripts/publish-external-results.sh`, which needs only `git`, `curl` and `python3` on the server:
+
+```sh
+GH_TOKEN=... RUN_ID=1234 RUN_URL=https://orbantix.example/tasks/1234 RUN_CONCLUSION=failure \
+  scripts/publish-external-results.sh core-sqlite-local=build/allure-results
+```
+
+The script pushes the raw results as one orphan commit to `orbantix-results/<RUN_ID>` and dispatches `publish-pages.yml`, which builds the report, adds it to the history with the `Orbantix` source, deploys Pages and deletes the branch; a failed publication keeps the branch so the dispatch can be repeated. Several profiles are passed as several `<profile>=<dir>` arguments. `GH_TOKEN` is a fine-grained token (or GitHub App token) limited to this repository with `Contents: Read and write` and `Actions: Read and write`. Optional `RUN_WORKFLOW`, `RUN_TITLE` and `HEAD_SHA` set the workflow name, card title and tested commit.
 
 The test verifies health, an invalid and a valid login, creates an isolated project and the main resource chain:
 
