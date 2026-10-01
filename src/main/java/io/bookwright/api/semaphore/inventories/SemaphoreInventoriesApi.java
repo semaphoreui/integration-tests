@@ -21,6 +21,10 @@ public interface SemaphoreInventoriesApi {
   Call<Inventory> createInventory(
       @Path("projectId") long projectId, @Body InventoryRequest request);
 
+  @GET("project/{projectId}/inventory/{inventoryId}")
+  Call<Inventory> getInventory(
+      @Path("projectId") long projectId, @Path("inventoryId") long inventoryId);
+
   @PUT("project/{projectId}/inventory/{inventoryId}")
   Call<Void> updateInventory(
       @Path("projectId") long projectId,
