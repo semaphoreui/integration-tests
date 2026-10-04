@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore release upgrade",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/37193825195",
+  "versions": [
+    "v2.19.8 → develop"
+  ],
+  "reports": [
+    {
+      "name": "upgrade-mariadb-local",
+      "profile": "upgrade-mariadb-local",
+      "version": "develop",
+      "previousVersion": "v2.19.8",
+      "versionLabel": "v2.19.8 → develop",
+      "tests": 92,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 52,
+        "skipped": 40,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "upgrade-mysql-local",
+      "profile": "upgrade-mysql-local",
+      "version": "develop",
+      "previousVersion": "v2.19.8",
+      "versionLabel": "v2.19.8 → develop",
+      "tests": 92,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 52,
+        "skipped": 40,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "upgrade-postgres-local",
+      "profile": "upgrade-postgres-local",
+      "version": "develop",
+      "previousVersion": "v2.19.8",
+      "versionLabel": "v2.19.8 → develop",
+      "tests": 92,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 52,
+        "skipped": 40,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "upgrade-sqlite-local",
+      "profile": "upgrade-sqlite-local",
+      "version": "develop",
+      "previousVersion": "v2.19.8",
+      "versionLabel": "v2.19.8 → develop",
+      "tests": 92,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 52,
+        "skipped": 40,
+        "unknown": 0
+      }
+    }
+  ],
+  "source": "github",
+  "workflow": "Release upgrade",
+  "workflowSlug": "release-upgrade",
+  "displayTitle": "Release upgrade",
+  "event": "schedule",
+  "conclusion": "success",
+  "runId": 37193825195,
+  "runAttempt": 1,
+  "runNumber": 10,
+  "createdAt": "2026-10-04T09:57:58Z",
+  "date": "2026-10-04",
+  "headSha": "4b45a7c1c6ee191e8b731985cd194735798ed5b5",
+  "shortSha": "4b45a7c",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/4b45a7c1c6ee191e8b731985cd194735798ed5b5"
+}
