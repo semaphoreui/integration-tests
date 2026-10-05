@@ -8,6 +8,9 @@
 #
 # Usage: scripts/publish-external-results.sh <profile>=<allure results dir> [<profile>=<dir>...]
 #
+# <profile> must be a folder of test-environment/profiles; other arguments are skipped, because
+# Semaphore appends the environment's extra variables as NAME=value arguments.
+#
 # Environment:
 #   GH_TOKEN          token with Contents and Actions read/write on the repository (required)
 #   RUN_ID            numeric run id (default: generated from the current time)
@@ -70,18 +73,27 @@ printf '%s' "$head_sha" | grep -Eq '^[0-9a-f]{40}$' || fail "HEAD_SHA must be a 
 work_dir=$(mktemp -d)
 trap 'rm -rf "$work_dir"' EXIT
 
+# Semaphore passes extra variables, survey variables and variable-type secrets of the environment
+# as NAME=value arguments too, so only arguments named after a profile are results; the rest are
+# skipped by name, never printing the value, which may be a secret.
+published=0
 for pair in "$@"; do
   profile=${pair%%=*}
   results_dir=${pair#*=}
-  [ "$profile" != "$pair" ] || fail "expected <profile>=<dir>: $pair"
   case "$profile" in
-  '' | *[!A-Za-z0-9._-]*) fail "unsafe profile name: $profile" ;;
+  '' | *[!A-Za-z0-9._-]*) profile= ;;
   esac
+  if [ "$profile" = "$pair" ] || [ -z "$profile" ] || [ ! -f "$repository_dir/test-environment/profiles/$profile/profile.yaml" ]; then
+    printf 'Skipping argument %s: not <profile>=<dir> with a profile from test-environment/profiles\n' "${pair%%=*}"
+    continue
+  fi
   [ -d "$results_dir" ] || fail "results directory does not exist: $results_dir"
   find "$results_dir" -maxdepth 1 -type f -name '*-result.json' | grep -q . ||
     fail "no *-result.json files in $results_dir"
   cp -R "$results_dir" "$work_dir/allure-results-$profile"
+  published=$((published + 1))
 done
+[ "$published" -gt 0 ] || fail "no <profile>=<allure results dir> argument names a profile from test-environment/profiles"
 
 # The token goes through a header, never the remote URL, so it does not reach git output or logs.
 auth_header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
