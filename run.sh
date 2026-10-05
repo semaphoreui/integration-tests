@@ -19,6 +19,8 @@ tty_args=
 
 docker pull $IMAGE
 
+echo "PATH:=$pwd"
+
 exec docker run --rm \
   --add-host host.docker.internal:host-gateway \
   $tty_args \
