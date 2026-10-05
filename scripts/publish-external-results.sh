@@ -29,6 +29,8 @@ echo "SEMAPHORE_WORKFLOW_ID=$SEMAPHORE_WORKFLOW_ID"
 echo "SEMAPHORE_WORKFLOW_RUN_ID=$SEMAPHORE_WORKFLOW_RUN_ID"
 echo "SEMAPHORE_WORKFLOW_URL=$SEMAPHORE_WORKFLOW_URL"
 
+RUN_RUL=$SEMAPHORE_WORKFLOW_URL
+
 fail() {
   printf 'publish-external-results: %s\n' "$1" >&2
   exit 1
@@ -47,21 +49,21 @@ display_title=${RUN_TITLE:-"Orbantix run $(date -u '+%Y-%m-%d %H:%M UTC')"}
 # Epoch seconds plus three random digits: numeric as the Pages history requires, and unique
 # enough that two servers publishing in the same second do not share a results branch.
 if [ -z "${RUN_ID:-}" ]; then
-  RUN_ID=$(date -u '+%s')$(printf '%03d' "$(( $(od -An -N2 -tu2 /dev/urandom | tr -d ' ') % 1000 ))")
+  RUN_ID=$(date -u '+%s')$(printf '%03d' "$(($(od -An -N2 -tu2 /dev/urandom | tr -d ' ') % 1000))")
   printf 'Generated RUN_ID=%s\n' "$RUN_ID"
 fi
 results_ref="orbantix-results/$RUN_ID"
 
 case "$RUN_ID" in
-  ''|*[!0-9]*) fail "RUN_ID must be numeric: $RUN_ID" ;;
+'' | *[!0-9]*) fail "RUN_ID must be numeric: $RUN_ID" ;;
 esac
 case "$RUN_CONCLUSION" in
-  success|failure|cancelled|timed_out|neutral|skipped) ;;
-  *) fail "unsupported RUN_CONCLUSION: $RUN_CONCLUSION" ;;
+success | failure | cancelled | timed_out | neutral | skipped) ;;
+*) fail "unsupported RUN_CONCLUSION: $RUN_CONCLUSION" ;;
 esac
 case "$RUN_URL" in
-  http://*|https://*) ;;
-  *) fail "RUN_URL must use http(s): $RUN_URL" ;;
+http://* | https://*) ;;
+*) fail "RUN_URL must use http(s): $RUN_URL" ;;
 esac
 printf '%s' "$head_sha" | grep -Eq '^[0-9a-f]{40}$' || fail "HEAD_SHA must be a full commit SHA: $head_sha"
 
@@ -73,11 +75,11 @@ for pair in "$@"; do
   results_dir=${pair#*=}
   [ "$profile" != "$pair" ] || fail "expected <profile>=<dir>: $pair"
   case "$profile" in
-    ''|*[!A-Za-z0-9._-]*) fail "unsafe profile name: $profile" ;;
+  '' | *[!A-Za-z0-9._-]*) fail "unsafe profile name: $profile" ;;
   esac
   [ -d "$results_dir" ] || fail "results directory does not exist: $results_dir"
-  find "$results_dir" -maxdepth 1 -type f -name '*-result.json' | grep -q . \
-    || fail "no *-result.json files in $results_dir"
+  find "$results_dir" -maxdepth 1 -type f -name '*-result.json' | grep -q . ||
+    fail "no *-result.json files in $results_dir"
   cp -R "$results_dir" "$work_dir/allure-results-$profile"
 done
 
