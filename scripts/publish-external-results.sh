@@ -23,6 +23,12 @@ set -eu
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 
+echo "SEMAPHORE_TASK_ID=$SEMAPHORE_TASK_ID"
+echo "SEMAPHORE_PROJECT_ID=$SEMAPHORE_PROJECT_ID"
+echo "SEMAPHORE_WORKFLOW_ID=$SEMAPHORE_WORKFLOW_ID"
+echo "SEMAPHORE_WORKFLOW_RUN_ID=$SEMAPHORE_WORKFLOW_RUN_ID"
+echo "SEMAPHORE_WORKFLOW_URL=$SEMAPHORE_WORKFLOW_URL"
+
 fail() {
   printf 'publish-external-results: %s\n' "$1" >&2
   exit 1
