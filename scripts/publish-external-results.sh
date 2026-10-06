@@ -14,8 +14,9 @@
 # Environment:
 #   GH_TOKEN          token with Contents and Actions read/write on the repository (required)
 #   RUN_ID            numeric run id (default: generated from the current time)
-#   RUN_URL           link to the run on the external server (required)
-#   RUN_CONCLUSION    success, failure, cancelled, timed_out, neutral or skipped (required)
+#   RUN_URL           link to the run on the external server (default: SEMAPHORE_WORKFLOW_URL)
+#   RUN_CONCLUSION    success, failure, cancelled, timed_out, neutral or skipped (default: the
+#                     outcome run.sh exec recorded in build/run-conclusion)
 #   RUN_WORKFLOW      workflow name on the Pages site (default: Orbantix)
 #   RUN_TITLE         run card title (default: Orbantix run <UTC start time>)
 #   GITHUB_REPOSITORY owner/name (default: semaphoreui/integration-tests)
@@ -26,14 +27,19 @@ set -eu
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 
-echo "SEMAPHORE_TASK_ID=$SEMAPHORE_TASK_ID"
-echo "SEMAPHORE_PROJECT_ID=$SEMAPHORE_PROJECT_ID"
-echo "SEMAPHORE_WORKFLOW_ID=$SEMAPHORE_WORKFLOW_ID"
-echo "SEMAPHORE_WORKFLOW_RUN_ID=$SEMAPHORE_WORKFLOW_RUN_ID"
-echo "SEMAPHORE_WORKFLOW_URL=$SEMAPHORE_WORKFLOW_URL"
+echo "SEMAPHORE_TASK_ID=${SEMAPHORE_TASK_ID:-}"
+echo "SEMAPHORE_PROJECT_ID=${SEMAPHORE_PROJECT_ID:-}"
+echo "SEMAPHORE_WORKFLOW_ID=${SEMAPHORE_WORKFLOW_ID:-}"
+echo "SEMAPHORE_WORKFLOW_RUN_ID=${SEMAPHORE_WORKFLOW_RUN_ID:-}"
+echo "SEMAPHORE_WORKFLOW_URL=${SEMAPHORE_WORKFLOW_URL:-}"
 echo "PATH:=$(pwd)"
 
-RUN_URL=$SEMAPHORE_WORKFLOW_URL
+RUN_URL=${RUN_URL:-${SEMAPHORE_WORKFLOW_URL:-}}
+# run.sh exec records the outcome of the test actions of a multi-task pipeline here.
+conclusion_file="$repository_dir/build/run-conclusion"
+if [ -z "${RUN_CONCLUSION:-}" ] && [ -s "$conclusion_file" ]; then
+  RUN_CONCLUSION=$(cat "$conclusion_file")
+fi
 
 fail() {
   printf 'publish-external-results: %s\n' "$1" >&2
@@ -47,7 +53,9 @@ fail() {
 : "${RUN_CONCLUSION:?Set RUN_CONCLUSION to the final status of the run}"
 repository=${GITHUB_REPOSITORY:-semaphoreui/integration-tests}
 workflow_name=${RUN_WORKFLOW:-Orbantix}
-head_sha=${HEAD_SHA:-$(git -C "$repository_dir" rev-parse HEAD)}
+# The runner container works as root in a checkout owned by another user, which git refuses
+# without safe.directory.
+head_sha=${HEAD_SHA:-$(git -c safe.directory="$repository_dir" -C "$repository_dir" rev-parse HEAD)}
 created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 display_title=${RUN_TITLE:-"Orbantix run $(date -u '+%Y-%m-%d %H:%M UTC')"}
 # Epoch seconds plus three random digits: numeric as the Pages history requires, and unique
@@ -88,7 +96,7 @@ for pair in "$@"; do
     printf 'Skipping argument %s: not <profile>=<dir> with a profile from test-environment/profiles\n' "${pair%%=*}"
     continue
   fi
-  [ -d "$results_dir" ] || fail "results directory does not exist: $results_dir"
+  [ -d "$results_dir" ] || fail "results directory does not exist: $results_dir (working directory: $(pwd))"
   find "$results_dir" -maxdepth 1 -type f -name '*-result.json' | grep -q . ||
     fail "no *-result.json files in $results_dir"
   cp -R "$results_dir" "$work_dir/allure-results-$profile"
