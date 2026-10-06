@@ -18,21 +18,56 @@
 
 set -eu
 
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+forwarded_names="API_BASE_URL API_USERNAME API_PASSWORD UI_BASE_URL TEST_REPOSITORY FIXTURE_GIT_PORT
+  APP_IMAGE APP_SOURCE APP_BRANCH APP_REPOSITORY APP_PR APP_SHA GH_TOKEN GITHUB_TOKEN
+  RUN_ID RUN_URL RUN_CONCLUSION RUN_WORKFLOW RUN_TITLE GITHUB_REPOSITORY HEAD_SHA
+  SEMAPHORE_TASK_ID SEMAPHORE_PROJECT_ID SEMAPHORE_WORKFLOW_ID SEMAPHORE_WORKFLOW_RUN_ID
+  SEMAPHORE_WORKFLOW_URL"
+
+# Semaphore passes variable-type secrets, extra variables and survey variables to a shell task
+# as NAME=value arguments, the secrets before the template arguments. A forwarded name becomes
+# an environment variable, as an environment-type secret would; any other one is dropped, so it
+# reaches neither the mode check below nor Gradle. Values are never printed. Arguments named
+# after a profile (the <profile>=<dir> pairs of publish) are kept.
+argument_count=$#
+while [ "$argument_count" -gt 0 ]; do
+  argument=$1
+  shift
+  argument_count=$((argument_count - 1))
+  name=${argument%%=*}
+  case "$argument" in
+  [A-Za-z_]*=*) ;;
+  *) set -- "$@" "$argument"; continue ;;
+  esac
+  case "$name" in
+  *[!A-Za-z0-9_]*) set -- "$@" "$argument"; continue ;;
+  esac
+  if [ -f "$SCRIPT_DIR/test-environment/profiles/$name/profile.yaml" ]; then
+    set -- "$@" "$argument"
+    continue
+  fi
+  case " $(echo $forwarded_names) RUNNER_IMAGE RUNNER_CONTAINER " in
+  *" $name "*)
+    export "$argument"
+    printf 'run.sh: %s taken from the task arguments\n' "$name"
+    ;;
+  *)
+    printf 'run.sh: skipping task argument %s\n' "$name"
+    ;;
+  esac
+done
+
 # RUNNER_IMAGE overrides the runner image, for example with one rebuilt from the current Dockerfile.
 IMAGE=${RUNNER_IMAGE:-lowswoo/semaphore-test-container:1.0-arm}
-
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 # One per pipeline run; RUNNER_CONTAINER overrides it outside Semaphore.
 container=${RUNNER_CONTAINER:-semaphore-tests-${SEMAPHORE_WORKFLOW_RUN_ID:-local}}
 container_label=io.semaphoreui.integration-tests.runner=shared
 
 env_args=
-for name in API_BASE_URL API_USERNAME API_PASSWORD UI_BASE_URL TEST_REPOSITORY FIXTURE_GIT_PORT \
-  APP_IMAGE APP_SOURCE APP_BRANCH APP_REPOSITORY APP_PR APP_SHA GH_TOKEN GITHUB_TOKEN \
-  RUN_ID RUN_URL RUN_CONCLUSION RUN_WORKFLOW RUN_TITLE GITHUB_REPOSITORY HEAD_SHA \
-  SEMAPHORE_TASK_ID SEMAPHORE_PROJECT_ID SEMAPHORE_WORKFLOW_ID SEMAPHORE_WORKFLOW_RUN_ID \
-  SEMAPHORE_WORKFLOW_URL; do
+for name in $forwarded_names; do
   # `-e NAME` without a value forwards the host value, so secrets never appear in argv.
   eval "is_set=\${$name+x}"
   [ -z "$is_set" ] || env_args="$env_args -e $name"
