@@ -18,7 +18,8 @@
 
 set -eu
 
-IMAGE="lowswoo/semaphore-test-container:1.0-arm"
+# RUNNER_IMAGE overrides the runner image, for example with one rebuilt from the current Dockerfile.
+IMAGE=${RUNNER_IMAGE:-lowswoo/semaphore-test-container:1.0-arm}
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
@@ -127,7 +128,7 @@ stop)
   stop_container
   ;;
 *)
-  docker pull $IMAGE
+  docker pull "$IMAGE"
 
   exec docker run --rm \
     --add-host host.docker.internal:host-gateway \
