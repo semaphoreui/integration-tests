@@ -20,17 +20,23 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-forwarded_names="API_BASE_URL API_USERNAME API_PASSWORD UI_BASE_URL TEST_REPOSITORY FIXTURE_GIT_PORT
-  APP_IMAGE APP_SOURCE APP_BRANCH APP_REPOSITORY APP_PR APP_SHA GH_TOKEN GITHUB_TOKEN
-  RUN_ID RUN_URL RUN_CONCLUSION RUN_WORKFLOW RUN_TITLE GITHUB_REPOSITORY HEAD_SHA
-  SEMAPHORE_TASK_ID SEMAPHORE_PROJECT_ID SEMAPHORE_WORKFLOW_ID SEMAPHORE_WORKFLOW_RUN_ID
-  SEMAPHORE_WORKFLOW_URL"
+# The whole task environment reaches the runner container, except the variables that describe
+# this host and would break the container: its paths, user, locale, Docker client settings, and
+# the settings of this script itself.
+host_only_name() {
+  case "$1" in
+  PATH | HOME | PWD | OLDPWD | SHLVL | _ | SHELL | USER | LOGNAME | HOSTNAME | TERM | TMPDIR | \
+    MAIL | DISPLAY | LANG | LANGUAGE | LC_* | TMP | TEMP | JAVA_HOME | GRADLE_USER_HOME | DOCKER_* | \
+    SSH_* | XDG_* | RUNNER_IMAGE | RUNNER_CONTAINER) return 0 ;;
+  *) return 1 ;;
+  esac
+}
 
 # Semaphore passes variable-type secrets, extra variables and survey variables to a shell task
-# as NAME=value arguments, the secrets before the template arguments. A forwarded name becomes
-# an environment variable, as an environment-type secret would; any other one is dropped, so it
-# reaches neither the mode check below nor Gradle. Values are never printed. Arguments named
-# after a profile (the <profile>=<dir> pairs of publish) are kept.
+# as NAME=value arguments, the secrets before the template arguments. Each one becomes an
+# environment variable, as an environment-type secret would, so it reaches the container and
+# neither the mode check below nor Gradle. Values are never printed. Arguments named after a
+# profile (the <profile>=<dir> pairs of publish) are kept.
 argument_count=$#
 while [ "$argument_count" -gt 0 ]; do
   argument=$1
@@ -48,15 +54,12 @@ while [ "$argument_count" -gt 0 ]; do
     set -- "$@" "$argument"
     continue
   fi
-  case " $(echo $forwarded_names) RUNNER_IMAGE RUNNER_CONTAINER " in
-  *" $name "*)
-    export "$argument"
-    printf 'run.sh: %s taken from the task arguments\n' "$name"
-    ;;
-  *)
-    printf 'run.sh: skipping task argument %s\n' "$name"
-    ;;
-  esac
+  if host_only_name "$name" && [ "$name" != RUNNER_IMAGE ] && [ "$name" != RUNNER_CONTAINER ]; then
+    printf 'run.sh: skipping task argument %s: it describes the host\n' "$name"
+    continue
+  fi
+  export "$argument"
+  printf 'run.sh: %s taken from the task arguments\n' "$name"
 done
 
 # RUNNER_IMAGE overrides the runner image, for example with one rebuilt from the current Dockerfile.
@@ -66,11 +69,12 @@ IMAGE=${RUNNER_IMAGE:-lowswoo/semaphore-test-container:1.0-arm}
 container=${RUNNER_CONTAINER:-semaphore-tests-${SEMAPHORE_WORKFLOW_RUN_ID:-local}}
 container_label=io.semaphoreui.integration-tests.runner=shared
 
+# `-e NAME` without a value forwards the host value, so secrets never appear in argv. awk lists
+# the names exactly, even when a value spans several lines.
 env_args=
-for name in $forwarded_names; do
-  # `-e NAME` without a value forwards the host value, so secrets never appear in argv.
-  eval "is_set=\${$name+x}"
-  [ -z "$is_set" ] || env_args="$env_args -e $name"
+for name in $(awk 'BEGIN { for (name in ENVIRON) print name }' |
+  grep -E '^[A-Za-z_][A-Za-z0-9_]*$' | sort); do
+  host_only_name "$name" || env_args="$env_args -e $name"
 done
 
 tty_args=
