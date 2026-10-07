@@ -65,8 +65,10 @@ done
 # RUNNER_IMAGE overrides the runner image, for example with one rebuilt from the current Dockerfile.
 IMAGE=${RUNNER_IMAGE:-lowswoo/semaphore-test-container:1.0-arm}
 
-# One per pipeline run; RUNNER_CONTAINER overrides it outside Semaphore.
-container=${RUNNER_CONTAINER:-semaphore-tests-${SEMAPHORE_WORKFLOW_RUN_ID:-local}}
+# The tasks of one Semaphore workflow run share SEMAPHORE_WORKFLOW_RUN_ID; tasks started outside
+# a workflow find the runner by a fixed name, which works because one stand runs on a host at a
+# time anyway. RUNNER_CONTAINER overrides both.
+container=${RUNNER_CONTAINER:-semaphore-tests${SEMAPHORE_WORKFLOW_RUN_ID:+-$SEMAPHORE_WORKFLOW_RUN_ID}}
 container_label=io.semaphoreui.integration-tests.runner=shared
 
 # `-e NAME` without a value forwards the host value, so secrets never appear in argv. awk lists
@@ -96,18 +98,19 @@ in_container() {
   docker exec $tty_args $env_args "$container" "$@"
 }
 
+# Takes a container name or id, so start can also remove the runners of earlier pipelines.
 stop_container() {
-  if ! docker inspect "$container" >/dev/null 2>&1; then
-    printf 'Runner container %s is not running\n' "$container"
+  if ! docker inspect "$1" >/dev/null 2>&1; then
+    printf 'Runner container %s is not running\n' "$1"
     return 0
   fi
   # The runner works as root; hand its output back to the checkout owner, or Semaphore cannot
-  # remove the checkout when it has to clone the repository again.
-  if container_running; then
-    docker exec "$container" chown -R "$(id -u):$(id -g)" build .gradle 2>/dev/null || true
+  # remove the checkout when a pull fails and it clones the repository again.
+  if [ "$(docker inspect --format '{{.State.Running}}' "$1" 2>/dev/null)" = true ]; then
+    docker exec "$1" chown -R "$(id -u):$(id -g)" build .gradle 2>/dev/null || true
   fi
-  docker rm --force "$container" >/dev/null
-  printf 'Stopped runner container %s\n' "$container"
+  docker rm --force "$1" >/dev/null
+  printf 'Stopped runner container %s\n' "$1"
 }
 
 case "${1:-}" in
@@ -115,8 +118,9 @@ start)
   shift
   # Only one stand runs on a host at a time (they all publish port 3000), so a runner left by an
   # earlier pipeline that never reached its publish or stop task is no longer needed.
-  leftovers=$(docker ps --all --quiet --filter "label=$container_label")
-  [ -z "$leftovers" ] || docker rm --force $leftovers >/dev/null
+  for leftover in $(docker ps --all --quiet --filter "label=$container_label"); do
+    stop_container "$leftover"
+  done
   docker pull "$IMAGE"
   docker run --detach --init \
     --name "$container" \
@@ -160,11 +164,11 @@ publish)
   shift
   status=0
   in_container scripts/publish-external-results.sh "$@" || status=$?
-  stop_container
+  stop_container "$container"
   exit "$status"
   ;;
 stop)
-  stop_container
+  stop_container "$container"
   ;;
 *)
   docker pull "$IMAGE"

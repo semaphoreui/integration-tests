@@ -14,7 +14,7 @@
 # Environment:
 #   GH_TOKEN          token with Contents and Actions read/write on the repository (required)
 #   RUN_ID            numeric run id (default: generated from the current time)
-#   RUN_URL           link to the run on the external server (default: SEMAPHORE_WORKFLOW_URL)
+#   RUN_URL           link to the run (default: SEMAPHORE_WORKFLOW_URL, then SEMAPHORE_TASK_DETAILS_URL)
 #   RUN_CONCLUSION    success, failure, cancelled, timed_out, neutral or skipped (default: the
 #                     outcome run.sh exec recorded in build/run-conclusion)
 #   RUN_WORKFLOW      workflow name on the Pages site (default: Orbantix)
@@ -27,14 +27,22 @@ set -eu
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 
-echo "SEMAPHORE_TASK_ID=${SEMAPHORE_TASK_ID:-}"
 echo "SEMAPHORE_PROJECT_ID=${SEMAPHORE_PROJECT_ID:-}"
+echo "SEMAPHORE_TASK_ID=${SEMAPHORE_TASK_ID:-}"
 echo "SEMAPHORE_WORKFLOW_ID=${SEMAPHORE_WORKFLOW_ID:-}"
 echo "SEMAPHORE_WORKFLOW_RUN_ID=${SEMAPHORE_WORKFLOW_RUN_ID:-}"
 echo "SEMAPHORE_WORKFLOW_URL=${SEMAPHORE_WORKFLOW_URL:-}"
+echo "SEMAPHORE_TASK_DETAILS_URL=${SEMAPHORE_TASK_DETAILS_URL:-}"
 echo "PATH:=$(pwd)"
 
-RUN_URL=${RUN_URL:-${SEMAPHORE_WORKFLOW_URL:-}}
+# Semaphore sets the links only when its web_host (SEMAPHORE_WEB_ROOT) is known: the workflow run
+# for a task of a workflow, and the task itself for a shell task, shell-quoted when it contains
+# characters such as '?'.
+semaphore_task_url=${SEMAPHORE_TASK_DETAILS_URL:-}
+case "$semaphore_task_url" in
+\'*\') semaphore_task_url=${semaphore_task_url#\'} semaphore_task_url=${semaphore_task_url%\'} ;;
+esac
+RUN_URL=${RUN_URL:-${SEMAPHORE_WORKFLOW_URL:-$semaphore_task_url}}
 # run.sh exec records the outcome of the test actions of a multi-task pipeline here.
 conclusion_file="$repository_dir/build/run-conclusion"
 if [ -z "${RUN_CONCLUSION:-}" ] && [ -s "$conclusion_file" ]; then
@@ -49,7 +57,7 @@ fail() {
 [ "$#" -gt 0 ] || fail "usage: $0 <profile>=<allure results dir> [<profile>=<dir>...]"
 
 : "${GH_TOKEN:?Set GH_TOKEN to a token with Contents and Actions read/write on the repository}"
-: "${RUN_URL:?Set RUN_URL to the link of the run on the external server}"
+: "${RUN_URL:?Set RUN_URL to the link of the run, or web_host (SEMAPHORE_WEB_ROOT) in the Semaphore config}"
 : "${RUN_CONCLUSION:?Set RUN_CONCLUSION to the final status of the run}"
 repository=${GITHUB_REPOSITORY:-semaphoreui/integration-tests}
 workflow_name=${RUN_WORKFLOW:-Orbantix}
