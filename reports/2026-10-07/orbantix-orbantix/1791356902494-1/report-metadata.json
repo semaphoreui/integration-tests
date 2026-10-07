@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "title": "Orbantix run 2026-10-07 07:08 UTC",
+  "runUrl": "https://semaphore.orbantix.com/project/3/history?t=486",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 88,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 58,
+        "skipped": 30,
+        "unknown": 0
+      }
+    }
+  ]
+}

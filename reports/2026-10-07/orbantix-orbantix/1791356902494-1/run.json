@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "title": "Orbantix run 2026-10-07 07:08 UTC",
+  "runUrl": "https://semaphore.orbantix.com/project/3/history?t=486",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 88,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 58,
+        "skipped": 30,
+        "unknown": 0
+      }
+    }
+  ],
+  "source": "orbantix",
+  "workflow": "Orbantix",
+  "workflowSlug": "orbantix",
+  "displayTitle": "Orbantix run 2026-10-07 07:08 UTC",
+  "event": "external",
+  "conclusion": "success",
+  "runId": 1791356902494,
+  "runAttempt": 1,
+  "runNumber": 1791356902494,
+  "createdAt": "2026-10-07T07:08:22Z",
+  "date": "2026-10-07",
+  "headSha": "427a5e34282e51ab6c83870e6c4bea0350c53b62",
+  "shortSha": "427a5e3",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/427a5e34282e51ab6c83870e6c4bea0350c53b62"
+}
