@@ -3,13 +3,16 @@ package io.bookwright.junit;
 import io.bookwright.api.model.CreatedBooking;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.SemaphoreAuthLifecycleUsers;
+import io.bookwright.api.model.semaphore.SemaphoreTaskHistory;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.User;
 import io.bookwright.config.Configs;
 import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTaskHistoryFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.util.TestData;
+import java.util.List;
 import java.util.function.BiConsumer;
 
 /** Catalog of product-state preconditions shared through typed {@link TestStore} accessors. */
@@ -27,6 +30,28 @@ public enum Precondition implements IPrecondition {
 
   SEMAPHORE_ADMIN_SESSION(
       "Login to Semaphore as administrator", (api, store) -> api.semaphore().auth().login()),
+
+  SEMAPHORE_TASK_HISTORY_EXISTS(
+      "Create completed, interleaved task history for two templates",
+      (api, store) -> {
+        var template = store.semaphoreTemplate();
+        var fixtures = SemaphoreTaskHistoryFixtures.from(store.testData());
+        var sibling =
+            api.semaphore()
+                .templates()
+                .create(
+                    template.projectId(),
+                    fixtures
+                        .siblingTemplate()
+                        .request(
+                            template.projectId(), template.repositoryId(), template.inventoryId()));
+        var oldest = api.semaphore().tasks().startAndWait(template.projectId(), template.id());
+        var other = api.semaphore().tasks().startAndWait(template.projectId(), sibling.id());
+        var middle = api.semaphore().tasks().startAndWait(template.projectId(), template.id());
+        var newest = api.semaphore().tasks().startAndWait(template.projectId(), template.id());
+        store.putSemaphoreTaskHistory(
+            new SemaphoreTaskHistory(List.of(newest, middle, other, oldest), template.id()));
+      }),
 
   SEMAPHORE_PROJECT_EXISTS(
       "Create an isolated Semaphore project",
@@ -101,6 +126,7 @@ public enum Precondition implements IPrecondition {
       });
 
   static final String BOOKING_KEY = "createdBooking";
+  static final String SEMAPHORE_TASK_HISTORY_KEY = "semaphoreTaskHistory";
   static final String SEMAPHORE_PROJECT_KEY = "semaphoreProject";
   static final String SEMAPHORE_TEMPLATE_KEY = "semaphoreTemplate";
   static final String SEMAPHORE_RBAC_USER_KEY = "semaphoreRbacUser";
