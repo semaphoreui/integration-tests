@@ -383,6 +383,31 @@ evidence remains in the corresponding defect documents.
 
 **Priority:** high. **Status:** complete on the current application source.
 
+### Completed P2 standalone block: task history pagination
+
+**Risk:** customers with growing task histories miss or see duplicate runs while paging; a
+template history includes another template's runs; a new task shifts the next page.
+
+**Scope:** eight API cases in `TaskHistoryPaginationApiTest`, covering both project and template
+history routes. Prepared history interleaves tasks from two templates. Assertions pin newest-first
+ordering, exclusive `before` cursors, complete non-overlapping pages, exact `X-Has-Next` on full
+and partial final pages and empty history, insertion between page requests, legacy `limit`, and
+`count` precedence. Expected IDs come from created tasks, not from a second history query.
+
+**Implementation:** typed query/page models, focused `TaskHistorySteps` within the task domain,
+typed fixtures, and a precondition-owned history snapshot. The existing API task discovers the
+tests; no new CI job, external stand, or pending PR is required. Task execution/cleanup helpers
+are reused without adding dependencies on the open cleanup PR.
+
+**Verification (2026-10-10):** all eight cases passed on `core-sqlite-local` (1m 25s) and
+`core-postgres-local` (1m 26s), using the same application commit
+`21481ec816336b1abdeb5e06a824afae8a903ae3`. `qualityGate` passed, including 14 new self-test cases
+for routes/query parameters, response-header parsing, missing body/header diagnostics, and fixtures.
+No pagination defect was observed in this scope. These were targeted runs, not the full product suite.
+
+**Not claimed:** performance at millions of tasks, maximum/default page size, malformed query
+fallbacks, UI scrolling, deletion between pages, or authorization coverage.
+
 ---
 
 ## Stage 6. Operation and Maintainability

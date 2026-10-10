@@ -27,6 +27,8 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- Task-history pagination coverage for project and template lists, exact next-page headers,
+  stable cursors after insertion, template filtering, and legacy limit/count compatibility.
 - `scripts/publish-external-results.sh` and a `workflow_dispatch` job in `publish-pages.yml` that publish Allure results of runs outside GitHub runners: the server pushes raw results to an `orbantix-results/<run id>` branch, GitHub builds, archives and deploys the report and deletes the branch.
 - Source filter (`GitHub` / `Orbantix`) on the Allure Pages history and an `archive --source` option that records where each run was executed; Orbantix runs are stored and redirected under `orbantix-<workflow>` keys so they never collide with GitHub runs.
 - Project credential-mapping (`host_configs`) coverage: API contract for host and URL mappings
