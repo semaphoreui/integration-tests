@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/38369137319",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 107,
+      "counts": {
+        "failed": 0,
+        "broken": 6,
+        "passed": 71,
+        "skipped": 30,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 103,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 103,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "source": "github",
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #48 from semaphoreui/codex/project-resource-isolation",
+  "event": "push",
+  "conclusion": "failure",
+  "runId": 38369137319,
+  "runAttempt": 1,
+  "runNumber": 139,
+  "createdAt": "2026-10-13T08:25:17Z",
+  "date": "2026-10-13",
+  "headSha": "3a6a00626887821f1fca04c1ed0796973a150377",
+  "shortSha": "3a6a006",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/3a6a00626887821f1fca04c1ed0796973a150377"
+}
