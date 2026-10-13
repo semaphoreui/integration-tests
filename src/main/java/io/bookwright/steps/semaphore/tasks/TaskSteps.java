@@ -236,6 +236,11 @@ public class TaskSteps {
     return Calls.body(api.getTasks(projectId), 200, "tasks");
   }
 
+  @Step("Get latest tasks in Semaphore project {projectId}")
+  public List<Task> getLastTasks(long projectId) {
+    return Calls.body(api.getLastTasks(projectId), 200, "latest tasks");
+  }
+
   @Step("Get tasks for Semaphore template {templateId}")
   public List<Task> getTasksForTemplate(long projectId, long templateId) {
     return Calls.body(api.getTemplateTasks(projectId, templateId), 200, "template tasks");

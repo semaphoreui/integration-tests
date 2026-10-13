@@ -33,6 +33,7 @@ class StateOwnershipArchitectureTest {
             "semaphoreAuthLifecycleUsers",
             "semaphoreProject",
             "semaphoreTaskHistory",
+            "semaphoreAccessKey",
             "semaphoreTemplate")
         .doesNotContain("get", "put", "getRequired");
   }
