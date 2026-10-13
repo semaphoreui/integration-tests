@@ -79,6 +79,22 @@ public class TestStore {
     put(Precondition.SEMAPHORE_TASK_HISTORY_KEY, history);
   }
 
+  public Project semaphoreAccessibleProject() {
+    return getRequired(Precondition.SEMAPHORE_ACCESSIBLE_PROJECT_KEY, Project.class);
+  }
+
+  public SemaphoreTestUser semaphoreIsolationUser() {
+    return getRequired(Precondition.SEMAPHORE_ISOLATION_USER_KEY, SemaphoreTestUser.class);
+  }
+
+  void putSemaphoreAccessibleProject(Project project) {
+    put(Precondition.SEMAPHORE_ACCESSIBLE_PROJECT_KEY, project);
+  }
+
+  void putSemaphoreIsolationUser(SemaphoreTestUser user) {
+    put(Precondition.SEMAPHORE_ISOLATION_USER_KEY, user);
+  }
+
   public AccessKey semaphoreAccessKey() {
     return getRequired(Precondition.SEMAPHORE_ACCESS_KEY_KEY, AccessKey.class);
   }
