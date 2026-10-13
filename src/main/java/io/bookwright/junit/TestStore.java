@@ -2,6 +2,7 @@ package io.bookwright.junit;
 
 import io.bookwright.api.AuthSession;
 import io.bookwright.api.model.CreatedBooking;
+import io.bookwright.api.model.semaphore.AccessKey;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.SemaphoreAuthLifecycleUsers;
 import io.bookwright.api.model.semaphore.SemaphoreTestUser;
@@ -83,6 +84,14 @@ public class TestStore {
 
   void putSemaphoreIsolationUser(SemaphoreTestUser user) {
     put(Precondition.SEMAPHORE_ISOLATION_USER_KEY, user);
+  }
+
+  public AccessKey semaphoreAccessKey() {
+    return getRequired(Precondition.SEMAPHORE_ACCESS_KEY_KEY, AccessKey.class);
+  }
+
+  void putSemaphoreAccessKey(AccessKey key) {
+    put(Precondition.SEMAPHORE_ACCESS_KEY_KEY, key);
   }
 
   void putBooking(CreatedBooking booking) {

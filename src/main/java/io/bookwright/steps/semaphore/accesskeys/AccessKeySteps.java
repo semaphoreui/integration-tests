@@ -34,12 +34,29 @@ public class AccessKeySteps {
     this.teardown = teardown;
   }
 
+  @Step("Delete Semaphore access key {keyId} in project {projectId}")
+  public void delete(long projectId, long keyId) {
+    Calls.expectStatus(api.deleteAccessKey(projectId, keyId), 204);
+  }
+
+  @Step("Verify Semaphore access key {keyId} is absent")
+  public void verifyAbsent(long projectId, long keyId) {
+    Calls.expectStatus(api.getAccessKeyDocument(projectId, keyId), 404);
+    if (Calls.body(api.getAccessKeys(projectId), 200, "access key collection").stream()
+        .anyMatch(item -> item.id() == keyId)) {
+      throw new IllegalStateException(
+          "Deleted Semaphore access key %d is still listed in project %d"
+              .formatted(keyId, projectId));
+    }
+  }
+
   @Step("Create no-auth access key in Semaphore project {projectId}")
   public AccessKey create(long projectId, AccessKeyRequest request) {
     AccessKey key = Calls.body(api.createAccessKey(projectId, request), 201, "created access key");
     teardown.push(
         "Delete Semaphore access key " + key.id(),
-        () -> Calls.expectStatus(api.deleteAccessKey(projectId, key.id()), 204));
+        () ->
+            Calls.expectStatus(Calls.response(api.deleteAccessKey(projectId, key.id())), 204, 404));
     return key;
   }
 
@@ -63,7 +80,8 @@ public class AccessKeySteps {
             session.accessKeys().createAccessKey(projectId, request), 201, "created access key");
     teardown.push(
         "Delete Semaphore access key " + key.id(),
-        () -> Calls.expectStatus(api.deleteAccessKey(projectId, key.id()), 204));
+        () ->
+            Calls.expectStatus(Calls.response(api.deleteAccessKey(projectId, key.id())), 204, 404));
     return key;
   }
 
@@ -85,7 +103,7 @@ public class AccessKeySteps {
     long keyId = requiredLong(created, "id");
     teardown.push(
         "Delete Semaphore access key " + keyId,
-        () -> Calls.expectStatus(api.deleteAccessKey(projectId, keyId), 204));
+        () -> Calls.expectStatus(Calls.response(api.deleteAccessKey(projectId, keyId)), 204, 404));
 
     verifyMasked(projectId, keyId, fixture);
 
@@ -108,7 +126,7 @@ public class AccessKeySteps {
     long keyId = requiredLong(created, "id");
     teardown.push(
         "Delete Semaphore access key " + keyId,
-        () -> Calls.expectStatus(api.deleteAccessKey(projectId, keyId), 204));
+        () -> Calls.expectStatus(Calls.response(api.deleteAccessKey(projectId, keyId)), 204, 404));
 
     verifyMasked(projectId, keyId, fixture);
 
@@ -126,6 +144,20 @@ public class AccessKeySteps {
     var listed = Calls.body(api.getAccessKeysDocument(projectId), 200, "access key collection");
     SecretAssertions.absent("access-key GET response", saved.toString(), fixture);
     SecretAssertions.absent("access-key collection response", listed.toString(), fixture);
+  }
+
+  @Step("Update login/password access key {keyId} and verify its secret remains masked")
+  public AccessKey updateAndVerifyMasked(
+      long projectId, long keyId, AccessKeyUpdateRequest request, SecretAccessKey fixture) {
+    Calls.expectStatus(api.updateAccessKey(projectId, keyId, request), 204);
+    verifyMasked(projectId, keyId, fixture);
+
+    var saved = Calls.body(api.getAccessKeyDocument(projectId, keyId), 200, "updated access key");
+    return new AccessKey(
+        requiredLong(saved, "id"),
+        requiredText(saved, "name"),
+        requiredText(saved, "type"),
+        saved.path("project_id").asLong());
   }
 
   @Step("Verify persisted SSH access key {keyId} remains masked")

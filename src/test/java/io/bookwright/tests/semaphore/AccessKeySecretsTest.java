@@ -6,6 +6,7 @@ import io.bookwright.annotations.Api;
 import io.bookwright.annotations.OwnerDanil;
 import io.bookwright.annotations.Smoke;
 import io.bookwright.assertions.SecretAssertions;
+import io.bookwright.fixtures.semaphore.SemaphoreAccessKeyCrudFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.junit.Precondition;
 import io.bookwright.junit.Preconditions;
@@ -23,8 +24,12 @@ class AccessKeySecretsTest {
 
   @Test
   @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_PROJECT_EXISTS})
-  @DisplayName("Login/password key remains masked in API responses and task output")
-  void loginPasswordKeyIsNotExposed(ApiSteps api, TestStore store, SemaphoreFixtures fixtures) {
+  @DisplayName("Rotated login/password key remains masked in API responses and task output")
+  void loginPasswordKeyIsNotExposed(
+      ApiSteps api,
+      TestStore store,
+      SemaphoreFixtures fixtures,
+      SemaphoreAccessKeyCrudFixtures credentials) {
     var project = store.semaphoreProject();
     var repositoryKey =
         api.semaphore()
@@ -37,9 +42,15 @@ class AccessKeySecretsTest {
                 project.id(),
                 fixtures.repositories().primary().request(project.id(), repositoryKey.id()));
     var secretKey =
-        api.semaphore()
-            .accessKeys()
-            .createAndVerifyMasked(project.id(), fixtures.secretAccessKey());
+        api.semaphore().accessKeys().createAndVerifyMasked(project.id(), credentials.original());
+    api.semaphore()
+        .accessKeys()
+        .updateAndVerifyMasked(
+            project.id(),
+            secretKey.id(),
+            credentials.updateRequest(project.id(), secretKey.id()),
+            credentials.rotated());
+    api.semaphore().accessKeys().verifyMasked(project.id(), secretKey.id(), credentials.original());
     var inventory =
         api.semaphore()
             .inventories()
@@ -59,17 +70,15 @@ class AccessKeySecretsTest {
         .waitUntilTaskOutputContains(
             project.id(), completedTask.id(), fixtures.expectations().outputMarker());
 
-    assertThat(secretKey.type()).isEqualTo(fixtures.secretAccessKey().type());
+    assertThat(secretKey.type()).isEqualTo(credentials.original().type());
     assertThat(inventory.sshKeyId()).isEqualTo(secretKey.id());
     assertThat(completedTask.status()).isEqualTo(fixtures.expectations().successfulTaskStatus());
 
-    SecretAssertions.absent(
-        "structured task output",
-        api.semaphore().tasks().getTaskOutputText(project.id(), completedTask.id()),
-        fixtures.secretAccessKey());
-    SecretAssertions.absent(
-        "raw task output",
-        api.semaphore().tasks().getTaskRawOutput(project.id(), completedTask.id()),
-        fixtures.secretAccessKey());
+    var output = api.semaphore().tasks().getTaskOutputText(project.id(), completedTask.id());
+    var rawOutput = api.semaphore().tasks().getTaskRawOutput(project.id(), completedTask.id());
+    SecretAssertions.credentialsAbsent("structured task output", output, credentials.original());
+    SecretAssertions.credentialsAbsent("structured task output", output, credentials.rotated());
+    SecretAssertions.credentialsAbsent("raw task output", rawOutput, credentials.original());
+    SecretAssertions.credentialsAbsent("raw task output", rawOutput, credentials.rotated());
   }
 }

@@ -34,6 +34,7 @@ class StateOwnershipArchitectureTest {
             "semaphoreProject",
             "semaphoreAccessibleProject",
             "semaphoreIsolationUser",
+            "semaphoreAccessKey",
             "semaphoreTemplate")
         .doesNotContain("get", "put", "getRequired");
   }
