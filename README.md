@@ -330,6 +330,24 @@ A separate RBAC suite pins the built-in `manager` and `task_runner` contracts. A
 
 The API token suite creates a time-limited token, verifies prefix-only listing, authenticates a separate Retrofit session through the Bearer header and creates a project. After revocation the same token gets `401`; creating an already expired token is rejected with `400`. The full value does not leak into the URL, step parameters or HTTP/Allure attachments: the creation response is deliberately hidden, Authorization is redacted, and delete uses the public eight-character prefix.
 
+Cross-project task isolation has three focused suites: `TaskReadIsolationApiTest` (details and
+structured/raw output), `TaskMutationIsolationApiTest` (launch and stop without side effects), and
+`ProjectMembershipRevocationApiTest` (access revoked in an already authenticated session). Each
+test creates a disposable non-admin owner of another project. Requests exercise both a foreign
+project URL and foreign resource IDs in the user's own project URL. The current application returns
+`404` for inaccessible projects and template launches, and `400` for mismatched task IDs; these
+statuses are asserted exactly, not as an arbitrary `4xx`. Membership removal must preserve access
+to the user's other project. These tests run in the existing API suite, not `externalTest`.
+
+Run only this block against a prepared local profile (also supported: `prod-postgres-runner`):
+
+```bash
+test-environment/profile test core-sqlite-local \
+  --tests io.bookwright.tests.semaphore.TaskReadIsolationApiTest \
+  --tests io.bookwright.tests.semaphore.TaskMutationIsolationApiTest \
+  --tests io.bookwright.tests.semaphore.ProjectMembershipRevocationApiTest
+```
+
 The user lifecycle suite verifies the sequence create → update → delete → absence → recreate supported by the Community API on a disposable typed fixture. The user model in the current Semaphore has no `active/disabled` field and no deactivate/reactivate endpoints, so such a contract is not imitated by substituting password/delete.
 
 The file inventory suite creates a repository-backed `type=file`, runs a playbook through an inventory file from the trusted Git fixture and verifies the saved `repository_id`. A separate safe canary pins a `v2.19.8` defect: create accepts the traversal path `../…`, although update correctly returns `400`; such an inventory is not executed.

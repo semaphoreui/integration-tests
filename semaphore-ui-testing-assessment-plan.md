@@ -299,6 +299,37 @@ Preliminary directions:
 - installation and upgrade;
 - load and security checks.
 
+### Completed P1 standalone block: cross-project task isolation
+
+**Risk:** an authenticated user substitutes a project, task, or template ID to read another
+project's output or control its tasks; removed membership remains effective in an existing session.
+
+**Scope:** 12 API cases in three focused classes, with typed per-test fixtures and preconditions:
+
+- `TaskReadIsolationApiTest`: task details and structured/raw output, through both a foreign
+  project URL and a foreign task ID in an accessible project URL (6 cases).
+- `TaskMutationIsolationApiTest`: rejected foreign template launch without created tasks in
+  either project; rejected stop with normal completion of the running task (4 cases).
+- `ProjectMembershipRevocationApiTest`: read and launch access disappear after membership removal
+  in the same authenticated session, while the user's own project remains accessible (2 cases).
+
+**Contract:** on application commit `a74639670a106d6a832f778b0a0798602602c9c4`, inaccessible
+projects return `404`; a task ID belonging to another project returns `400` from
+`GetTaskMiddleware`. Foreign template launches return `404` for both routes. Tests assert these
+specific statuses, not a broad permission/error range. This block does not claim full resource
+CRUD isolation, force-stop isolation, or coverage of every authentication mechanism.
+
+**Dependencies:** existing local Git/playbook fixtures and local API profiles; no external stand,
+Pro subscription, new CI job, or pending test-refactoring PR is required. Each test creates its
+own non-admin user and projects and registers LIFO cleanup. Finite running tasks finish before
+deletion; an unexpected successful forbidden launch is also registered for cleanup.
+
+**Verification (2026-09-30):** all 12 cases passed on both `core-sqlite-local` (2m 8s) and
+`prod-postgres-runner` (2m 50s), against the same application image above. `qualityGate` passed,
+including 17 new self-test cases for fixtures, precise failure statuses, request routes, membership
+cleanup, and cleanup after unexpected launch. No isolation violation was observed in this scope.
+Post-run API checks found no remaining isolation users or accessible-project fixtures.
+
 ### Completed P1 conditional security block: web-cache safety
 
 Semaphore does not provide a shared HTTP cache, and the documented NGINX configuration does not
