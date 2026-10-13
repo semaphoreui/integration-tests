@@ -36,6 +36,17 @@ public enum Precondition implements IPrecondition {
         store.putSemaphoreProject(project);
       }),
 
+  SEMAPHORE_ACCESS_KEY_EXISTS(
+      "Create a no-auth Semaphore access key",
+      (api, store) -> {
+        SemaphoreFixtures fixtures = SemaphoreFixtures.from(Configs.main(), store.testData());
+        long projectId = store.semaphoreProject().id();
+        store.putSemaphoreAccessKey(
+            api.semaphore()
+                .accessKeys()
+                .create(projectId, fixtures.accessKey().request(projectId)));
+      }),
+
   SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS(
       "Create an executable Semaphore template",
       (api, store) -> {
@@ -102,6 +113,7 @@ public enum Precondition implements IPrecondition {
 
   static final String BOOKING_KEY = "createdBooking";
   static final String SEMAPHORE_PROJECT_KEY = "semaphoreProject";
+  static final String SEMAPHORE_ACCESS_KEY_KEY = "semaphoreAccessKey";
   static final String SEMAPHORE_TEMPLATE_KEY = "semaphoreTemplate";
   static final String SEMAPHORE_RBAC_USER_KEY = "semaphoreRbacUser";
   static final String SEMAPHORE_AUTH_LIFECYCLE_USERS_KEY = "semaphoreAuthLifecycleUsers";
