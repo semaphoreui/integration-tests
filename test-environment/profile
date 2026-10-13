@@ -758,7 +758,10 @@ case "$action" in
           "-Dbookwright.test.ssl.trustStorePassword=changeit"
       fi
       if [ -n "$selected_test_class" ]; then
-        set -- "$@" --tests "$selected_test_class"
+        # A manifest names one class, or several separated by commas.
+        for test_class in $(printf '%s' "$selected_test_class" | tr ',' ' '); do
+          set -- "$@" --tests "$test_class"
+        done
       fi
       ./gradlew "$@"
     )

@@ -33,6 +33,7 @@ public final class SecretSanitizer {
           "passphrase",
           "private_key",
           "recovery_code",
+          "signature",
           "token",
           "secret");
 

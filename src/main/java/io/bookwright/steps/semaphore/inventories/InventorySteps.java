@@ -21,13 +21,31 @@ public class InventorySteps {
     this.teardown = teardown;
   }
 
+  @Step("Delete Semaphore inventory {inventoryId} in project {projectId}")
+  public void delete(long projectId, long inventoryId) {
+    Calls.expectStatus(api.deleteInventory(projectId, inventoryId), 204);
+  }
+
+  @Step("Verify Semaphore inventory {inventoryId} is absent")
+  public void verifyAbsent(long projectId, long inventoryId) {
+    Calls.expectStatus(api.getInventory(projectId, inventoryId), 404);
+    if (Calls.body(api.getInventories(projectId), 200, "inventory collection").stream()
+        .anyMatch(item -> item.id() == inventoryId)) {
+      throw new IllegalStateException(
+          "Deleted Semaphore inventory %d is still listed in project %d"
+              .formatted(inventoryId, projectId));
+    }
+  }
+
   @Step("Create inventory in Semaphore project {projectId}")
   public Inventory create(long projectId, InventoryRequest request) {
     Inventory inventory =
         Calls.body(api.createInventory(projectId, request), 201, "created inventory");
     teardown.push(
         "Delete Semaphore inventory " + inventory.id(),
-        () -> Calls.expectStatus(api.deleteInventory(projectId, inventory.id()), 204));
+        () ->
+            Calls.expectStatus(
+                Calls.response(api.deleteInventory(projectId, inventory.id())), 204, 404));
     return inventory;
   }
 
@@ -35,6 +53,17 @@ public class InventorySteps {
   public void verifyUnsafePathUpdateRejected(
       long projectId, long inventoryId, InventoryUpdateRequest request) {
     Calls.expectStatus(api.updateInventory(projectId, inventoryId, request), 400);
+  }
+
+  @Step("Get Semaphore inventory {inventoryId} in project {projectId}")
+  public Inventory get(long projectId, long inventoryId) {
+    return Calls.body(api.getInventory(projectId, inventoryId), 200, "inventory");
+  }
+
+  @Step("Update Semaphore inventory {inventoryId} in project {projectId}")
+  public Inventory update(long projectId, long inventoryId, InventoryUpdateRequest request) {
+    Calls.expectStatus(api.updateInventory(projectId, inventoryId, request), 204);
+    return get(projectId, inventoryId);
   }
 
   @Step("Find required inventory {name} in Semaphore project {projectId}")

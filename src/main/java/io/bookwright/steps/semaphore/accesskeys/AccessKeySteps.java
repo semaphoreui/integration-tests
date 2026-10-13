@@ -1,8 +1,12 @@
 package io.bookwright.steps.semaphore.accesskeys;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.bookwright.api.model.semaphore.AccessKey;
 import io.bookwright.api.model.semaphore.AccessKeyRequest;
+import io.bookwright.api.model.semaphore.AccessKeyUpdateRequest;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.accesskeys.SemaphoreAccessKeysApi;
 import io.bookwright.assertions.SecretAssertions;
@@ -11,9 +15,15 @@ import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures.SshAccessKey;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Step;
+import java.io.IOException;
 import java.util.List;
+import java.util.stream.StreamSupport;
+import retrofit2.Call;
+import retrofit2.Response;
 
 public class AccessKeySteps {
+
+  private static final ObjectMapper JSON = new ObjectMapper();
 
   private final SemaphoreAccessKeysApi api;
   private final TeardownStorage teardown;
@@ -24,12 +34,29 @@ public class AccessKeySteps {
     this.teardown = teardown;
   }
 
+  @Step("Delete Semaphore access key {keyId} in project {projectId}")
+  public void delete(long projectId, long keyId) {
+    Calls.expectStatus(api.deleteAccessKey(projectId, keyId), 204);
+  }
+
+  @Step("Verify Semaphore access key {keyId} is absent")
+  public void verifyAbsent(long projectId, long keyId) {
+    Calls.expectStatus(api.getAccessKeyDocument(projectId, keyId), 404);
+    if (Calls.body(api.getAccessKeys(projectId), 200, "access key collection").stream()
+        .anyMatch(item -> item.id() == keyId)) {
+      throw new IllegalStateException(
+          "Deleted Semaphore access key %d is still listed in project %d"
+              .formatted(keyId, projectId));
+    }
+  }
+
   @Step("Create no-auth access key in Semaphore project {projectId}")
   public AccessKey create(long projectId, AccessKeyRequest request) {
     AccessKey key = Calls.body(api.createAccessKey(projectId, request), 201, "created access key");
     teardown.push(
         "Delete Semaphore access key " + key.id(),
-        () -> Calls.expectStatus(api.deleteAccessKey(projectId, key.id()), 204));
+        () ->
+            Calls.expectStatus(Calls.response(api.deleteAccessKey(projectId, key.id())), 204, 404));
     return key;
   }
 
@@ -53,7 +80,8 @@ public class AccessKeySteps {
             session.accessKeys().createAccessKey(projectId, request), 201, "created access key");
     teardown.push(
         "Delete Semaphore access key " + key.id(),
-        () -> Calls.expectStatus(api.deleteAccessKey(projectId, key.id()), 204));
+        () ->
+            Calls.expectStatus(Calls.response(api.deleteAccessKey(projectId, key.id())), 204, 404));
     return key;
   }
 
@@ -75,7 +103,7 @@ public class AccessKeySteps {
     long keyId = requiredLong(created, "id");
     teardown.push(
         "Delete Semaphore access key " + keyId,
-        () -> Calls.expectStatus(api.deleteAccessKey(projectId, keyId), 204));
+        () -> Calls.expectStatus(Calls.response(api.deleteAccessKey(projectId, keyId)), 204, 404));
 
     verifyMasked(projectId, keyId, fixture);
 
@@ -98,7 +126,7 @@ public class AccessKeySteps {
     long keyId = requiredLong(created, "id");
     teardown.push(
         "Delete Semaphore access key " + keyId,
-        () -> Calls.expectStatus(api.deleteAccessKey(projectId, keyId), 204));
+        () -> Calls.expectStatus(Calls.response(api.deleteAccessKey(projectId, keyId)), 204, 404));
 
     verifyMasked(projectId, keyId, fixture);
 
@@ -118,6 +146,20 @@ public class AccessKeySteps {
     SecretAssertions.absent("access-key collection response", listed.toString(), fixture);
   }
 
+  @Step("Update login/password access key {keyId} and verify its secret remains masked")
+  public AccessKey updateAndVerifyMasked(
+      long projectId, long keyId, AccessKeyUpdateRequest request, SecretAccessKey fixture) {
+    Calls.expectStatus(api.updateAccessKey(projectId, keyId, request), 204);
+    verifyMasked(projectId, keyId, fixture);
+
+    var saved = Calls.body(api.getAccessKeyDocument(projectId, keyId), 200, "updated access key");
+    return new AccessKey(
+        requiredLong(saved, "id"),
+        requiredText(saved, "name"),
+        requiredText(saved, "type"),
+        saved.path("project_id").asLong());
+  }
+
   @Step("Verify persisted SSH access key {keyId} remains masked")
   public void verifyMasked(long projectId, long keyId, SshAccessKey fixture) {
     var saved =
@@ -133,6 +175,68 @@ public class AccessKeySteps {
     Calls.expectStatus(
         api.updateAccessKey(projectId, keyId, fixture.rotationRequest(projectId, keyId)), 204);
     verifyMasked(projectId, keyId, fixture);
+  }
+
+  @Step("Get access key {keyId} in Semaphore project {projectId}")
+  public AccessKey get(long projectId, long keyId) {
+    return Calls.body(api.getAccessKey(projectId, keyId), 200, "access key");
+  }
+
+  @Step("Get ids of the credential mappings referring to access key {keyId}")
+  public List<Long> getHostConfigReferrerIds(long projectId, long keyId) {
+    JsonNode refs = Calls.body(api.getAccessKeyRefs(projectId, keyId), 200, "access key refs");
+    JsonNode hostConfigs = refs.path("host_configs");
+    if (!hostConfigs.isArray()) {
+      throw new IllegalStateException(
+          "Access key refs have no 'host_configs' array. Body: " + refs);
+    }
+    return StreamSupport.stream(hostConfigs.spliterator(), false)
+        .map(referrer -> referrer.path("id").asLong())
+        .toList();
+  }
+
+  @Step("Verify access key {keyId} can not be deleted while a mapping uses it")
+  public void verifyCannotDelete(long projectId, long keyId, String expectedError) {
+    verifyValidationError(api.deleteAccessKey(projectId, keyId), expectedError);
+    Calls.expectStatus(api.getAccessKey(projectId, keyId), 200);
+  }
+
+  @Step("Verify access key {keyId} can not change to a type its mappings can not use")
+  public void verifyCannotRetype(
+      long projectId, long keyId, AccessKeyUpdateRequest request, String expectedError) {
+    AccessKey before = get(projectId, keyId);
+    verifyValidationError(api.updateAccessKey(projectId, keyId, request), expectedError);
+    AccessKey after = get(projectId, keyId);
+    if (!before.type().equals(after.type())) {
+      throw new IllegalStateException(
+          "Access key %d changed type from %s to %s although the update was rejected"
+              .formatted(keyId, before.type(), after.type()));
+    }
+  }
+
+  private void verifyValidationError(Call<?> call, String expectedError) {
+    Response<?> response = Calls.response(call);
+    Calls.expectStatus(response, 400);
+    try (var body = response.errorBody()) {
+      String diagnostic = body == null ? "" : body.string();
+      if (!validationMessage(diagnostic).contains(expectedError)) {
+        throw new IllegalStateException(
+            "Access key validation response did not contain '%s'. Body: %s"
+                .formatted(expectedError, diagnostic));
+      }
+    } catch (IOException error) {
+      throw new IllegalStateException(
+          "Could not read Semaphore access key validation response", error);
+    }
+  }
+
+  private String validationMessage(String responseBody) {
+    try {
+      var document = JSON.readTree(responseBody);
+      return document.hasNonNull("error") ? document.get("error").asText() : responseBody;
+    } catch (JsonProcessingException ignored) {
+      return responseBody;
+    }
   }
 
   private long requiredLong(com.fasterxml.jackson.databind.JsonNode document, String field) {

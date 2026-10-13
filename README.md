@@ -131,6 +131,8 @@ test-environment/profile test feature-ssh-local
 
 Two isolated SSH servers are reachable only inside the Compose network and accept different generated keys. The positive scenario confirms remote playbook execution, the negative one confirms useful clone diagnostics with a wrong key. The rotation scenario first gets a rejection from the second server with the old key, updates the secret of the same access key through the API and then confirms a successful Git clone and Ansible SSH. All scenarios verify that the private key and passphrase are absent from the API and task output.
 
+The same profile verifies project credential mappings (`/api/project/{id}/host_configs`): repositories and inventories carry a key of type `none`, and a host mapping is the only thing binding the generated key to `ssh-fixture`. The scenarios confirm that one mapping serves Git clone, remote branch listing and the Ansible connection, that two mappings select a different key for each server within one task, that a URL mapping rewrites an HTTPS repository URL into an SSH clone with the mapped key, that a mapped key the server rejects fails the clone without exposing the key, and that a key-less repository without a mapping has no credential at all. The API contract of the mappings — validation, credential-kind rules, duplicate detection, project scoping, role checks, referrer protection of the key, and backup/restore by credential name — runs in every core profile.
+
 A private Git over HTTPS is verified separately, through a local NGINX with self-signed TLS and mandatory Basic Auth:
 
 ```bash
@@ -139,7 +141,7 @@ test-environment/profile up feature-git-https
 test-environment/profile test feature-git-https
 ```
 
-The profile passes the trusted CA to Git processes through the standard `SEMAPHORE_FORWARDED_ENV_VARS`. The positive scenario runs a playbook after an authenticated clone, the negative one confirms rejection without an access key. The password does not leak into API/Allure diagnostics, and the login and password are absent from the structured/raw task output.
+The profile passes the trusted CA to Git processes through the standard `SEMAPHORE_FORWARDED_ENV_VARS`. The positive scenario runs a playbook after an authenticated clone, the negative one confirms rejection without an access key. The password does not leak into API/Allure diagnostics, and the login and password are absent from the structured/raw task output. A second class on the same profile maps the login/password credential onto the repository by URL prefix: the repository carries no key, the mapping supplies the Basic Auth, and a mapping of another prefix is confirmed not to apply.
 
 The OIDC feature profile performs a full browser login through a local Dex and verifies the callback, session, return path, external user provisioning, repeated login, logout, a conflict with a local email and rejection of an unavailable provider:
 
@@ -309,7 +311,16 @@ branch.
 
 After every CI, nightly matrix or release-upgrade run, Allure is automatically assembled into a ready-made HTML site and uploaded as the artifact `allure-html-<run>-<attempt>`. Every Allure report is built in single-file mode: after downloading, it is enough to unpack the archive and open `index.html` with a double click — no local HTTP server is needed. For a matrix run the start page contains a separate report for each profile, so the results of different DBMSs are not mixed in retries.
 
-Completed runs of the trusted `main` branch are additionally published on [GitHub Pages](https://semaphoreui.github.io/integration-tests/). The mini-site keeps at most 60 runs from the last 30 days, groups them by date and allows filtering by workflow and Semaphore version. For each run the final status, commit, profiles, test distribution and individual Allure reports are available. PR and external-environment runs are deliberately not published. The generated history is stored in the `gh-pages` branch; it should not be edited manually. Before the first deployment the repository owner must select `Settings → Pages → Source → GitHub Actions` once.
+Completed runs of the trusted `main` branch are additionally published on [GitHub Pages](https://semaphoreui.github.io/integration-tests/). The mini-site keeps at most 60 runs from the last 30 days, groups them by date and allows filtering by workflow, Semaphore version and source: `GitHub` for workflows on GitHub runners, `Orbantix` for runs outside GitHub runners, archived with `scripts/allure_pages.py archive --source orbantix`. For each run the final status, commit, profiles, test distribution and individual Allure reports are available. PR runs are deliberately not published. The generated history is stored in the `gh-pages` branch; it should not be edited manually. Before the first deployment the repository owner must select `Settings → Pages → Source → GitHub Actions` once.
+
+Runs outside GitHub runners (Orbantix) are published with `scripts/publish-external-results.sh`, which needs only `git`, `curl` and `python3` on the server:
+
+```sh
+GH_TOKEN=... RUN_ID=1234 RUN_URL=https://orbantix.example/tasks/1234 RUN_CONCLUSION=failure \
+  scripts/publish-external-results.sh core-sqlite-local=build/allure-results
+```
+
+The script pushes the raw results as one orphan commit to `orbantix-results/<RUN_ID>` and dispatches `publish-pages.yml`, which builds the report, adds it to the history with the `Orbantix` source, deploys Pages and deletes the branch; a failed publication keeps the branch so the dispatch can be repeated. Several profiles are passed as several `<profile>=<dir>` arguments. `GH_TOKEN` is a fine-grained token (or GitHub App token) limited to this repository with `Contents: Read and write` and `Actions: Read and write`. Optional `RUN_WORKFLOW`, `RUN_TITLE` and `HEAD_SHA` set the workflow name, card title and tested commit.
 
 The test verifies health, an invalid and a valid login, creates an isolated project and the main resource chain:
 
@@ -697,7 +708,7 @@ test-environment/profile test core-sqlite-local
 `test-environment/profile` takes the image from `APP_IMAGE` if the variable is set, and from the profile
 manifest otherwise; a manifest value of `branch:<name>` is resolved and built by `scripts/app-source.sh`.
 Useful build variables: `APP_BRANCH` (defaults to `develop`),
-`APP_BUILD_PLATFORM` (defaults to `linux/amd64` in CI and to the local platform elsewhere),
+`APP_BUILD_PLATFORM` (defaults to `linux/amd64,linux/arm64` in CI and to the local platform elsewhere),
 `APP_DOCKERFILE` (defaults to `deployment/docker/server/Dockerfile`), `APP_BUILD_PUSH` (defaults to
 `true` in CI and to `false` elsewhere).
 

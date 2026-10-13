@@ -75,13 +75,41 @@ esac
 """,
         )
 
-    def stub_docker(self, manifest_status=1, local_status=1):
+    def stub_docker(
+        self,
+        manifest_status=1,
+        local_status=1,
+        platforms=("linux/amd64", "linux/arm64"),
+        local_arch="amd64",
+        daemon_arch="amd64",
+    ):
+        """The script reads the published platforms, the local image and the daemon architecture.
+
+        `docker pull` puts the image into the local store, as the real command does.
+        """
+        manifest = ",".join(
+            '{"Descriptor":{"platform":{"architecture":"%s","os":"%s"}}}'
+            % tuple(reversed(platform.split("/", 1)))
+            for platform in platforms
+        )
+        pulled = self.root / "pulled"
         self.write_stub(
             "docker",
             f"""
 case "$1" in
-  manifest) exit {manifest_status} ;;
-  image) exit {local_status} ;;
+  manifest)
+    [ {manifest_status} -eq 0 ] || exit {manifest_status}
+    printf '%s\\n' '[{manifest}]'
+    ;;
+  image)
+    [ "$2" = inspect ] || exit 0
+    if [ {local_status} -ne 0 ] && [ ! -f '{pulled}' ]; then
+      exit {local_status}
+    fi
+    printf '{local_arch}\\n'
+    ;;
+  pull) : > '{pulled}' ;;
+  version) printf '{daemon_arch}\\n' ;;
   *) exit 0 ;;
 esac
 """,
@@ -320,6 +348,26 @@ class LocalBuildTest(AppSourceTestCase):
         self.assertEqual("false", values["APP_BUILD_REQUIRED"])
         self.assertIn("Pulling the application image", result.stdout)
 
+    def test_a_local_image_of_another_architecture_is_rebuilt(self):
+        self.stub_gh()
+        self.stub_docker(manifest_status=1, local_status=0, local_arch="amd64", daemon_arch="arm64")
+
+        values = self.parse(self.run_script(environment=self.LOCAL).stdout)
+
+        self.assertEqual("false", values["APP_IMAGE_EXISTS"])
+        self.assertEqual("true", values["APP_BUILD_REQUIRED"])
+
+    def test_a_published_image_of_another_architecture_is_built_locally(self):
+        self.stub_gh()
+        self.stub_docker(manifest_status=0, local_status=1, local_arch="amd64", daemon_arch="arm64")
+
+        result = self.run_script(environment=self.LOCAL)
+        values = self.parse(result.stdout)
+
+        self.assertEqual("false", values["APP_IMAGE_EXISTS"])
+        self.assertEqual("true", values["APP_BUILD_REQUIRED"])
+        self.assertIn("The published image is not built for arm64", result.stdout)
+
     def test_an_image_nobody_published_is_built(self):
         self.stub_gh()
         self.stub_docker(manifest_status=1, local_status=1)
@@ -458,6 +506,28 @@ class ImageReuseTest(AppSourceTestCase):
         self.assertEqual("true", values["APP_BUILD_REQUIRED"])
         self.assertIn("Application image not found", result.stdout)
         self.assertIn("Building application...", result.stdout)
+
+    def test_a_tag_published_without_every_platform_is_rebuilt(self):
+        self.stub_gh()
+        self.stub_docker(manifest_status=0, platforms=("linux/amd64",))
+
+        values = self.parse(self.run_script(environment={"APP_PR": "123"}).stdout)
+
+        self.assertEqual("false", values["APP_IMAGE_EXISTS"])
+        self.assertEqual("true", values["APP_BUILD_REQUIRED"])
+
+    def test_the_platform_override_decides_which_platforms_are_required(self):
+        self.stub_gh()
+        self.stub_docker(manifest_status=0, platforms=("linux/amd64",))
+
+        values = self.parse(
+            self.run_script(
+                environment={"APP_PR": "123", "APP_BUILD_PLATFORM": "linux/amd64"}
+            ).stdout
+        )
+
+        self.assertEqual("true", values["APP_IMAGE_EXISTS"])
+        self.assertEqual("false", values["APP_BUILD_REQUIRED"])
 
     def test_the_registry_decides_when_the_image_is_pushed(self):
         self.stub_gh()

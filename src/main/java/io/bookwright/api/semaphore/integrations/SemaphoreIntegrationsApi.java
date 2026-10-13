@@ -10,6 +10,7 @@ import io.bookwright.api.model.semaphore.IntegrationRequest;
 import io.bookwright.api.model.semaphore.IntegrationUpdateRequest;
 import java.util.List;
 import java.util.Map;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
@@ -112,5 +113,5 @@ public interface SemaphoreIntegrationsApi {
 
   @POST
   Call<Void> dispatch(
-      @Url String url, @HeaderMap Map<String, String> headers, @Body Map<String, Object> payload);
+      @Url String url, @HeaderMap Map<String, String> headers, @Body RequestBody payload);
 }

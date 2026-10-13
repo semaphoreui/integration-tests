@@ -25,6 +25,8 @@ VALID_CONCLUSIONS = {
     "success",
     "timed_out",
 }
+SOURCE_LABELS = {"github": "GitHub", "orbantix": "Orbantix"}
+DEFAULT_SOURCE = "github"
 
 
 def read_profile_manifest(path: Path) -> dict[str, str]:
@@ -153,6 +155,16 @@ def prune_runs(site_dir: Path, now: datetime, retention_days: int, max_runs: int
                 directory.rmdir()
 
 
+def run_source(run: dict[str, Any]) -> str:
+    # Runs archived before sources were recorded all came from GitHub-hosted runners.
+    return str(run.get("source") or DEFAULT_SOURCE)
+
+
+def run_key(source: str, workflow_slug: str) -> str:
+    # GitHub keeps the unprefixed keys so existing report paths and latest/ links stay valid.
+    return workflow_slug if source == DEFAULT_SOURCE else f"{source}-{workflow_slug}"
+
+
 def conclusion_label(conclusion: str) -> str:
     return conclusion.replace("_", " ").title()
 
@@ -167,14 +179,20 @@ def report_totals(run: dict[str, Any]) -> Counter[str]:
 
 def render_index(site_dir: Path, runs: list[dict[str, Any]], retention_days: int) -> None:
     workflows = sorted({str(run["workflow"]) for run in runs})
+    workflow_sources: dict[str, set[str]] = {}
+    for run in runs:
+        workflow_sources.setdefault(str(run["workflow"]), set()).add(run_source(run))
     versions = sorted({str(version) for run in runs for version in run.get("versions", [])})
     grouped: dict[str, list[dict[str, Any]]] = {}
     for run in runs:
         grouped.setdefault(str(run["date"]), []).append(run)
 
     workflow_options = "".join(
-        f'<option value="{html.escape(slug(workflow))}">{html.escape(workflow)}</option>'
+        f'<option value="{html.escape(slug(workflow))}" data-sources="{html.escape("|".join(sorted(workflow_sources[workflow])))}">{html.escape(workflow)}</option>'
         for workflow in workflows
+    )
+    source_options = "".join(
+        f'<option value="{html.escape(source)}">{html.escape(label)}</option>' for source, label in SOURCE_LABELS.items()
     )
     version_options = "".join(
         f'<option value="{html.escape(version)}">{html.escape(version)}</option>' for version in versions
@@ -192,19 +210,22 @@ def render_index(site_dir: Path, runs: list[dict[str, Any]], retention_days: int
             if len(profiles) > 4:
                 profile_preview += f" +{len(profiles) - 4}"
             created = parse_timestamp(str(run["createdAt"]))
+            source = run_source(run)
+            source_label = SOURCE_LABELS.get(source, source)
+            run_link_label = "Actions" if source == "github" else source_label
             status = str(run["conclusion"])
             status_class = "success" if status == "success" else "failure" if status in {"failure", "timed_out"} else "other"
             counts_text = " · ".join(
                 f"{totals[status_name]} {status_name}" for status_name in STATUS_ORDER if totals[status_name]
             )
             cards.append(
-                f'''<article class="run-card" data-workflow="{html.escape(slug(str(run['workflow'])))}" data-versions="{html.escape('|'.join(run.get('versions', [])))}">
-  <div class="card-top"><span class="workflow">{html.escape(str(run['workflow']))}</span><span class="status {status_class}">{html.escape(conclusion_label(status))}</span></div>
+                f'''<article class="run-card" data-source="{html.escape(source)}" data-workflow="{html.escape(slug(str(run['workflow'])))}" data-versions="{html.escape('|'.join(run.get('versions', [])))}">
+  <div class="card-top"><span class="workflow">{html.escape(str(run['workflow']))}<span class="source">{html.escape(source_label)}</span></span><span class="status {status_class}">{html.escape(conclusion_label(status))}</span></div>
   <h3>{html.escape(str(run['displayTitle']))}</h3>
   <p class="version">{html.escape(versions_text)}</p>
   <p class="profiles">{html.escape(profile_preview)}</p>
   <p class="counts">{total} tests{(' · ' + html.escape(counts_text)) if counts_text else ''}</p>
-  <div class="card-bottom"><span>{created:%H:%M} UTC · <a href="{html.escape(str(run['commitUrl']))}">{html.escape(str(run['shortSha']))}</a> · <a href="{html.escape(str(run['runUrl']))}">Actions</a></span><a class="report-link" href="{html.escape(str(run['path']))}/index.html">Open report →</a></div>
+  <div class="card-bottom"><span>{created:%H:%M} UTC · <a href="{html.escape(str(run['commitUrl']))}">{html.escape(str(run['shortSha']))}</a> · <a href="{html.escape(str(run['runUrl']))}">{html.escape(run_link_label)}</a></span><a class="report-link" href="{html.escape(str(run['path']))}/index.html">Open report →</a></div>
 </article>'''
             )
         sections.append(
@@ -235,7 +256,7 @@ def render_index(site_dir: Path, runs: list[dict[str, Any]], retention_days: int
     .day {{ margin-top:34px; }} .day h2 {{ display:flex; align-items:baseline; justify-content:space-between; margin:0 0 13px; font-size:24px; }} .day h2 span {{ color:var(--muted); font-size:13px; font-weight:500; }}
     .runs {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:15px; }}
     .run-card {{ display:flex; min-height:245px; flex-direction:column; padding:20px; border:1px solid var(--line); border-radius:15px; background:var(--paper); box-shadow:0 9px 26px rgba(30,41,59,.05); }}
-    .card-top,.card-bottom {{ display:flex; align-items:center; justify-content:space-between; gap:12px; }} .workflow {{ color:var(--accent); font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; }}
+    .card-top,.card-bottom {{ display:flex; align-items:center; justify-content:space-between; gap:12px; }} .workflow {{ color:var(--accent); font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; }} .source {{ margin-left:8px; color:var(--muted); font-weight:700; }}
     .status {{ padding:5px 9px; border-radius:999px; background:#eef1f5; color:#475467; font-size:12px; font-weight:800; }} .status.success {{ color:var(--success); background:#e8f7ef; }} .status.failure {{ color:var(--danger); background:#fff0ee; }}
     h3 {{ margin:21px 0 10px; font-size:20px; line-height:1.3; }} .version {{ margin:0 0 8px; font-weight:750; }} .profiles,.counts {{ margin:0 0 8px; color:var(--muted); font-size:14px; line-height:1.45; }}
     .card-bottom {{ margin-top:auto; padding-top:18px; border-top:1px solid #edf0f4; color:var(--muted); font-size:13px; }} a {{ color:var(--accent); }} .report-link {{ font-weight:800; text-decoration:none; white-space:nowrap; }}
@@ -245,16 +266,17 @@ def render_index(site_dir: Path, runs: list[dict[str, Any]], retention_days: int
   </style>
 </head>
 <body>
-  <header><p class="eyebrow">Semaphore UI · Integration tests</p><h1>Allure report history</h1><p class="intro">Reports from trusted main-branch CI, configuration-matrix and release-upgrade runs, grouped by day and retained for {retention_days} days.</p><div class="summary"><span>{len(runs)} published runs</span><span>{len(versions)} version labels</span><span>Updated {generated_at}</span></div></header>
+  <header><p class="eyebrow">Semaphore UI · Integration tests</p><h1>Allure report history</h1><p class="intro">Reports from trusted main-branch CI, configuration-matrix and release-upgrade runs on GitHub runners and from Orbantix runs, grouped by day and retained for {retention_days} days.</p><div class="summary"><span>{len(runs)} published runs</span><span>{len(versions)} version labels</span><span>Updated {generated_at}</span></div></header>
   <main>
-    <div class="filters"><label>Workflow<select id="workflow"><option value="">All workflows</option>{workflow_options}</select></label><label>Semaphore version<select id="version"><option value="">All versions</option>{version_options}</select></label></div>
+    <div class="filters"><label>Workflow<select id="workflow"><option value="">All workflows</option>{workflow_options}</select></label><label>Semaphore version<select id="version"><option value="">All versions</option>{version_options}</select></label><label>Source<select id="source"><option value="">All sources</option>{source_options}</select></label></div>
     <div id="history">{''.join(sections)}</div>{empty_message}
   </main>
-  <footer>Generated from GitHub Actions artifacts. Pull-request and external-environment runs are intentionally excluded.</footer>
+  <footer>Generated from GitHub Actions and Orbantix artifacts. Pull-request runs are intentionally excluded.</footer>
   <script>
-    const workflow=document.querySelector('#workflow'),version=document.querySelector('#version'),empty=document.querySelector('.empty');
-    function filterRuns(){{let visible=0;document.querySelectorAll('.run-card').forEach(card=>{{const show=(!workflow.value||card.dataset.workflow===workflow.value)&&(!version.value||card.dataset.versions.split('|').includes(version.value));card.hidden=!show;if(show)visible++;}});document.querySelectorAll('.day').forEach(day=>day.hidden=![...day.querySelectorAll('.run-card')].some(card=>!card.hidden));empty.style.display=visible?'none':'block';}}
-    workflow.addEventListener('change',filterRuns);version.addEventListener('change',filterRuns);
+    const workflow=document.querySelector('#workflow'),version=document.querySelector('#version'),source=document.querySelector('#source'),empty=document.querySelector('.empty');
+    function filterWorkflows(){{[...workflow.options].forEach(option=>{{option.hidden=option.disabled=!!option.value&&!!source.value&&!option.dataset.sources.split('|').includes(source.value);}});if(workflow.selectedOptions[0].hidden)workflow.value='';}}
+    function filterRuns(){{let visible=0;document.querySelectorAll('.run-card').forEach(card=>{{const show=(!source.value||card.dataset.source===source.value)&&(!workflow.value||card.dataset.workflow===workflow.value)&&(!version.value||card.dataset.versions.split('|').includes(version.value));card.hidden=!show;if(show)visible++;}});document.querySelectorAll('.day').forEach(day=>day.hidden=![...day.querySelectorAll('.run-card')].some(card=>!card.hidden));empty.style.display=visible?'none':'block';}}
+    source.addEventListener('change',()=>{{filterWorkflows();filterRuns();}});workflow.addEventListener('change',filterRuns);version.addEventListener('change',filterRuns);
   </script>
 </body>
 </html>
@@ -268,17 +290,17 @@ def write_latest_redirects(site_dir: Path, runs: list[dict[str, Any]]) -> None:
         shutil.rmtree(latest_dir)
     seen: set[str] = set()
     for run in runs:
-        workflow_slug = slug(str(run["workflow"]))
-        if workflow_slug in seen:
+        key = run_key(run_source(run), slug(str(run["workflow"])))
+        if key in seen:
             continue
-        seen.add(workflow_slug)
+        seen.add(key)
         target = f"../../{run['path']}/index.html"
-        destination = latest_dir / workflow_slug
+        destination = latest_dir / key
         destination.mkdir(parents=True, exist_ok=True)
         destination.joinpath("index.html").write_text(
             "<!doctype html><html><head><meta charset=\"utf-8\">"
             f"<meta http-equiv=\"refresh\" content=\"0; url={html.escape(target)}\">"
-            f"<title>Latest {html.escape(str(run['workflow']))} report</title></head>"
+            f"<title>Latest {html.escape(str(run['workflow']))} report ({html.escape(SOURCE_LABELS.get(run_source(run), run_source(run)))})</title></head>"
             f"<body><a href=\"{html.escape(target)}\">Open latest report</a></body></html>\n",
             encoding="utf-8",
         )
@@ -290,7 +312,9 @@ def archive_run(args: argparse.Namespace) -> None:
     report_metadata = load_json(args.source_dir / "report-metadata.json")
     created_at = parse_timestamp(args.created_at)
     workflow_slug = slug(args.workflow)
-    relative_path = Path("reports") / created_at.date().isoformat() / workflow_slug / f"{args.run_id}-{args.run_attempt}"
+    relative_path = (
+        Path("reports") / created_at.date().isoformat() / run_key(args.source, workflow_slug) / f"{args.run_id}-{args.run_attempt}"
+    )
     destination = args.site_dir / relative_path
     if destination.exists():
         shutil.rmtree(destination)
@@ -299,6 +323,7 @@ def archive_run(args: argparse.Namespace) -> None:
 
     run_metadata = {
         **report_metadata,
+        "source": args.source,
         "workflow": args.workflow,
         "workflowSlug": workflow_slug,
         "displayTitle": args.display_title,
@@ -346,6 +371,7 @@ def parser() -> argparse.ArgumentParser:
     archive = commands.add_parser("archive", help="Add one bundle to the bounded Pages history")
     archive.add_argument("--source-dir", type=Path, required=True)
     archive.add_argument("--site-dir", type=Path, required=True)
+    archive.add_argument("--source", choices=sorted(SOURCE_LABELS), default=DEFAULT_SOURCE)
     archive.add_argument("--workflow", required=True)
     archive.add_argument("--display-title", required=True)
     archive.add_argument("--event", required=True)

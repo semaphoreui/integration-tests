@@ -7,6 +7,7 @@ import io.bookwright.annotations.OwnerDanil;
 import io.bookwright.api.model.semaphore.Integration;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreIntegrationFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreIntegrationFixtures.WebhookAuthentication;
 import io.bookwright.junit.Precondition;
 import io.bookwright.junit.Preconditions;
 import io.bookwright.junit.TestStore;
@@ -176,7 +177,7 @@ class WebhookIntegrationApiTest {
     api.semaphore()
         .integrations()
         .verifyIgnored(
-            integration.projectId(), alias, fixture.invalidTokenHeaders(), fixture.payload());
+            integration.projectId(), alias, fixture.invalidTokenHeaders(), fixture.payloadJson());
 
     assertThat(api.semaphore().tasks().getTasks(integration.projectId())).isEmpty();
   }
@@ -196,7 +197,7 @@ class WebhookIntegrationApiTest {
     api.semaphore()
         .integrations()
         .verifyIgnored(
-            integration.projectId(), alias, fixture.unmatchedHeaders(), fixture.payload());
+            integration.projectId(), alias, fixture.unmatchedHeaders(), fixture.payloadJson());
 
     assertThat(api.semaphore().tasks().getTasks(integration.projectId())).isEmpty();
   }
@@ -225,7 +226,7 @@ class WebhookIntegrationApiTest {
     var dispatch =
         api.semaphore()
             .integrations()
-            .dispatch(alias, fixture.acceptedHeaders(), fixture.payload());
+            .dispatch(alias, fixture.acceptedHeaders(), fixture.payloadJson());
     var task =
         api.semaphore().tasks().waitUntilTaskSucceeds(integration.projectId(), dispatch.taskId());
 
@@ -239,8 +240,98 @@ class WebhookIntegrationApiTest {
         .waitUntilTaskOutputContains(integration.projectId(), task.id(), fixture.outputMarker());
   }
 
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("GitHub SHA-256 signature accepts only the original webhook payload")
+  void githubSignatureAuthenticatesWebhook(
+      ApiSteps api, SemaphoreFixtures core, SemaphoreIntegrationFixtures fixture) {
+    verifyWebhookAuthentication(api, core, fixture, fixture.githubAuthentication());
+  }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Generic HMAC-SHA256 accepts only the original webhook payload")
+  void genericHmacAuthenticatesWebhook(
+      ApiSteps api, SemaphoreFixtures core, SemaphoreIntegrationFixtures fixture) {
+    verifyWebhookAuthentication(api, core, fixture, fixture.hmacAuthentication());
+  }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Generic HMAC-SHA512 accepts only the original webhook payload")
+  void genericHmacSha512AuthenticatesWebhook(
+      ApiSteps api, SemaphoreFixtures core, SemaphoreIntegrationFixtures fixture) {
+    verifyWebhookAuthentication(api, core, fixture, fixture.hmacSha512Authentication());
+  }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Bitbucket SHA-256 signature accepts only the original webhook payload")
+  void bitbucketSignatureAuthenticatesWebhook(
+      ApiSteps api, SemaphoreFixtures core, SemaphoreIntegrationFixtures fixture) {
+    verifyWebhookAuthentication(api, core, fixture, fixture.bitbucketAuthentication());
+  }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Basic authentication requires both the configured login and password")
+  void basicCredentialsAuthenticateWebhook(
+      ApiSteps api, SemaphoreFixtures core, SemaphoreIntegrationFixtures fixture) {
+    verifyWebhookAuthentication(api, core, fixture, fixture.basicAuthentication());
+  }
+
+  private void verifyWebhookAuthentication(
+      ApiSteps api,
+      SemaphoreFixtures core,
+      SemaphoreIntegrationFixtures fixture,
+      WebhookAuthentication authentication) {
+    var integration = createIntegration(api, core, fixture, authentication);
+    var alias = api.semaphore().integrations().createProjectAlias(integration.projectId());
+
+    api.semaphore()
+        .integrations()
+        .addMatcher(
+            integration.projectId(), integration.id(), fixture.matcherRequest(integration.id()));
+    api.semaphore()
+        .integrations()
+        .addExtractValue(
+            integration.projectId(), integration.id(), fixture.releaseExtractor(integration.id()));
+    api.semaphore()
+        .integrations()
+        .addExtractValue(
+            integration.projectId(), integration.id(), fixture.traceExtractor(integration.id()));
+    api.semaphore()
+        .integrations()
+        .verifyIgnored(
+            integration.projectId(),
+            alias,
+            authentication.rejectedHeaders(),
+            fixture.payloadJson());
+
+    var dispatch =
+        api.semaphore()
+            .integrations()
+            .dispatch(alias, authentication.acceptedHeaders(), fixture.payloadJson());
+    var task =
+        api.semaphore().tasks().waitUntilTaskSucceeds(integration.projectId(), dispatch.taskId());
+
+    assertThat(dispatch.integrationId()).isEqualTo(integration.id());
+    assertThat(task.integrationId()).isEqualTo(integration.id());
+    api.semaphore()
+        .tasks()
+        .waitUntilTaskOutputContains(integration.projectId(), task.id(), fixture.outputMarker());
+  }
+
   private Integration createIntegration(
       ApiSteps api, SemaphoreFixtures core, SemaphoreIntegrationFixtures fixture) {
+    return createIntegration(api, core, fixture, fixture.tokenAuthentication());
+  }
+
+  private Integration createIntegration(
+      ApiSteps api,
+      SemaphoreFixtures core,
+      SemaphoreIntegrationFixtures fixture,
+      WebhookAuthentication authentication) {
     var project = api.semaphore().projects().createProject(fixture.projectRequest());
     var key = api.semaphore().accessKeys().createAndVerifyMasked(project.id(), fixture.authKey());
     var repository =
@@ -259,6 +350,8 @@ class WebhookIntegrationApiTest {
                 fixture.templateRequest(project.id(), repository.id(), inventory.id()));
     return api.semaphore()
         .integrations()
-        .create(project.id(), fixture.integrationRequest(project.id(), template.id(), key.id()));
+        .create(
+            project.id(),
+            fixture.integrationRequest(project.id(), template.id(), key.id(), authentication));
   }
 }

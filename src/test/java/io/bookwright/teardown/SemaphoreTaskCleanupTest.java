@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.bookwright.api.UnexpectedResponseException;
 import io.bookwright.api.model.semaphore.IntegrationAlias;
+import io.bookwright.api.model.semaphore.WebhookHeaders;
 import io.bookwright.api.semaphore.SemaphoreSessionApis;
 import io.bookwright.api.semaphore.integrations.SemaphoreIntegrationsApi;
 import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
@@ -255,7 +256,10 @@ class SemaphoreTaskCleanupTest {
             retrofit.create(SemaphoreIntegrationsApi.class),
             retrofit.create(SemaphoreTasksApi.class),
             storage)
-        .dispatch(new IntegrationAlias(1, server.url("/webhook").toString()), Map.of(), Map.of());
+        .dispatch(
+            new IntegrationAlias(1, server.url("/webhook").toString()),
+            new WebhookHeaders(Map.of()),
+            "{}");
     server.enqueue(task("running"));
     server.enqueue(new MockResponse().setResponseCode(204));
     server.enqueue(task("stopped"));
@@ -281,7 +285,10 @@ class SemaphoreTaskCleanupTest {
             retrofit.create(SemaphoreTasksApi.class),
             storage)
         .verifyIgnored(
-            7, new IntegrationAlias(1, server.url("/webhook").toString()), Map.of(), Map.of());
+            7,
+            new IntegrationAlias(1, server.url("/webhook").toString()),
+            new WebhookHeaders(Map.of()),
+            "{}");
 
     assertThat(storage.pollLast()).isNull();
     assertThat(requests()).containsExactly("POST /webhook");
@@ -300,8 +307,8 @@ class SemaphoreTaskCleanupTest {
                     .verifyIgnored(
                         7,
                         new IntegrationAlias(1, server.url("/webhook").toString()),
-                        Map.of(),
-                        Map.of()))
+                        new WebhookHeaders(Map.of()),
+                        "{}"))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("unexpectedly launched task 11 for webhook alias 1");
     server.enqueue(task("running"));

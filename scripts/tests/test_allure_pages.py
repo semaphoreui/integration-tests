@@ -87,6 +87,7 @@ class AllurePagesTest(unittest.TestCase):
                 {
                     "source_dir": source,
                     "site_dir": site,
+                    "source": "github",
                     "workflow": "CI",
                     "display_title": "Fix <output>",
                     "event": "push",
@@ -115,6 +116,74 @@ class AllurePagesTest(unittest.TestCase):
             self.assertTrue((site / "latest" / "ci" / "index.html").is_file())
             manifest = json.loads((site / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual([200], [run["runId"] for run in manifest["runs"]])
+
+    def test_separates_orbantix_runs_from_github_runs(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "current"
+            source.mkdir()
+            (source / "index.html").write_text("orbantix report", encoding="utf-8")
+            (source / "report-metadata.json").write_text(
+                json.dumps({"schemaVersion": 1, "title": "Orbantix", "versions": ["v2.19.12"], "reports": []}),
+                encoding="utf-8",
+            )
+            site = root / "site"
+            # A run archived before sources existed must still count as a GitHub run.
+            github_run = site / "reports" / "2026-01-15" / "ci" / "200-1"
+            github_run.mkdir(parents=True)
+            (github_run / "run.json").write_text(
+                json.dumps(
+                    {
+                        "workflow": "CI",
+                        "displayTitle": "github",
+                        "conclusion": "success",
+                        "runId": 200,
+                        "createdAt": "2026-01-15T10:00:00Z",
+                        "date": "2026-01-15",
+                        "commitUrl": "https://github.com/example/repo/commit/abc",
+                        "shortSha": "abc",
+                        "runUrl": "https://github.com/example/repo/actions/runs/200",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            args = type(
+                "Args",
+                (),
+                {
+                    "source_dir": source,
+                    "site_dir": site,
+                    "source": "orbantix",
+                    "workflow": "CI",
+                    "display_title": "Nightly external",
+                    "event": "schedule",
+                    "conclusion": "failure",
+                    "run_id": 200,
+                    "run_attempt": 1,
+                    "run_number": 7,
+                    "created_at": "2026-01-15T11:30:00Z",
+                    "head_sha": "1234567890abcdef",
+                    "repository": "example/repo",
+                    "run_url": "https://orbantix.example/tasks/200",
+                    "retention_days": 30,
+                    "max_runs": 60,
+                    "now": "2026-01-15T12:00:00Z",
+                },
+            )()
+
+            allure_pages.archive_run(args)
+
+            current = site / "reports" / "2026-01-15" / "orbantix-ci" / "200-1"
+            self.assertEqual("orbantix", json.loads((current / "run.json").read_text(encoding="utf-8"))["source"])
+            self.assertTrue((github_run / "run.json").is_file())
+            self.assertIn("ci/200-1", (site / "latest" / "ci" / "index.html").read_text(encoding="utf-8"))
+            self.assertIn("orbantix-ci/200-1", (site / "latest" / "orbantix-ci" / "index.html").read_text(encoding="utf-8"))
+            index = (site / "index.html").read_text(encoding="utf-8")
+            self.assertIn('<select id="source">', index)
+            self.assertIn('data-source="orbantix"', index)
+            self.assertIn('data-source="github"', index)
+            self.assertIn('data-sources="github|orbantix"', index)
+            self.assertIn('href="https://orbantix.example/tasks/200">Orbantix</a>', index)
 
 
 if __name__ == "__main__":

@@ -67,6 +67,8 @@ DEFAULT_APP_REPOSITORY=semaphoreui/semaphore
 DEFAULT_APP_BRANCH=develop
 DEFAULT_PR_IMAGE_TAG_PREFIX=ci-pr
 DEFAULT_APP_DOCKERFILE=deployment/docker/server/Dockerfile
+# Published images serve both the GitHub-hosted amd64 runners and the arm64 self-hosted runners.
+DEFAULT_PUSH_PLATFORMS=linux/amd64,linux/arm64
 
 fail() {
   printf 'app-source: %s\n' "$1" >&2
@@ -325,16 +327,37 @@ build_push_enabled() {
   [ "${APP_BUILD_PUSH:-$build_push_default}" = "true" ]
 }
 
+# Platforms of a pushed build; a local build has none and follows the machine it runs on.
+push_platforms() {
+  printf '%s' "${APP_BUILD_PLATFORM:-$DEFAULT_PUSH_PLATFORMS}"
+}
+
 image_exists() {
   command -v docker >/dev/null 2>&1 || fail "docker is required to inspect $app_image"
   if build_push_enabled; then
     # The registry is the authority: build and test run on different CI machines, so a locally
-    # present image says nothing about what the test job will be able to pull.
-    docker manifest inspect "$app_image" >/dev/null 2>&1
+    # present image says nothing about what the test job will be able to pull. A tag pushed
+    # before a platform was added (amd64 only) lacks it and is rebuilt under the same name.
+    published_platforms=$(docker manifest inspect --verbose "$app_image" 2>/dev/null \
+      | tr -d ' \t\n' | grep -o '"architecture":"[^"]*","os":"[^"]*"' \
+      | sed 's/"architecture":"\([^"]*\)","os":"\([^"]*\)"/\2\/\1/') || return 1
+    for platform in $(push_platforms | tr ',' ' '); do
+      printf '%s\n' "$published_platforms" | grep -qx "$platform" || return 1
+    done
   else
-    # Without a push the image stays on this machine, so the local store is the authority.
-    docker image inspect "$app_image" >/dev/null 2>&1
+    # Without a push the image stays on this machine, so the local store is the authority. An
+    # image of another architecture does not count: a host without emulation fails to start it
+    # with "exec format error", and older CI tags were published for linux/amd64 only.
+    local_image_arch=$(docker image inspect --format '{{.Architecture}}' "$app_image" 2>/dev/null) \
+      || return 1
+    [ "$local_image_arch" = "$(daemon_arch)" ]
   fi
+}
+
+# The architecture containers run on is the daemon's, not the one of the machine this script
+# runs on: the test runner container talks to the host daemon through its socket.
+daemon_arch() {
+  docker version --format '{{.Server.Arch}}' 2>/dev/null
 }
 
 # A local run that cannot push can still save the whole build by pulling an image CI already
@@ -343,7 +366,13 @@ pull_existing_image() {
   command -v docker >/dev/null 2>&1 || return 1
   docker manifest inspect "$app_image" >/dev/null 2>&1 || return 1
   printf 'Pulling the application image published for this commit...\n'
-  docker pull --quiet "$app_image" >/dev/null 2>&1
+  docker pull --quiet "$app_image" >/dev/null 2>&1 || return 1
+  image_exists && return 0
+  printf 'The published image is not built for %s; building it locally instead\n' "$(daemon_arch)"
+  # The tag is taken over by the local build; dropping it now keeps a failed build from leaving
+  # an image behind that the next run would try to start.
+  docker image rm "$app_image" >/dev/null 2>&1 || true
+  return 1
 }
 
 # refs/pull/<n>/head for a pull request, refs/heads/<branch> for a branch.
@@ -404,12 +433,12 @@ build_and_push() {
     --file "$checkout_dir/$dockerfile" \
     --tag "$app_image" \
     --provenance false
-  # CI pins the platform its runners test on. A local build follows the machine it runs on,
-  # because an emulated foreign platform would make every local run unusably slow.
-  if [ -n "${APP_BUILD_PLATFORM:-}" ]; then
+  # CI publishes every platform its runners test on. A local build follows the machine it runs
+  # on, because an emulated foreign platform would make every local run unusably slow.
+  if build_push_enabled; then
+    set -- "$@" --platform "$(push_platforms)"
+  elif [ -n "${APP_BUILD_PLATFORM:-}" ]; then
     set -- "$@" --platform "$APP_BUILD_PLATFORM"
-  elif build_push_enabled; then
-    set -- "$@" --platform linux/amd64
   fi
   if [ "${APP_BUILD_CACHE:-}" = "gha" ]; then
     set -- "$@" --cache-from type=gha --cache-to type=gha,mode=max
