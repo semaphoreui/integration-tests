@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/38367403984",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 95,
+      "counts": {
+        "failed": 0,
+        "broken": 6,
+        "passed": 59,
+        "skipped": 30,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 86,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 86,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "source": "github",
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #41 from semaphoreui/codex/project-resource-crud",
+  "event": "push",
+  "conclusion": "cancelled",
+  "runId": 38367403984,
+  "runAttempt": 1,
+  "runNumber": 136,
+  "createdAt": "2026-10-13T08:09:54Z",
+  "date": "2026-10-13",
+  "headSha": "971cbce7ecd29bfc4e7e0a38058e55945344286d",
+  "shortSha": "971cbce",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/971cbce7ecd29bfc4e7e0a38058e55945344286d"
+}
