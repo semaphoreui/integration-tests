@@ -3,11 +3,13 @@ package io.bookwright.junit;
 import io.bookwright.api.model.CreatedBooking;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.SemaphoreAuthLifecycleUsers;
+import io.bookwright.api.model.semaphore.SemaphoreTestUser;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.api.model.semaphore.User;
 import io.bookwright.config.Configs;
 import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreProjectIsolationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTotpFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.util.TestData;
@@ -100,6 +102,17 @@ public enum Precondition implements IPrecondition {
         api.semaphore().users().disableTotpAfterTest(user);
       }),
 
+  SEMAPHORE_PROJECT_ISOLATION_ACTOR_EXISTS(
+      "Create a disposable non-admin owner of a separate Semaphore project",
+      (api, store) -> {
+        var fixtures = SemaphoreProjectIsolationFixtures.from(store.testData());
+        var user = api.semaphore().users().createDisposable(fixtures.user());
+        store.putSemaphoreIsolationUser(new SemaphoreTestUser(user, fixtures.user().password()));
+        var project = api.semaphore().projects().createProject(fixtures.accessibleProject());
+        store.putSemaphoreAccessibleProject(project);
+        api.semaphore().users().addToProject(project.id(), user.id(), fixtures.role());
+      }),
+
   SEMAPHORE_RBAC_USER_EXISTS(
       "Ensure the Semaphore RBAC fixture user exists",
       (api, store) -> {
@@ -135,6 +148,8 @@ public enum Precondition implements IPrecondition {
 
   static final String BOOKING_KEY = "createdBooking";
   static final String SEMAPHORE_PROJECT_KEY = "semaphoreProject";
+  static final String SEMAPHORE_ACCESSIBLE_PROJECT_KEY = "semaphoreAccessibleProject";
+  static final String SEMAPHORE_ISOLATION_USER_KEY = "semaphoreIsolationUser";
   static final String SEMAPHORE_ACCESS_KEY_KEY = "semaphoreAccessKey";
   static final String SEMAPHORE_TEMPLATE_KEY = "semaphoreTemplate";
   static final String SEMAPHORE_TOTP_USER_KEY = "semaphoreTotpUser";
