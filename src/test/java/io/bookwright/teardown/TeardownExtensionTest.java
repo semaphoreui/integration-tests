@@ -33,6 +33,23 @@ class TeardownExtensionTest {
   }
 
   @Test
+  void allPreparationsRunBeforeAnyResourceDeletion() {
+    TeardownStorage storage = new TeardownStorage();
+    List<String> order = new ArrayList<>();
+    storage.push("project", () -> order.add("delete project"));
+    storage.beforeCleanup("running task", () -> order.add("stop running"));
+    storage.push("running task", () -> order.add("delete running"));
+    storage.beforeCleanup("queued task", () -> order.add("stop queued"));
+    storage.push("queued task", () -> order.add("delete queued"));
+
+    TeardownExtension.execute(storage, true, false);
+
+    assertThat(order)
+        .containsExactly(
+            "stop queued", "stop running", "delete queued", "delete running", "delete project");
+  }
+
+  @Test
   void preservesPrimaryTestFailure() {
     assertThatCode(() -> TeardownExtension.execute(failingStorage(), true, true))
         .doesNotThrowAnyException();
@@ -49,11 +66,25 @@ class TeardownExtensionTest {
     TeardownStorage storage = new TeardownStorage();
     List<String> deleted = new ArrayList<>();
     storage.push("upgrade fixture", () -> deleted.add("upgrade fixture"));
+    storage.beforeCleanup("upgrade task", () -> deleted.add("stopped upgrade task"));
 
     storage.retainCreatedData();
     TeardownExtension.execute(storage, true, false);
 
     assertThat(deleted).isEmpty();
+  }
+
+  @Test
+  void explicitCleanupDiscardsPreparationsAndDeletions() {
+    TeardownStorage storage = new TeardownStorage();
+    List<String> actions = new ArrayList<>();
+    storage.beforeCleanup("stop", () -> actions.add("stop"));
+    storage.push("delete", () -> actions.add("delete"));
+
+    storage.discardAfterExplicitCleanup();
+    TeardownExtension.execute(storage, true, false);
+
+    assertThat(actions).isEmpty();
   }
 
   private TeardownStorage failingStorage() {

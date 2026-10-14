@@ -13,6 +13,7 @@ import io.bookwright.api.model.semaphore.IntegrationUpdateRequest;
 import io.bookwright.api.model.semaphore.WebhookHeaders;
 import io.bookwright.api.semaphore.integrations.SemaphoreIntegrationsApi;
 import io.bookwright.api.semaphore.tasks.SemaphoreTasksApi;
+import io.bookwright.teardown.SemaphoreTaskCleanup;
 import io.bookwright.teardown.TeardownStorage;
 import io.bookwright.util.Calls;
 import io.qameta.allure.Param;
@@ -157,24 +158,24 @@ public class IntegrationSteps {
     Response<Void> response =
         Calls.expectStatus(api.dispatch(alias.url(), headers.values(), jsonBody(payload)), 204);
     IntegrationDispatch dispatch = requiredDispatch(response.headers(), alias);
-    teardown.push(
-        "Delete webhook-created Semaphore task " + dispatch.taskId(),
-        () ->
-            Calls.expectStatus(tasksApi.deleteTask(dispatch.projectId(), dispatch.taskId()), 204));
+    SemaphoreTaskCleanup.register(tasksApi, teardown, dispatch.projectId(), dispatch.taskId());
     return dispatch;
   }
 
   @Step("Verify Semaphore ignores webhook sent through {alias.url}")
   public void verifyIgnored(
+      long projectId,
       IntegrationAlias alias,
       @Param(mode = Parameter.Mode.HIDDEN) WebhookHeaders headers,
       String payload) {
     Response<Void> response =
         Calls.expectStatus(api.dispatch(alias.url(), headers.values(), jsonBody(payload)), 204);
-    if (response.headers().get("X-Semaphore-Task-ID") != null) {
+    Long taskId = optionalHeader(response.headers(), "X-Semaphore-Task-ID", alias);
+    if (taskId != null) {
+      SemaphoreTaskCleanup.register(tasksApi, teardown, projectId, taskId);
       throw new IllegalStateException(
           "Semaphore unexpectedly launched task %s for webhook alias %s"
-              .formatted(response.headers().get("X-Semaphore-Task-ID"), alias.id()));
+              .formatted(taskId, alias.id()));
     }
   }
 

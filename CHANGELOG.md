@@ -34,6 +34,11 @@ All notable changes to the Semaphore UI test automation project are documented i
   container reached through a Host mapping. `git_https_fixture_dir` gives each HTTPS fixture its
   own generated certificate.
 - `run.sh start` / `exec` / `publish` / `stop` keep one runner container for a pipeline of separate Semaphore tasks (up, test, cleanup, publication), so they share one checkout's `build/` instead of each template's own; `exec test` records the outcome in `build/run-conclusion`, which `publish-external-results.sh` uses as the default `RUN_CONCLUSION`, and `RUN_URL` defaults to `SEMAPHORE_WORKFLOW_URL`, then to the task link `SEMAPHORE_TASK_DETAILS_URL`. The runner image now includes `python3`.
+- Task-history pagination coverage for project and template lists, exact next-page headers,
+  stable cursors after insertion, template filtering, and legacy limit/count compatibility.
+- Cross-project task isolation coverage for task details, structured/raw output, template launch,
+  and task stop, including foreign IDs in an accessible project and membership revocation in an
+  existing session. Twelve API cases use disposable fixtures and verify mutation side effects.
 - `scripts/publish-external-results.sh` and a `workflow_dispatch` job in `publish-pages.yml` that publish Allure results of runs outside GitHub runners: the server pushes raw results to an `orbantix-results/<run id>` branch, GitHub builds, archives and deploys the report and deletes the branch.
 - Source filter (`GitHub` / `Orbantix`) on the Allure Pages history and an `archive --source` option that records where each run was executed; Orbantix runs are stored and redirected under `orbantix-<workflow>` keys so they never collide with GitHub runs.
 - Project credential-mapping (`host_configs`) coverage: API contract for host and URL mappings

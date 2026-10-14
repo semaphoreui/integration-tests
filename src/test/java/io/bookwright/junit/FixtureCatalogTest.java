@@ -31,12 +31,27 @@ class FixtureCatalogTest {
 
     assertThat(FixtureCatalog.resolve(SemaphoreTotpFixtures.class, config, TEST_DATA))
         .isExactlyInstanceOf(SemaphoreTotpFixtures.class);
+    assertThat(FixtureCatalog.resolve(SemaphoreAuthLifecycleFixtures.class, config, TEST_DATA))
+        .isExactlyInstanceOf(SemaphoreAuthLifecycleFixtures.class);
     assertThat(FixtureCatalog.resolve(SemaphoreUpgradeFixtures.class, config, TEST_DATA))
         .isExactlyInstanceOf(SemaphoreUpgradeFixtures.class);
     assertThat(FixtureCatalog.resolve(SemaphoreBackupFixtures.class, config, TEST_DATA))
         .isExactlyInstanceOf(SemaphoreBackupFixtures.class);
     assertThat(FixtureCatalog.resolve(SemaphoreFixtures.class, config, TEST_DATA))
         .isExactlyInstanceOf(SemaphoreFixtures.class);
+  }
+
+  @Test
+  void totpAccountsAreReproducibleAndIsolatedByTestSeed() {
+    var first = SemaphoreTotpFixtures.from(TEST_DATA);
+    var second = SemaphoreTotpFixtures.from(new TestData(42L, 85L, "another-totp-test"));
+
+    assertThat(SemaphoreTotpFixtures.from(TEST_DATA)).isEqualTo(first);
+    assertThat(first.apiAccount().username()).isNotEqualTo(second.apiAccount().username());
+    assertThat(first.uiAccount().username()).isNotEqualTo(second.uiAccount().username());
+    assertThat(first.apiAccount().username()).isNotEqualTo(first.uiAccount().username());
+    assertThat(first.apiAccount().admin()).isFalse();
+    assertThat(first.uiAccount().admin()).isTrue();
   }
 
   @Test

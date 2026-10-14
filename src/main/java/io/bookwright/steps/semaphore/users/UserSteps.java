@@ -67,6 +67,11 @@ public class UserSteps {
     }
   }
 
+  @Step("Register cleanup before enabling TOTP in the browser for Semaphore user {user.id}")
+  public void disableTotpAfterTest(User user) {
+    teardown.push("Disable TOTP for Semaphore user " + user.id(), () -> ensureTotpDisabled(user));
+  }
+
   private void disableTotpIfPresent(long userId, long totpId) {
     var response = Calls.response(api.disableTotp(userId, totpId));
     if (response.code() != 204 && response.code() != 400) {
@@ -185,7 +190,8 @@ public class UserSteps {
     Calls.expectStatus(api.addProjectUser(projectId, new ProjectMemberRequest(userId, role)), 204);
     teardown.push(
         "Remove Semaphore user %d from project %d".formatted(userId, projectId),
-        () -> Calls.expectStatus(api.removeProjectUser(projectId, userId), 204));
+        () ->
+            Calls.expectStatus(Calls.response(api.removeProjectUser(projectId, userId)), 204, 404));
   }
 
   @Step("Add user {userId} to Semaphore project {projectId} through an isolated session")
@@ -194,7 +200,13 @@ public class UserSteps {
         session.users().addProjectUser(projectId, new ProjectMemberRequest(userId, role)), 204);
     teardown.push(
         "Remove Semaphore user %d from project %d".formatted(userId, projectId),
-        () -> Calls.expectStatus(api.removeProjectUser(projectId, userId), 204));
+        () ->
+            Calls.expectStatus(Calls.response(api.removeProjectUser(projectId, userId)), 204, 404));
+  }
+
+  @Step("Remove Semaphore user {userId} from project {projectId}")
+  public void removeFromProject(long projectId, long userId) {
+    Calls.expectStatus(api.removeProjectUser(projectId, userId), 204);
   }
 
   @Step("Verify guest can read assigned Semaphore project {projectId}")

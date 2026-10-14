@@ -5,6 +5,7 @@ import io.bookwright.config.MainConfig;
 import io.bookwright.fixtures.database.HotelDatabaseFixtures;
 import io.bookwright.fixtures.local.LocalUserFixtures;
 import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreAccessKeyCrudFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreBackupFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreBranchIsolationFixtures;
@@ -19,17 +20,22 @@ import io.bookwright.fixtures.semaphore.SemaphoreHostConfigHttpsGitFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHostConfigSshFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHttpsGitFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreIntegrationFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreInventoryCrudFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLoginSecurityFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreOidcFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreProcessCleanupFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreProjectDeletionFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreProjectIsolationFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreRepositoryCrudFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreRunnerRoutingFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreScheduleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreShellOutputFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreStaticInventoryFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSurveyFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTaskHistoryFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTemplateCrudFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTerraformFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTokenFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTotpFixtures;
@@ -49,6 +55,9 @@ final class FixtureCatalog {
 
   private static final Map<Class<?>, FixtureDefinition<?>> FIXTURES =
       Map.ofEntries(
+          fixture(
+              SemaphoreTaskHistoryFixtures.class,
+              context -> SemaphoreTaskHistoryFixtures.from(context.testData())),
           fixture(SauceDemoFixtures.class, context -> SauceDemoFixtures.from(context.config())),
           fixture(LocalUserFixtures.class, context -> LocalUserFixtures.from(context.config())),
           fixture(HotelDatabaseFixtures.class, context -> HotelDatabaseFixtures.seeded()),
@@ -109,6 +118,22 @@ final class FixtureCatalog {
               context ->
                   SemaphoreProjectDeletionFixtures.from(context.config(), context.testData())),
           fixture(
+              SemaphoreProjectIsolationFixtures.class,
+              context -> SemaphoreProjectIsolationFixtures.from(context.testData())),
+          fixture(
+              SemaphoreAccessKeyCrudFixtures.class,
+              context -> SemaphoreAccessKeyCrudFixtures.from(context.testData())),
+          fixture(
+              SemaphoreInventoryCrudFixtures.class,
+              context -> SemaphoreInventoryCrudFixtures.from(context.testData())),
+          fixture(
+              SemaphoreRepositoryCrudFixtures.class,
+              context ->
+                  SemaphoreRepositoryCrudFixtures.from(context.config(), context.testData())),
+          fixture(
+              SemaphoreTemplateCrudFixtures.class,
+              context -> SemaphoreTemplateCrudFixtures.from(context.testData())),
+          fixture(
               SemaphoreRunnerRoutingFixtures.class,
               context -> SemaphoreRunnerRoutingFixtures.from(context.testData())),
           fixture(
@@ -129,7 +154,9 @@ final class FixtureCatalog {
           fixture(
               SemaphoreTerraformFixtures.class,
               context -> SemaphoreTerraformFixtures.from(context.config(), context.testData())),
-          fixture(SemaphoreTotpFixtures.class, context -> SemaphoreTotpFixtures.standard()),
+          fixture(
+              SemaphoreTotpFixtures.class,
+              context -> SemaphoreTotpFixtures.from(context.testData())),
           fixture(
               SemaphoreTokenFixtures.class,
               context -> SemaphoreTokenFixtures.from(context.testData())),

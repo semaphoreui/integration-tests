@@ -2,10 +2,13 @@ package io.bookwright.junit;
 
 import io.bookwright.api.AuthSession;
 import io.bookwright.api.model.CreatedBooking;
+import io.bookwright.api.model.semaphore.AccessKey;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.SemaphoreAuthLifecycleUsers;
+import io.bookwright.api.model.semaphore.SemaphoreTaskHistory;
 import io.bookwright.api.model.semaphore.SemaphoreTestUser;
 import io.bookwright.api.model.semaphore.Template;
+import io.bookwright.api.model.semaphore.User;
 import io.bookwright.util.TestData;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -67,6 +70,46 @@ public class TestStore {
 
   public Template semaphoreTemplate() {
     return getRequired(Precondition.SEMAPHORE_TEMPLATE_KEY, Template.class);
+  }
+
+  public SemaphoreTaskHistory semaphoreTaskHistory() {
+    return getRequired(Precondition.SEMAPHORE_TASK_HISTORY_KEY, SemaphoreTaskHistory.class);
+  }
+
+  void putSemaphoreTaskHistory(SemaphoreTaskHistory history) {
+    put(Precondition.SEMAPHORE_TASK_HISTORY_KEY, history);
+  }
+
+  public User semaphoreTotpUser() {
+    return getRequired(Precondition.SEMAPHORE_TOTP_USER_KEY, User.class);
+  }
+
+  void putSemaphoreTotpUser(User user) {
+    put(Precondition.SEMAPHORE_TOTP_USER_KEY, user);
+  }
+
+  public Project semaphoreAccessibleProject() {
+    return getRequired(Precondition.SEMAPHORE_ACCESSIBLE_PROJECT_KEY, Project.class);
+  }
+
+  public SemaphoreTestUser semaphoreIsolationUser() {
+    return getRequired(Precondition.SEMAPHORE_ISOLATION_USER_KEY, SemaphoreTestUser.class);
+  }
+
+  void putSemaphoreAccessibleProject(Project project) {
+    put(Precondition.SEMAPHORE_ACCESSIBLE_PROJECT_KEY, project);
+  }
+
+  void putSemaphoreIsolationUser(SemaphoreTestUser user) {
+    put(Precondition.SEMAPHORE_ISOLATION_USER_KEY, user);
+  }
+
+  public AccessKey semaphoreAccessKey() {
+    return getRequired(Precondition.SEMAPHORE_ACCESS_KEY_KEY, AccessKey.class);
+  }
+
+  void putSemaphoreAccessKey(AccessKey key) {
+    put(Precondition.SEMAPHORE_ACCESS_KEY_KEY, key);
   }
 
   void putBooking(CreatedBooking booking) {

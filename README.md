@@ -42,6 +42,10 @@ test-environment/profile test core-sqlite-local
 
 The command checks readiness on its own and adds the exact environment configuration to the Allure environment. Stop while keeping the SQLite volume: `test-environment/profile down core-sqlite-local`. Removing the state completely requires the explicit command `test-environment/profile clean core-sqlite-local --yes`.
 
+`SemaphoreProjectSmokeTest` focuses on creating linked resources and executing their template.
+Health, invalid login, schedule read/list, guest permissions, and non-member visibility run as
+independent smoke-tagged tests in their respective domain classes, with isolated setup and cleanup.
+
 The core suite also guards the project deletion lifecycle: after a task is stopped, the project and
 its dependent resources are deleted correctly. A known-defect canary for `v2.19.8` shows that deletion
 while `running` incorrectly returns `204`, leaves the executor running and ends with FK errors.
@@ -51,6 +55,7 @@ The reproduction and source boundary are described in
 Static inventory is verified in both standard formats — INI `static` and YAML `static-yaml`.
 For each format the scenario saves two groups with different host aliases and runs a template with a
 default `limit`. The task output confirms that only the selected group was executed.
+INI and YAML are independent parameterized cases, each with its own project and cleanup.
 
 The password-login security test compares responses for an existing and an unknown account, verifies
 the absence of a session cookie and the correct rejection of an empty password. On `v2.19.8` five consecutive
@@ -69,6 +74,8 @@ the release image. The minimal local module does not download providers; workspa
 `terraform-workspace` and `tofu-workspace` are confirmed by the real output of each tool. The attached
 Variable Group passes a secret of type `env` with the `TF_VAR_` prefix: the module compares its SHA-256 and
 prints only a safe marker, while the test excludes plaintext from the API, structured/raw output and Allure.
+Terraform and OpenTofu are independent parameterized cases with separate projects, workspaces,
+secrets, and cleanup. A failure in one engine does not prevent the other case from running.
 
 A short browser smoke on the same environment verifies password login, launching a prepared executable template through the UI, and that the project name is required before the request is submitted:
 
@@ -103,6 +110,10 @@ test-environment/profile test prod-postgres-runner
 The runner registers automatically, stores a long-lived token in a separate volume and is assigned as the default runner through the admin API. The API tests confirm `active`, `registered`, `is_default`, `online`, heartbeat, exact tag routing by the persisted `used_runner_id` and capacity `1`: the second task stays in `waiting` while the first one occupies the runner.
 
 When no suitable active runner is available, the behaviour differs from the capacity case: `v2.19.8` moves the task to `error: no runners available` instead of keeping it in the queue. This was reproduced for a temporarily disabled matching runner and for a non-existent tag; details are in `test-environment/runner-unavailable-routing-defect.md`.
+
+Capacity/queue admission, disabled-runner recovery, and unmatched-tag dispatch have independent
+tests and projects. The class remains isolated from other tests while it changes the shared runner;
+each case registers restoration of the original runner settings before changing them.
 
 Older releases lose secret survey variables before remote dispatch. The current-source profile runs
 the server and persistent runner from the same resolved application image and positively verifies
@@ -184,7 +195,7 @@ test-environment/profile up feature-totp-local
 test-environment/profile test feature-totp-local
 ```
 
-The shared `totpTest` covers API self-enrollment, `TOTP_REQUIRED`, an invalid and a valid RFC 6238 passcode, recovery, repeated enrollment and rejection of an already used recovery code. The browser scenario separately verifies the Security settings, QR/recovery-code rendering, the challenge and the recovery form. OTP material is redacted in HTTP and raw Allure JSON, and sensitive browser artifacts are not published on failure.
+The shared `totpTest` runs four independent API cases (enrollment, invalid passcode, valid passcode, recovery/re-enrollment/reuse) and four browser cases (Security/QR enrollment, invalid challenge, successful challenge, recovery). Each case gets a disposable seed-specific account through a precondition. Browser challenge/recovery cases prepare enrollment through the API; UI enrollment has its own test. Binding cleanup is registered before browser actions and accounts are deleted after each case. OTP material remains redacted in HTTP and raw Allure JSON, and sensitive browser artifacts are not published on failure.
 
 The dynamic runner profile verifies the start/finish webhook, launching a separate one-off runner and real task execution:
 
@@ -261,6 +272,27 @@ locally confirmed as of 2026-09-09, but not fully confirmed until their first su
 workflow run.
 The diagnostics are recorded in `test-environment/v2.19.8-regression-report.md`; the historical
 schema defect of the `v2.19.6 → v2.19.7` pair is in `test-environment/upgrade-report.md`.
+
+## Task history regression
+
+`TaskHistoryPaginationApiTest` covers project-wide and per-template `/tasks/last` history:
+newest-first order across pages, template filtering, exact `X-Has-Next` values (including a full
+final page and empty history), stable `before` cursors after a new task, and legacy `limit` with
+`count` precedence. There are eight cases; non-empty histories use per-test completed tasks
+from two interleaved templates.
+Preparation stays in preconditions; query fixtures are typed and history steps are separate from
+task execution steps. The existing `apiTest` task discovers this suite; `externalTest` does not.
+
+Run only this block on a prepared profile:
+
+```bash
+test-environment/profile test core-sqlite-local \
+  --tests io.bookwright.tests.semaphore.TaskHistoryPaginationApiTest
+```
+
+The same command accepts `core-postgres-local`. These are functional pagination checks, not a
+large-history performance benchmark; default/max page size and malformed query inputs are not
+covered by this block.
 
 ## CI
 
@@ -340,6 +372,24 @@ A separate RBAC suite pins the built-in `manager` and `task_runner` contracts. A
 
 The API token suite creates a time-limited token, verifies prefix-only listing, authenticates a separate Retrofit session through the Bearer header and creates a project. After revocation the same token gets `401`; creating an already expired token is rejected with `400`. The full value does not leak into the URL, step parameters or HTTP/Allure attachments: the creation response is deliberately hidden, Authorization is redacted, and delete uses the public eight-character prefix.
 
+Cross-project task isolation has three focused suites: `TaskReadIsolationApiTest` (details and
+structured/raw output), `TaskMutationIsolationApiTest` (launch and stop without side effects), and
+`ProjectMembershipRevocationApiTest` (access revoked in an already authenticated session). Each
+test creates a disposable non-admin owner of another project. Requests exercise both a foreign
+project URL and foreign resource IDs in the user's own project URL. The current application returns
+`404` for inaccessible projects and template launches, and `400` for mismatched task IDs; these
+statuses are asserted exactly, not as an arbitrary `4xx`. Membership removal must preserve access
+to the user's other project. These tests run in the existing API suite, not `externalTest`.
+
+Run only this block against a prepared local profile (also supported: `prod-postgres-runner`):
+
+```bash
+test-environment/profile test core-sqlite-local \
+  --tests io.bookwright.tests.semaphore.TaskReadIsolationApiTest \
+  --tests io.bookwright.tests.semaphore.TaskMutationIsolationApiTest \
+  --tests io.bookwright.tests.semaphore.ProjectMembershipRevocationApiTest
+```
+
 The user lifecycle suite verifies the sequence create → update → delete → absence → recreate supported by the Community API on a disposable typed fixture. The user model in the current Semaphore has no `active/disabled` field and no deactivate/reactivate endpoints, so such a contract is not imitated by substituting password/delete.
 
 The file inventory suite creates a repository-backed `type=file`, runs a playbook through an inventory file from the trusted Git fixture and verifies the saved `repository_id`. A separate safe canary pins a `v2.19.8` defect: create accepts the traversal path `../…`, although update correctly returns `400`; such an inventory is not executed.
@@ -360,15 +410,28 @@ when launching the deploy. Semaphore assigns the build a `start_version`, passes
 safe version markers. The deploy detail API stores the link, while the displayed version is taken from the
 nested `build_task` in the task history — the deploy task has no `version` field of its own.
 
-The survey/task override suite saves enum, integer, string, env-target and secret survey variables in the template, then runs `survey-overrides.yml` with overridden values, template/task arguments and Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. The task really runs with local execution and through the persistent runner, the secret is verified by SHA-256 under `no_log` and is absent from the structured/raw output. Unsupported survey targets and enum defaults outside their allowed values receive diagnosable `400` responses. The historical remote-dispatch and enum-default defects remain documented separately.
+The survey/task override suite saves enum, integer, string, env-target and secret survey variables in the template, then runs `survey-overrides.yml` with overridden values, template/task arguments and Ansible `limit`/`tags`/`skip_tags`/`diff`/`skip_galaxy_install`. The task really runs with local execution and through the persistent runner, the secret is verified by SHA-256 under `no_log` and is absent from the structured/raw output. Unsupported survey targets and enum defaults outside their allowed values receive diagnosable `400` responses in two independent tests, each with its own project and dependencies. The historical remote-dispatch and enum-default defects remain documented separately.
+
+Schedule validation has four independent negative cases: invalid cron, missing run time, past run
+time, and unsupported schedule type. Existing project/template preconditions isolate each case;
+cron validation only creates a project. Rejected creation also checks that no schedule was saved.
 
 The webhook integration suite creates a token-authenticated searchable integration, a project alias, a header matcher and extractors from the JSON body/header. Requests with a wrong token or event do not launch a task, while a valid webhook returns task identifiers, saves the link through `integration_id` and really passes the extracted values to the Ansible playbook. The token is stored in a `login_password` access key and is redacted in API/Allure diagnostics.
+
+Integration settings, project aliases, integration aliases, matchers, extractors, invalid tokens,
+unmatched events, and successful execution are eight independent cases with isolated projects.
+Negative cases check both the dispatch response and the absence of persisted tasks. If a rejected
+webhook unexpectedly returns a task ID, cleanup is registered before reporting the failure.
 
 The project backup/restore suite exports the configuration with access keys, repository, inventory, template and schedule after a real task execution. The backup contains no plaintext authentication secret and no task history; the restored project gets new IDs with correctly relinked resources, after which its template runs successfully again. Workflows and external Secret Storage management are not imitated on the Community image: both capabilities are disabled by feature flags and require a Pro test subscription for an honest e2e.
 
 Negative restore checks confirm that the operation is forbidden for a non-admin and that a missing repository reference is rejected. On `v2.19.8` a general off-by-one defect of duplicate validation was found: a document with two identical repository names is accepted and creates both resources; the canary and source boundary are described in `test-environment/project-backup-restore-validation-defect.md`.
 
-The concurrency suite creates a template with `allow_parallel_tasks=true` so as not to mix the project limit with the template lock. With `max_parallel_tasks=1` the first task reaches the marker, while the second one reliably stays in `waiting`; after the slot is freed it starts. After the project is updated through the API to a limit of `2`, two tasks reach the marker simultaneously and both stop correctly.
+Successful restore, non-admin rejection, missing-repository validation, and the duplicate-repository
+canary are four independent tests with their own source projects. A failed negative check or canary
+therefore no longer prevents the successful restore workflow from running.
+
+The concurrency suite creates a template with `allow_parallel_tasks=true` so as not to mix the project limit with the template lock. One independent case verifies that with `max_parallel_tasks=1` the first task reaches the marker, while the second stays in `waiting` until the slot is freed. Another case creates a fresh project, updates its limit through the API to `2`, and verifies both tasks are running together before stopping them. Both cases retain shared-executor isolation and task cleanup.
 
 The Git suite verifies task execution from an explicitly selected branch, a diagnosable failure for a missing branch and for an unreachable HTTPS remote. For an authenticated clone it additionally verifies that the login/password do not leak into the structured and raw task output.
 

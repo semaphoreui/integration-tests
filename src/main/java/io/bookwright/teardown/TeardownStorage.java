@@ -16,6 +16,7 @@ public class TeardownStorage {
   public record TeardownAction(String name, Runnable action) {}
 
   private final Deque<TeardownAction> actions = new ArrayDeque<>();
+  private final Deque<TeardownAction> preparations = new ArrayDeque<>();
 
   public static TeardownStorage getOrCreate(ExtensionContext context) {
     return NamespaceRegistry.methodStore(context)
@@ -30,24 +31,30 @@ public class TeardownStorage {
     actions.addLast(new TeardownAction(name, action));
   }
 
+  /** Runs before any resource deletion, e.g. to cancel all tasks that share executor capacity. */
+  public void beforeCleanup(String name, Runnable action) {
+    preparations.addLast(new TeardownAction(name, action));
+  }
+
   /**
    * Discards the queued cleanup only after a multi-phase test has successfully created the state
    * that the next phase must inspect.
    */
   public void retainCreatedData() {
-    actions.clear();
+    clear();
   }
 
   /** Discards redundant actions after a test has explicitly removed all resources it created. */
   public void discardAfterExplicitCleanup() {
-    actions.clear();
+    clear();
   }
 
   TeardownAction pollLast() {
-    return actions.pollLast();
+    return preparations.isEmpty() ? actions.pollLast() : preparations.pollLast();
   }
 
   void clear() {
+    preparations.clear();
     actions.clear();
   }
 }

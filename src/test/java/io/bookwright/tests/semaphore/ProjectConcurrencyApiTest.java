@@ -17,13 +17,13 @@ import org.junit.jupiter.api.parallel.Isolated;
 @Api
 @OwnerDanil
 @Feature("Semaphore project task concurrency")
-@Isolated("Temporarily saturates the shared persistent runner")
+@Isolated("Temporarily saturates the shared task executor")
 class ProjectConcurrencyApiTest {
 
   @Test
   @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
-  @DisplayName("Project max parallel tasks controls queue admission")
-  void projectParallelLimitControlsQueue(
+  @DisplayName("Serial project limit queues the second task until the first stops")
+  void serialProjectLimitControlsQueue(
       ApiSteps api, SemaphoreFixtures core, SemaphoreConcurrencyFixtures fixture) {
     var project = api.semaphore().projects().createProject(fixture.projectRequest());
     var key =
@@ -68,6 +68,30 @@ class ProjectConcurrencyApiTest {
         .waitUntilTaskOutputContains(project.id(), queued.id(), fixture.runningMarker());
     assertThat(api.semaphore().tasks().stopAndWait(project.id(), queued.id(), true).status())
         .isEqualTo(fixture.stoppedStatus());
+  }
+
+  @Test
+  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
+  @DisplayName("Updating the project parallel limit allows two tasks to execute together")
+  void updatedProjectLimitAllowsParallelExecution(
+      ApiSteps api, SemaphoreFixtures core, SemaphoreConcurrencyFixtures fixture) {
+    var project = api.semaphore().projects().createProject(fixture.projectRequest());
+    var key =
+        api.semaphore().accessKeys().create(project.id(), core.accessKey().request(project.id()));
+    var repository =
+        api.semaphore()
+            .repositories()
+            .create(project.id(), core.repositories().primary().request(project.id(), key.id()));
+    var inventory =
+        api.semaphore()
+            .inventories()
+            .create(project.id(), core.inventory().request(project.id(), key.id()));
+    var template =
+        api.semaphore()
+            .templates()
+            .create(
+                project.id(),
+                fixture.templateRequest(project.id(), repository.id(), inventory.id()));
 
     assertThat(
             api.semaphore()

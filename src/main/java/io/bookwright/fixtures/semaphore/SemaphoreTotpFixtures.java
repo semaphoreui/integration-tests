@@ -2,22 +2,24 @@ package io.bookwright.fixtures.semaphore;
 
 import io.bookwright.api.model.semaphore.LoginRequest;
 import io.bookwright.api.model.semaphore.UserRequest;
+import io.bookwright.util.TestData;
 
-/** Separate accounts for concurrent API and browser TOTP scenarios. */
+/** Per-test disposable accounts for independent API and browser TOTP scenarios. */
 public record SemaphoreTotpFixtures(Account apiAccount, Account uiAccount) {
 
-  public static SemaphoreTotpFixtures standard() {
+  public static SemaphoreTotpFixtures from(TestData data) {
+    String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreTotpFixtures(
         new Account(
             "Bookwright TOTP User",
-            "bookwright-totp-user",
-            "bookwright-totp-user@localhost",
+            "bookwright-totp-user-" + suffix,
+            "bookwright-totp-user-" + suffix + "@localhost",
             "Bookwright-TOTP-password-42!",
             false),
         new Account(
             "Bookwright TOTP UI Admin",
-            "bookwright-totp-ui-admin",
-            "bookwright-totp-ui-admin@localhost",
+            "bookwright-totp-ui-admin-" + suffix,
+            "bookwright-totp-ui-admin-" + suffix + "@localhost",
             "Bookwright-TOTP-UI-password-42!",
             true));
   }

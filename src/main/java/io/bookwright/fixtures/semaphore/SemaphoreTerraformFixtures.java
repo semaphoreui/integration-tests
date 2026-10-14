@@ -28,6 +28,18 @@ public record SemaphoreTerraformFixtures(
     Tool tofu,
     String workspaceOutputName) {
 
+  public enum Engine {
+    TERRAFORM,
+    OPEN_TOFU
+  }
+
+  public Tool tool(Engine engine) {
+    return switch (engine) {
+      case TERRAFORM -> terraform;
+      case OPEN_TOFU -> tofu;
+    };
+  }
+
   public static SemaphoreTerraformFixtures from(MainConfig config, TestData data) {
     String suffix = Long.toUnsignedString(data.testSeed(), 36);
     return new SemaphoreTerraformFixtures(
