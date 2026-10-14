@@ -5,6 +5,7 @@ import io.bookwright.api.model.CreatedBooking;
 import io.bookwright.api.model.semaphore.AccessKey;
 import io.bookwright.api.model.semaphore.Project;
 import io.bookwright.api.model.semaphore.SemaphoreAuthLifecycleUsers;
+import io.bookwright.api.model.semaphore.SemaphoreTaskHistory;
 import io.bookwright.api.model.semaphore.SemaphoreTestUser;
 import io.bookwright.api.model.semaphore.Template;
 import io.bookwright.util.TestData;
@@ -68,6 +69,14 @@ public class TestStore {
 
   public Template semaphoreTemplate() {
     return getRequired(Precondition.SEMAPHORE_TEMPLATE_KEY, Template.class);
+  }
+
+  public SemaphoreTaskHistory semaphoreTaskHistory() {
+    return getRequired(Precondition.SEMAPHORE_TASK_HISTORY_KEY, SemaphoreTaskHistory.class);
+  }
+
+  void putSemaphoreTaskHistory(SemaphoreTaskHistory history) {
+    put(Precondition.SEMAPHORE_TASK_HISTORY_KEY, history);
   }
 
   public Project semaphoreAccessibleProject() {

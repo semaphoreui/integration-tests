@@ -32,6 +32,7 @@ class StateOwnershipArchitectureTest {
             "semaphoreRbacUser",
             "semaphoreAuthLifecycleUsers",
             "semaphoreProject",
+            "semaphoreTaskHistory",
             "semaphoreAccessibleProject",
             "semaphoreIsolationUser",
             "semaphoreAccessKey",

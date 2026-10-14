@@ -252,6 +252,27 @@ workflow run.
 The diagnostics are recorded in `test-environment/v2.19.8-regression-report.md`; the historical
 schema defect of the `v2.19.6 → v2.19.7` pair is in `test-environment/upgrade-report.md`.
 
+## Task history regression
+
+`TaskHistoryPaginationApiTest` covers project-wide and per-template `/tasks/last` history:
+newest-first order across pages, template filtering, exact `X-Has-Next` values (including a full
+final page and empty history), stable `before` cursors after a new task, and legacy `limit` with
+`count` precedence. There are eight cases; non-empty histories use per-test completed tasks
+from two interleaved templates.
+Preparation stays in preconditions; query fixtures are typed and history steps are separate from
+task execution steps. The existing `apiTest` task discovers this suite; `externalTest` does not.
+
+Run only this block on a prepared profile:
+
+```bash
+test-environment/profile test core-sqlite-local \
+  --tests io.bookwright.tests.semaphore.TaskHistoryPaginationApiTest
+```
+
+The same command accepts `core-postgres-local`. These are functional pagination checks, not a
+large-history performance benchmark; default/max page size and malformed query inputs are not
+covered by this block.
+
 ## CI
 
 GitHub Actions are split by cost and purpose:

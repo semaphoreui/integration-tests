@@ -13,6 +13,7 @@ import io.bookwright.steps.semaphore.repositories.RepositorySteps;
 import io.bookwright.steps.semaphore.runners.RunnerSteps;
 import io.bookwright.steps.semaphore.schedules.ScheduleSteps;
 import io.bookwright.steps.semaphore.system.SystemSteps;
+import io.bookwright.steps.semaphore.tasks.TaskHistorySteps;
 import io.bookwright.steps.semaphore.tasks.TaskSteps;
 import io.bookwright.steps.semaphore.templates.TemplateSteps;
 import io.bookwright.steps.semaphore.tokens.TokenSteps;
@@ -39,6 +40,7 @@ public class SemaphoreSteps {
   @Inject private IntegrationSteps integrations;
   @Inject private TemplateSteps templates;
   @Inject private TaskSteps tasks;
+  @Inject private TaskHistorySteps taskHistory;
   @Inject private ScheduleSteps schedules;
   @Inject private TokenSteps tokens;
   @Inject private UserSteps users;

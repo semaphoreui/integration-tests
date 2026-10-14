@@ -33,6 +33,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreShellOutputFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSshFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreStaticInventoryFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreSurveyFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTaskHistoryFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTemplateCrudFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTerraformFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTokenFixtures;
@@ -53,6 +54,9 @@ final class FixtureCatalog {
 
   private static final Map<Class<?>, FixtureDefinition<?>> FIXTURES =
       Map.ofEntries(
+          fixture(
+              SemaphoreTaskHistoryFixtures.class,
+              context -> SemaphoreTaskHistoryFixtures.from(context.testData())),
           fixture(SauceDemoFixtures.class, context -> SauceDemoFixtures.from(context.config())),
           fixture(LocalUserFixtures.class, context -> LocalUserFixtures.from(context.config())),
           fixture(HotelDatabaseFixtures.class, context -> HotelDatabaseFixtures.seeded()),
