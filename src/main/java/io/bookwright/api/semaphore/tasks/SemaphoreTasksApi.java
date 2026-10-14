@@ -12,8 +12,24 @@ import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
+import retrofit2.http.Query;
 
 public interface SemaphoreTasksApi {
+
+  @GET("project/{projectId}/tasks/last")
+  Call<List<Task>> getTaskHistory(
+      @Path("projectId") long projectId,
+      @Query("count") Integer count,
+      @Query("limit") Integer limit,
+      @Query("before") Long before);
+
+  @GET("project/{projectId}/templates/{templateId}/tasks/last")
+  Call<List<Task>> getTemplateTaskHistory(
+      @Path("projectId") long projectId,
+      @Path("templateId") long templateId,
+      @Query("count") Integer count,
+      @Query("limit") Integer limit,
+      @Query("before") Long before);
 
   @GET("project/{projectId}/tasks")
   Call<List<Task>> getTasks(@Path("projectId") long projectId);

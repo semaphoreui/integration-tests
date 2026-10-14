@@ -27,6 +27,8 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- Task-history pagination coverage for project and template lists, exact next-page headers,
+  stable cursors after insertion, template filtering, and legacy limit/count compatibility.
 - Cross-project task isolation coverage for task details, structured/raw output, template launch,
   and task stop, including foreign IDs in an accessible project and membership revocation in an
   existing session. Twelve API cases use disposable fixtures and verify mutation side effects.
