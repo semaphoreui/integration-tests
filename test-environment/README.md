@@ -15,6 +15,7 @@ Five baseline profiles and thirteen feature profiles are available:
 | `prod-postgres-runner` | PostgreSQL 14.3 | production-like server → DB → persistent remote runner |
 | `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target, and key material protection |
 | `feature-git-https` | SQLite | private Git over HTTPS, Basic Auth, trusted self-signed CA, and credentials protection |
+| `feature-host-config` | SQLite | credential mappings for Git submodules over HTTPS/HTTP/SSH, an Ansible target container, the Ansible git module and Galaxy requirements |
 | `feature-parallel-tasks-cmd-git` | SQLite | parallel task isolation with the command-line Git client |
 | `feature-parallel-tasks-go-git` | SQLite | parallel task isolation with the Go Git client |
 | `feature-oidc-local` | SQLite | browser login via Dex, session/logout, provisioning, and negative account/provider scenarios |
@@ -159,6 +160,31 @@ test-environment/profile test feature-git-https
 ```
 
 The manifest names two test classes (comma separated in `test_class`): the repository scenarios with the key attached directly, and the credential-mapping scenarios in which a URL mapping supplies the Basic Auth to a key-less repository.
+
+## Credential-mapping feature profile
+
+`feature-host-config` serves every repository from containers inside the Compose network:
+`host-config-git` (NGINX: anonymous dumb HTTP on port 80 under `/public/`, TLS with Basic Auth on
+port 443 under `/private/`), `host-config-git-ssh` (Git over SSH, user `fixture`) and
+`host-config-target` (sshd with Python, the Ansible target). `host-config-git-init` builds the
+repositories offline from `fixtures/host-config/`, including a parent repository whose three
+submodules point to HTTPS, HTTP and SSH. The CA goes to `build/test-fixtures/host-config-git`
+(manifest key `git_https_fixture_dir`), the SSH key pair to `build/test-fixtures/ssh`.
+
+```bash
+test-environment/profile down feature-ssh-local
+test-environment/profile up feature-host-config
+test-environment/profile test feature-host-config
+```
+
+Repositories and inventories carry a key of type `none`. In the submodule scenarios a URL mapping
+on `https://host-config-git/private/` supplies Basic Auth to the HTTPS submodule and a Host mapping
+on `host-config-git-ssh` supplies the SSH key to the SSH submodule, while the HTTP submodule stays
+anonymous; without either mapping the clone fails. The same URL mapping reaches
+`ansible.builtin.git` and a role from `roles/requirements.yml`, and a Host mapping on
+`host-config-target` supplies the SSH key for a playbook that runs ordinary modules on the
+container. A login/password mapping exists only for `https://`, so the plain HTTP repositories are
+public.
 
 ## Schedule timezone feature profile
 

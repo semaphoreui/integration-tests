@@ -1,0 +1,28 @@
+---
+- name: Semaphore Ansible git module fixture
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Clone a private repository with the Ansible git module
+      block:
+        - name: Create a disposable checkout directory
+          ansible.builtin.tempfile:
+            state: directory
+            prefix: semaphore-bookwright-git-module-
+          register: checkout
+
+        - name: Clone the private repository
+          ansible.builtin.git:
+            repo: https://host-config-git/private/content.git
+            dest: "{{ checkout.path }}/content"
+            version: main
+
+        - name: Report the cloned marker
+          ansible.builtin.debug:
+            msg: "{{ lookup('ansible.builtin.file', checkout.path ~ '/content/marker.txt') }}"
+      always:
+        - name: Remove the checkout directory
+          ansible.builtin.file:
+            path: "{{ checkout.path }}"
+            state: absent
+          when: checkout.path is defined

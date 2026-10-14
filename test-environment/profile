@@ -445,7 +445,10 @@ prepare_git_https_fixture() {
   [ "$selected_git_https_fixture" = "generated" ] || return 0
   command -v openssl >/dev/null 2>&1 || fail "openssl is required for profile '$profile_id'"
 
-  git_https_fixture_dir="$repository_dir/build/test-fixtures/git-https"
+  # Each profile signs its own server name, so the directory and the OpenSSL config are per profile.
+  git_https_fixture_name=$(manifest_value git_https_fixture_dir)
+  [ -n "$git_https_fixture_name" ] || git_https_fixture_name=git-https
+  git_https_fixture_dir="$repository_dir/build/test-fixtures/$git_https_fixture_name"
   git_https_private_key="$git_https_fixture_dir/server-key.pem"
   git_https_certificate="$git_https_fixture_dir/server-cert.pem"
   mkdir -p "$git_https_fixture_dir"
@@ -457,7 +460,7 @@ prepare_git_https_fixture() {
     openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
       -keyout "$git_https_private_key" \
       -out "$git_https_certificate" \
-      -config "$profiles_dir/feature-git-https/openssl.cnf"
+      -config "$profile_dir/openssl.cnf"
   fi
 
   chmod 600 "$git_https_private_key"
