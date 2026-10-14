@@ -51,6 +51,7 @@ jobs:
           - prod-postgres-runner
           - feature-ssh-local
           - feature-git-https
+          - feature-host-config
           - feature-oidc-local
           - feature-proxy-oidc
           - feature-ldap-tls
