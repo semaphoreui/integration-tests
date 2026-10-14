@@ -27,6 +27,13 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- `feature-host-config` profile with credential-mapping scenarios on containers only: a parent
+  repository over HTTP whose submodules come over HTTPS (Basic Auth from a URL mapping), plain HTTP
+  and SSH (key from a Host mapping), a failed clone without either mapping, the Ansible `git` module
+  and a `roles/requirements.yml` role through the URL mapping, and a playbook on an SSH target
+  container reached through a Host mapping. `git_https_fixture_dir` gives each HTTPS fixture its
+  own generated certificate.
+- `run.sh start` / `exec` / `publish` / `stop` keep one runner container for a pipeline of separate Semaphore tasks (up, test, cleanup, publication), so they share one checkout's `build/` instead of each template's own; `exec test` records the outcome in `build/run-conclusion`, which `publish-external-results.sh` uses as the default `RUN_CONCLUSION`, and `RUN_URL` defaults to `SEMAPHORE_WORKFLOW_URL`, then to the task link `SEMAPHORE_TASK_DETAILS_URL`. The runner image now includes `python3`.
 - `scripts/publish-external-results.sh` and a `workflow_dispatch` job in `publish-pages.yml` that publish Allure results of runs outside GitHub runners: the server pushes raw results to an `orbantix-results/<run id>` branch, GitHub builds, archives and deploys the report and deletes the branch.
 - Source filter (`GitHub` / `Orbantix`) on the Allure Pages history and an `archive --source` option that records where each run was executed; Orbantix runs are stored and redirected under `orbantix-<workflow>` keys so they never collide with GitHub runs.
 - Project credential-mapping (`host_configs`) coverage: API contract for host and URL mappings
