@@ -12,6 +12,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreProjectIsolationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTaskHistoryFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTotpFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.util.TestData;
 import java.util.List;
@@ -105,6 +106,27 @@ public enum Precondition implements IPrecondition {
         store.putSemaphoreTemplate(template);
       }),
 
+  SEMAPHORE_TOTP_API_USER_EXISTS(
+      "Create a disposable Semaphore TOTP API user",
+      (api, store) ->
+          store.putSemaphoreTotpUser(
+              api.semaphore()
+                  .users()
+                  .createDisposable(
+                      SemaphoreTotpFixtures.from(store.testData()).apiAccount().userRequest()))),
+
+  SEMAPHORE_TOTP_UI_USER_EXISTS(
+      "Create a disposable Semaphore TOTP UI user and register binding cleanup",
+      (api, store) -> {
+        User user =
+            api.semaphore()
+                .users()
+                .createDisposable(
+                    SemaphoreTotpFixtures.from(store.testData()).uiAccount().userRequest());
+        store.putSemaphoreTotpUser(user);
+        api.semaphore().users().disableTotpAfterTest(user);
+      }),
+
   SEMAPHORE_PROJECT_ISOLATION_ACTOR_EXISTS(
       "Create a disposable non-admin owner of a separate Semaphore project",
       (api, store) -> {
@@ -156,6 +178,7 @@ public enum Precondition implements IPrecondition {
   static final String SEMAPHORE_ISOLATION_USER_KEY = "semaphoreIsolationUser";
   static final String SEMAPHORE_ACCESS_KEY_KEY = "semaphoreAccessKey";
   static final String SEMAPHORE_TEMPLATE_KEY = "semaphoreTemplate";
+  static final String SEMAPHORE_TOTP_USER_KEY = "semaphoreTotpUser";
   static final String SEMAPHORE_RBAC_USER_KEY = "semaphoreRbacUser";
   static final String SEMAPHORE_AUTH_LIFECYCLE_USERS_KEY = "semaphoreAuthLifecycleUsers";
 

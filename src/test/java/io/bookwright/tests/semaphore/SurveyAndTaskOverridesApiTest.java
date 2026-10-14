@@ -110,8 +110,8 @@ class SurveyAndTaskOverridesApiTest {
 
   @Test
   @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_PROJECT_EXISTS})
-  @DisplayName("Template rejects invalid survey variable definitions")
-  void invalidSurveyDefinitionsAreRejected(
+  @DisplayName("Template rejects an unsupported survey variable target")
+  void invalidSurveyTargetIsRejected(
       ApiSteps api, TestStore store, SemaphoreFixtures core, SemaphoreSurveyFixtures fixture) {
     var project = store.semaphoreProject();
     var key =
@@ -131,6 +131,25 @@ class SurveyAndTaskOverridesApiTest {
             project.id(),
             fixture.invalidTemplateRequest(project.id(), repository.id(), inventory.id()),
             fixture.expectedValidationError());
+  }
+
+  @Test
+  @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_PROJECT_EXISTS})
+  @DisplayName("Template rejects a survey enum default absent from its allowed values")
+  void invalidSurveyEnumDefaultIsRejected(
+      ApiSteps api, TestStore store, SemaphoreFixtures core, SemaphoreSurveyFixtures fixture) {
+    var project = store.semaphoreProject();
+    var key =
+        api.semaphore().accessKeys().create(project.id(), core.accessKey().request(project.id()));
+    var repository =
+        api.semaphore()
+            .repositories()
+            .create(project.id(), core.repositories().primary().request(project.id(), key.id()));
+    var inventory =
+        api.semaphore()
+            .inventories()
+            .create(project.id(), core.inventory().request(project.id(), key.id()));
+
     api.semaphore()
         .templates()
         .verifyRejected(

@@ -20,28 +20,18 @@ import org.junit.jupiter.api.Test;
 class ProjectBackupRestoreApiTest {
 
   @Test
-  @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_RBAC_USER_EXISTS})
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS
+  })
   @DisplayName("Project backup restores executable resources without task history or secrets")
   void projectBackupRestoresResourcesWithoutHistoryOrSecrets(
       ApiSteps api, TestStore store, SemaphoreFixtures core, SemaphoreBackupFixtures fixture) {
-    var source = api.semaphore().projects().createProject(core.projects().secrets());
-    var key =
-        api.semaphore().accessKeys().create(source.id(), core.accessKey().request(source.id()));
+    var source = store.semaphoreProject();
+    var template = store.semaphoreTemplate();
+    var key = api.semaphore().accessKeys().requireByName(source.id(), core.accessKey().name());
     api.semaphore().accessKeys().createAndVerifyMasked(source.id(), core.secretAccessKey());
-    var repository =
-        api.semaphore()
-            .repositories()
-            .create(source.id(), core.repositories().primary().request(source.id(), key.id()));
-    var inventory =
-        api.semaphore()
-            .inventories()
-            .create(source.id(), core.inventory().request(source.id(), key.id()));
-    var template =
-        api.semaphore()
-            .templates()
-            .create(
-                source.id(),
-                core.templates().primary().request(source.id(), repository.id(), inventory.id()));
     var sourceTask = api.semaphore().tasks().startAndWait(source.id(), template.id());
     api.semaphore()
         .schedules()
@@ -49,26 +39,8 @@ class ProjectBackupRestoreApiTest {
 
     var backup =
         api.semaphore().backups().exportProjectAndVerifyMasked(source.id(), core.secretAccessKey());
-    api.semaphore()
-        .backups()
-        .verifyCannotRestore(
-            api.semaphore().auth().loginAs(store.semaphoreRbacUser()),
-            backup,
-            fixture.unauthorizedProjectName());
-    api.semaphore()
-        .backups()
-        .verifyMissingTemplateRepositoryRejected(
-            backup, fixture.missingLinkProjectName(), fixture.missingRepositoryName());
-    var duplicateRestore =
-        api.semaphore()
-            .backups()
-            .restoreWithDuplicateRepositoriesCurrentlyAccepted(
-                backup, fixture.duplicateProjectName());
     var restored = api.semaphore().backups().restoreProject(backup, fixture.restoredProjectName());
 
-    assertThat(api.semaphore().repositories().getRepositories(duplicateRestore.id()))
-        .filteredOn(item -> item.name().equals(core.repositories().primary().name()))
-        .hasSize(2);
     assertThat(api.semaphore().tasks().getTasks(restored.id())).isEmpty();
 
     var restoredKey =
@@ -98,5 +70,62 @@ class ProjectBackupRestoreApiTest {
         .tasks()
         .waitUntilTaskOutputContains(
             restored.id(), restoredTask.id(), core.expectations().outputMarker());
+  }
+
+  @Test
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_RBAC_USER_EXISTS
+  })
+  @DisplayName("Non-admin user cannot restore a project backup")
+  void nonAdminCannotRestoreProject(
+      ApiSteps api, TestStore store, SemaphoreBackupFixtures fixture) {
+    var backup = api.semaphore().backups().exportProject(store.semaphoreProject().id());
+
+    api.semaphore()
+        .backups()
+        .verifyCannotRestore(
+            api.semaphore().auth().loginAs(store.semaphoreRbacUser()),
+            backup,
+            fixture.unauthorizedProjectName());
+  }
+
+  @Test
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS
+  })
+  @DisplayName("Restore rejects a template referencing a missing repository")
+  void missingTemplateRepositoryIsRejected(
+      ApiSteps api, TestStore store, SemaphoreBackupFixtures fixture) {
+    api.semaphore()
+        .backups()
+        .verifyMissingTemplateRepositoryRejected(
+            api.semaphore().backups().exportProject(store.semaphoreProject().id()),
+            fixture.missingLinkProjectName(),
+            fixture.missingRepositoryName());
+  }
+
+  @Test
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS
+  })
+  @DisplayName("Known gap: restore currently accepts duplicate repositories")
+  void duplicateRepositoriesAreCurrentlyAccepted(
+      ApiSteps api, TestStore store, SemaphoreFixtures core, SemaphoreBackupFixtures fixture) {
+    var restored =
+        api.semaphore()
+            .backups()
+            .restoreWithDuplicateRepositoriesCurrentlyAccepted(
+                api.semaphore().backups().exportProject(store.semaphoreProject().id()),
+                fixture.duplicateProjectName());
+
+    assertThat(api.semaphore().repositories().getRepositories(restored.id()))
+        .filteredOn(item -> item.name().equals(core.repositories().primary().name()))
+        .hasSize(2);
   }
 }

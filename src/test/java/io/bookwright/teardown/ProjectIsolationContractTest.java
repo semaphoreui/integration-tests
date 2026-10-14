@@ -92,24 +92,31 @@ class ProjectIsolationContractTest {
   }
 
   @Test
-  void finiteTaskFinishesBeforeItsOriginalDeleteAction() throws Exception {
+  void finiteTaskCleanupStopsBeforeWaitingAndDeleting() throws Exception {
     try (var server = new MockWebServer()) {
       var session = SemaphoreSessionApis.create(RetrofitFactory.create(server.url("/").toString()));
       var storage = new TeardownStorage();
       var steps = new TaskSteps(session.tasks(), storage);
       server.enqueue(json(201, "{\"id\":11,\"project_id\":7,\"status\":\"waiting\"}"));
       server.enqueue(json(200, "{\"id\":11,\"project_id\":7,\"status\":\"running\"}"));
-      server.enqueue(json(200, "{\"id\":11,\"project_id\":7,\"status\":\"success\"}"));
+      server.enqueue(new MockResponse().setResponseCode(204));
+      server.enqueue(json(200, "{\"id\":11,\"project_id\":7,\"status\":\"stopped\"}"));
+      server.enqueue(json(200, "{\"id\":11,\"project_id\":7,\"status\":\"stopped\"}"));
       server.enqueue(new MockResponse().setResponseCode(204));
 
       var task = steps.startTask(7, 13);
       steps.awaitCompletionAfterTest(7, task.id());
       TeardownExtension.execute(storage, true, true);
 
-      assertThat(server.takeRequest().getMethod()).isEqualTo("POST");
-      assertThat(server.takeRequest().getMethod()).isEqualTo("GET");
-      assertThat(server.takeRequest().getMethod()).isEqualTo("GET");
-      assertThat(server.takeRequest().getMethod()).isEqualTo("DELETE");
+      assertThat(server.takeRequest(1, TimeUnit.SECONDS).getMethod()).isEqualTo("POST");
+      assertThat(server.takeRequest(1, TimeUnit.SECONDS).getMethod()).isEqualTo("GET");
+      var stop = server.takeRequest(1, TimeUnit.SECONDS);
+      assertThat(stop.getMethod()).isEqualTo("POST");
+      assertThat(stop.getPath()).isEqualTo("/project/7/tasks/11/stop");
+      assertThat(stop.getBody().readUtf8()).contains("\"force\":true");
+      assertThat(server.takeRequest(1, TimeUnit.SECONDS).getMethod()).isEqualTo("GET");
+      assertThat(server.takeRequest(1, TimeUnit.SECONDS).getMethod()).isEqualTo("GET");
+      assertThat(server.takeRequest(1, TimeUnit.SECONDS).getMethod()).isEqualTo("DELETE");
     }
   }
 

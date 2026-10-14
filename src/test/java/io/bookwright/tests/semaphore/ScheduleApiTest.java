@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.bookwright.annotations.Api;
 import io.bookwright.annotations.OwnerDanil;
 import io.bookwright.annotations.Regression;
+import io.bookwright.annotations.Smoke;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreScheduleFixtures;
 import io.bookwright.junit.Precondition;
@@ -20,6 +21,31 @@ import org.junit.jupiter.api.Test;
 @OwnerDanil
 @Feature("Semaphore schedules")
 class ScheduleApiTest {
+
+  @Test
+  @Smoke
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS
+  })
+  @DisplayName("Created cron schedule is readable individually and in the project list")
+  void createdScheduleIsReadable(ApiSteps api, TestStore store, SemaphoreFixtures fixtures) {
+    var project = store.semaphoreProject();
+    var template = store.semaphoreTemplate();
+    var schedule =
+        api.semaphore()
+            .schedules()
+            .create(project.id(), fixtures.schedule().request(project.id(), template.id()));
+    var saved = api.semaphore().schedules().getSchedule(project.id(), schedule.id());
+
+    assertThat(saved.templateId()).isEqualTo(template.id());
+    assertThat(saved.cronFormat()).isEqualTo(fixtures.schedule().cronFormat());
+    assertThat(saved.active()).isEqualTo(fixtures.schedule().active());
+    assertThat(api.semaphore().schedules().getSchedules(project.id()))
+        .extracting(item -> item.id())
+        .contains(schedule.id());
+  }
 
   @Test
   @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
@@ -55,43 +81,81 @@ class ScheduleApiTest {
   }
 
   @Test
-  @Preconditions(Precondition.SEMAPHORE_ADMIN_SESSION)
-  @DisplayName("Invalid cron, run time and schedule type are rejected with diagnostics")
-  void invalidSchedulePayloadsAreRejected(
-      ApiSteps api, SemaphoreFixtures fixtures, SemaphoreScheduleFixtures schedules) {
-    var context = createRunnableTemplate(api, fixtures);
+  @Preconditions({Precondition.SEMAPHORE_ADMIN_SESSION, Precondition.SEMAPHORE_PROJECT_EXISTS})
+  @DisplayName("Invalid cron expression is rejected with diagnostics")
+  void invalidCronIsRejected(ApiSteps api, TestStore store, SemaphoreScheduleFixtures schedules) {
+    var project = store.semaphoreProject();
 
     assertThat(
             api.semaphore()
                 .schedules()
-                .rejectedCron(context.projectId(), schedules.invalidCron(context.projectId())))
+                .rejectedCron(project.id(), schedules.invalidCron(project.id())))
         .contains(schedules.expectedCronError());
+  }
+
+  @Test
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS
+  })
+  @DisplayName("One-shot schedule without run time is rejected with diagnostics")
+  void missingRunTimeIsRejected(
+      ApiSteps api, TestStore store, SemaphoreScheduleFixtures schedules) {
+    var template = store.semaphoreTemplate();
+
     assertThat(
             api.semaphore()
                 .schedules()
                 .rejectedCreate(
-                    context.projectId(),
-                    schedules
-                        .runAt()
-                        .missingRunAtRequest(context.projectId(), context.templateId())))
+                    template.projectId(),
+                    schedules.runAt().missingRunAtRequest(template.projectId(), template.id())))
         .contains(schedules.expectedMissingRunAtError());
+    assertThat(api.semaphore().schedules().getSchedules(template.projectId())).isEmpty();
+  }
+
+  @Test
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS
+  })
+  @DisplayName("One-shot schedule with past run time is rejected with diagnostics")
+  void pastRunTimeIsRejected(ApiSteps api, TestStore store, SemaphoreScheduleFixtures schedules) {
+    var template = store.semaphoreTemplate();
+
     assertThat(
             api.semaphore()
                 .schedules()
                 .rejectedCreate(
-                    context.projectId(),
-                    schedules.runAt().pastRequest(context.projectId(), context.templateId())))
+                    template.projectId(),
+                    schedules.runAt().pastRequest(template.projectId(), template.id())))
         .contains(schedules.expectedPastRunAtError());
+    assertThat(api.semaphore().schedules().getSchedules(template.projectId())).isEmpty();
+  }
+
+  @Test
+  @Preconditions({
+    Precondition.SEMAPHORE_ADMIN_SESSION,
+    Precondition.SEMAPHORE_PROJECT_EXISTS,
+    Precondition.SEMAPHORE_EXECUTABLE_TEMPLATE_EXISTS
+  })
+  @DisplayName("Unsupported schedule type is rejected with diagnostics")
+  void unsupportedScheduleTypeIsRejected(
+      ApiSteps api, TestStore store, SemaphoreScheduleFixtures schedules) {
+    var template = store.semaphoreTemplate();
+
     assertThat(
             api.semaphore()
                 .schedules()
                 .rejectedCreate(
-                    context.projectId(),
+                    template.projectId(),
                     schedules
                         .runAt()
                         .invalidTypeRequest(
-                            context.projectId(), context.templateId(), schedules.invalidType())))
+                            template.projectId(), template.id(), schedules.invalidType())))
         .contains(schedules.expectedInvalidTypeError());
+    assertThat(api.semaphore().schedules().getSchedules(template.projectId())).isEmpty();
   }
 
   @Test

@@ -8,6 +8,7 @@ import io.bookwright.api.model.semaphore.SemaphoreAuthLifecycleUsers;
 import io.bookwright.api.model.semaphore.SemaphoreTaskHistory;
 import io.bookwright.api.model.semaphore.SemaphoreTestUser;
 import io.bookwright.api.model.semaphore.Template;
+import io.bookwright.api.model.semaphore.User;
 import io.bookwright.util.TestData;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -77,6 +78,14 @@ public class TestStore {
 
   void putSemaphoreTaskHistory(SemaphoreTaskHistory history) {
     put(Precondition.SEMAPHORE_TASK_HISTORY_KEY, history);
+  }
+
+  public User semaphoreTotpUser() {
+    return getRequired(Precondition.SEMAPHORE_TOTP_USER_KEY, User.class);
+  }
+
+  void putSemaphoreTotpUser(User user) {
+    put(Precondition.SEMAPHORE_TOTP_USER_KEY, user);
   }
 
   public Project semaphoreAccessibleProject() {
