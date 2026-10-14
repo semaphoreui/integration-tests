@@ -3,6 +3,61 @@
   "runs": [
     {
       "schemaVersion": 1,
+      "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/38535934424",
+      "versions": [
+        "develop"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 151,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 108,
+            "skipped": 43,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 152,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 152,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "source": "github",
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "Merge pull request #42 from semaphoreui/codex/p1-task-cleanup",
+      "event": "push",
+      "conclusion": "success",
+      "runId": 38535934424,
+      "runAttempt": 1,
+      "runNumber": 144,
+      "createdAt": "2026-10-14T08:33:20Z",
+      "date": "2026-10-14",
+      "headSha": "5023bb602b61835a1feebb56a340159f973241b9",
+      "shortSha": "5023bb6",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/5023bb602b61835a1feebb56a340159f973241b9",
+      "path": "reports/2026-10-14/ci/38535934424-1"
+    },
+    {
+      "schemaVersion": 1,
       "title": "Semaphore configuration matrix",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/38522898083",
       "versions": [
