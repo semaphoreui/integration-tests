@@ -32,7 +32,7 @@ All notable changes to the Semaphore UI test automation project are documented i
   and SSH (key from a Host mapping), a failed clone without either mapping, the Ansible `git` module
   and a `roles/requirements.yml` role through the URL mapping, and a playbook on an SSH target
   container reached through a Host mapping. `git_https_fixture_dir` gives each HTTPS fixture its
-  own generated certificate.
+  own generated certificate. The profile runs in the daily configuration matrix.
 - `run.sh start` / `exec` / `publish` / `stop` keep one runner container for a pipeline of separate Semaphore tasks (up, test, cleanup, publication), so they share one checkout's `build/` instead of each template's own; `exec test` records the outcome in `build/run-conclusion`, which `publish-external-results.sh` uses as the default `RUN_CONCLUSION`, and `RUN_URL` defaults to `SEMAPHORE_WORKFLOW_URL`, then to the task link `SEMAPHORE_TASK_DETAILS_URL`. The runner image now includes `python3`.
 - Task-history pagination coverage for project and template lists, exact next-page headers,
   stable cursors after insertion, template filtering, and legacy limit/count compatibility.

@@ -4,7 +4,7 @@ The `core-sqlite-local` profile: a minimal Semaphore UI stand with SQLite, local
 
 The profile manifest lives in `profiles/<profile>/profile.yaml`. It pins the Semaphore version, installation method, DBMS, execution mode, and capabilities. The lifecycle command reads the manifest, uses a stable Compose project name, and records the actual configuration and image digests in `build/allure-results/environment.properties`.
 
-Five baseline profiles and thirteen feature profiles are available:
+Five baseline profiles and fourteen feature profiles are available:
 
 | Profile | DBMS | Purpose |
 |---|---|---|
@@ -370,7 +370,7 @@ The profiles are wired into three GitHub Actions workflows:
 | Workflow | Trigger | Profiles |
 |---|---|---|
 | `CI` | pull request and push to `main` | API suite and Chromium UI smoke on `core-sqlite-local` after the framework quality gate |
-| `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-shell-output`, `feature-schedule-timezone` |
+| `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-host-config`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-shell-output`, `feature-schedule-timezone` |
 | `Release upgrade` | Sunday at `03:30 UTC`, manually | `upgrade-sqlite-local`, `upgrade-postgres-local`, `upgrade-mysql-local`, `upgrade-mariadb-local` |
 
 Each matrix profile runs on its own runner, so the shared port `3000` causes no conflicts. After execution the workflow keeps JUnit/HTML/Allure artifacts, adds `profile ps` and a final snapshot of the Compose logs on failure, and then removes only the containers and volumes of the selected profile.
