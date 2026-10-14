@@ -132,6 +132,16 @@ test-environment/profile test feature-git-https
 
 The profile passes the trusted CA to Git processes through the standard `SEMAPHORE_FORWARDED_ENV_VARS`. The positive scenario runs a playbook after an authenticated clone, the negative one confirms rejection without an access key. The password does not leak into API/Allure diagnostics, and the login and password are absent from the structured/raw task output. A second class on the same profile maps the login/password credential onto the repository by URL prefix: the repository carries no key, the mapping supplies the Basic Auth, and a mapping of another prefix is confirmed not to apply.
 
+Credential mappings for Git submodules and Ansible are verified on their own profile, with every Git server and the Ansible target as a container:
+
+```bash
+test-environment/profile down feature-ssh-local
+test-environment/profile up feature-host-config
+test-environment/profile test feature-host-config
+```
+
+A key-less parent repository over HTTP carries three submodules — private over HTTPS with Basic Auth, anonymous over plain HTTP and over SSH. A URL mapping is the only source of the HTTPS credential and a Host mapping the only source of the SSH key: with both the task checks out all three submodules, without either one the clone fails. The same URL mapping reaches the Ansible `git` module and a private role from `roles/requirements.yml`, and a Host mapping supplies the SSH key for a playbook that runs on the `host-config-target` container. Credentials stay out of the structured and raw task output.
+
 The OIDC feature profile performs a full browser login through a local Dex and verifies the callback, session, return path, external user provisioning, repeated login, logout, a conflict with a local email and rejection of an unavailable provider:
 
 ```bash
@@ -305,11 +315,11 @@ Completed runs of the trusted `main` branch are additionally published on [GitHu
 Runs outside GitHub runners (Orbantix) are published with `scripts/publish-external-results.sh`, which needs only `git`, `curl` and `python3` on the server:
 
 ```sh
-GH_TOKEN=... RUN_ID=1234 RUN_URL=https://orbantix.example/tasks/1234 RUN_CONCLUSION=failure \
+GH_TOKEN=... RUN_URL=https://orbantix.example/tasks/1234 RUN_CONCLUSION=failure \
   scripts/publish-external-results.sh core-sqlite-local=build/allure-results
 ```
 
-The script pushes the raw results as one orphan commit to `orbantix-results/<RUN_ID>` and dispatches `publish-pages.yml`, which builds the report, adds it to the history with the `Orbantix` source, deploys Pages and deletes the branch; a failed publication keeps the branch so the dispatch can be repeated. Several profiles are passed as several `<profile>=<dir>` arguments. `GH_TOKEN` is a fine-grained token (or GitHub App token) limited to this repository with `Contents: Read and write` and `Actions: Read and write`. Optional `RUN_WORKFLOW`, `RUN_TITLE` and `HEAD_SHA` set the workflow name, card title and tested commit.
+The script pushes the raw results as one orphan commit to `orbantix-results/<RUN_ID>` (`RUN_ID` is generated from the current time unless set) and dispatches `publish-pages.yml`, which builds the report, adds it to the history with the `Orbantix` source, deploys Pages and deletes the branch; a failed publication keeps the branch so the dispatch can be repeated. Several profiles are passed as several `<profile>=<dir>` arguments; `<profile>` must be a folder of `test-environment/profiles`, and any other `NAME=value` argument (Semaphore appends the environment's extra variables this way) is skipped. `GH_TOKEN` is a fine-grained token (or GitHub App token) limited to this repository with `Contents: Read and write` and `Actions: Read and write`. Optional `RUN_ID`, `RUN_WORKFLOW`, `RUN_TITLE` and `HEAD_SHA` set the run id, workflow name, card title and tested commit. `RUN_URL` defaults to `SEMAPHORE_WORKFLOW_URL`, then to the task link `SEMAPHORE_TASK_DETAILS_URL` (both set when Semaphore knows its `web_host`), and `RUN_CONCLUSION` to the outcome `run.sh exec test` recorded in `build/run-conclusion`. When up, test, cleanup and publication are separate Semaphore tasks, run them through one shared runner container (`run.sh start` / `exec` / `publish`, see CONTRIBUTING.md §11): each template has its own checkout, so a separate publication task does not see the `build/allure-results` of the test task.
 
 The test verifies health, an invalid and a valid login, creates an isolated project and the main resource chain:
 
