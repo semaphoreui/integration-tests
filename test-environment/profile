@@ -255,6 +255,7 @@ select_profile() {
   [ -n "$selected_ui_ignore_https_errors" ] || selected_ui_ignore_https_errors=false
   selected_tls_fixture=$(manifest_value tls_fixture)
   selected_git_https_fixture=$(manifest_value git_https_fixture)
+  selected_ldap_tls_fixture=$(manifest_value ldap_tls_fixture)
   selected_encryption_fixture=$(manifest_value encryption_fixture)
 
   case "$selected_test_task" in
@@ -462,6 +463,63 @@ prepare_git_https_fixture() {
 
   chmod 600 "$git_https_private_key"
   chmod 644 "$git_https_certificate"
+}
+
+# A private CA signs the LDAPS server certificate for the Compose name `ldap`. Semaphore trusts
+# only trust/ca.pem; the CA key never leaves the host.
+prepare_ldap_tls_fixture() {
+  [ "$selected_ldap_tls_fixture" = "generated" ] || return 0
+  command -v openssl >/dev/null 2>&1 || fail "openssl is required for profile '$profile_id'"
+
+  ldap_tls_fixture_dir="$repository_dir/build/test-fixtures/ldap-tls"
+  ldap_tls_config="$profiles_dir/feature-ldap-tls/openssl.cnf"
+  ldap_ca_private_key="$ldap_tls_fixture_dir/ca-key.pem"
+  ldap_ca_certificate="$ldap_tls_fixture_dir/ca.pem"
+  ldap_server_private_key="$ldap_tls_fixture_dir/server-key.pem"
+  ldap_server_certificate="$ldap_tls_fixture_dir/server-cert.pem"
+  ldap_trusted_ca="$ldap_tls_fixture_dir/trust/ca.pem"
+  mkdir -p "$ldap_tls_fixture_dir/trust"
+
+  ldap_tls_present=0
+  for ldap_tls_file in "$ldap_ca_private_key" "$ldap_ca_certificate" \
+    "$ldap_server_private_key" "$ldap_server_certificate" "$ldap_trusted_ca"; do
+    [ ! -s "$ldap_tls_file" ] || ldap_tls_present=$((ldap_tls_present + 1))
+  done
+
+  if [ "$ldap_tls_present" -eq 0 ]; then
+    for ldap_tls_file in "$ldap_ca_private_key" "$ldap_ca_certificate" \
+      "$ldap_server_private_key" "$ldap_server_certificate" "$ldap_trusted_ca"; do
+      [ ! -e "$ldap_tls_file" ] \
+        || fail "incomplete LDAPS fixture in $ldap_tls_fixture_dir; remove the directory and retry"
+    done
+    ldap_server_request="$ldap_tls_fixture_dir/server.csr"
+    openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
+      -keyout "$ldap_ca_private_key" \
+      -out "$ldap_ca_certificate" \
+      -subj "/CN=Bookwright LDAP Test CA/O=Bookwright Test Fixture" \
+      -config "$ldap_tls_config" \
+      -extensions ca_extensions
+    openssl req -new -newkey rsa:2048 -sha256 -nodes \
+      -keyout "$ldap_server_private_key" \
+      -out "$ldap_server_request" \
+      -subj "/CN=ldap/O=Bookwright Test Fixture" \
+      -config "$ldap_tls_config"
+    openssl x509 -req -sha256 -days 3650 \
+      -in "$ldap_server_request" \
+      -CA "$ldap_ca_certificate" \
+      -CAkey "$ldap_ca_private_key" \
+      -CAcreateserial \
+      -out "$ldap_server_certificate" \
+      -extfile "$ldap_tls_config" \
+      -extensions server_extensions
+    rm -f "$ldap_server_request" "$ldap_tls_fixture_dir/ca.srl"
+    cp "$ldap_ca_certificate" "$ldap_trusted_ca"
+  elif [ "$ldap_tls_present" -ne 5 ]; then
+    fail "incomplete LDAPS fixture in $ldap_tls_fixture_dir; remove the directory and retry"
+  fi
+
+  chmod 600 "$ldap_ca_private_key" "$ldap_server_private_key"
+  chmod 644 "$ldap_ca_certificate" "$ldap_server_certificate" "$ldap_trusted_ca"
 }
 
 prepare_encryption_fixture() {
@@ -701,6 +759,7 @@ case "$action" in
     prepare_ssh_fixture
     prepare_tls_fixture
     prepare_git_https_fixture
+    prepare_ldap_tls_fixture
     prepare_encryption_fixture
     if [ "$selected_encryption_fixture" = "generated" ] && [ ! -s "$encryption_keys_file" ]; then
       write_encryption_keyset old-primary true
@@ -727,6 +786,7 @@ case "$action" in
     prepare_ssh_fixture
     prepare_tls_fixture
     prepare_git_https_fixture
+    prepare_ldap_tls_fixture
     prepare_encryption_fixture
     wait_for_setup
     await_published_fixture_git

@@ -6,6 +6,10 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Changed
 
+- The LDAPS profile now serves a certificate for `ldap` signed by a generated test CA that
+  Semaphore trusts through `SSL_CERT_DIR`, so the profile passes with LDAP certificate
+  verification, which Semaphore `develop` enables by default since `048df995`.
+
 - Promoted the fixed shell-output, remote survey-secret, and enum-default canaries to positive
   regressions on the current application source. The SQLite gate now protects complete task output
   and enum validation; the daily persistent-runner profile protects remote secret delivery.
