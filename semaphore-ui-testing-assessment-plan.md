@@ -307,8 +307,9 @@ failure or let a queued task start after its dependencies have been deleted.
 
 **Test level:** framework HTTP-contract tests plus focused API/UI regressions on the existing profiles.
 
-**Priority:** P1. **Status:** all seven blocks are implemented and locally validated on
-`codex/p1-task-cleanup`, grouped for review in one PR. CI/review and merge remain outstanding.
+**Priority:** P1. **Status:** all seven blocks are implemented and locally validated;
+PR #42 was merged into `main` on 2026-10-14 (`5023bb6`). The block-specific results below
+record the original local validation, not a claim that every profile was rerun at merge time.
 
 | Order | Block | Scope and completion criteria | Status |
 | --- | --- | --- | --- |
@@ -419,6 +420,37 @@ deletion; an unexpected successful forbidden launch is also registered for clean
 including 17 new self-test cases for fixtures, precise failure statuses, request routes, membership
 cleanup, and cleanup after unexpected launch. No isolation violation was observed in this scope.
 Post-run API checks found no remaining isolation users or accessible-project fixtures.
+
+### P1 standalone block: non-admin API-token authorization
+
+**Risk:** bearer authentication bypasses project membership or role checks, retains access after
+membership removal, or revoking one token unexpectedly invalidates another credential.
+
+**Scope:** four independent cases in two focused classes:
+
+- `ApiTokenAuthorizationTest`: an owner token cannot read an unassigned project (`404`); a guest
+  token cannot create an access key (`403`) and the stored key collection is unchanged; removing
+  membership immediately hides the project from the existing bearer client while current-user
+  authentication still works.
+- `ApiTokenRevocationTest`: two tokens work before revocation; revoking the first returns `401`
+  for that same bearer client, leaves the second token and cookie session able to read the project,
+  and removes only the first token from the owner's list.
+
+**Implementation:** reuse disposable user/project preconditions and typed token/RBAC fixtures.
+Token steps accept an isolated owner session for creation, listing and deletion; teardown retains
+the creating client so it never attempts to revoke a non-admin token as the administrator. Seven
+framework cases verify owner routing, cleanup status handling, failed creation and cookie isolation
+of the bearer client. No generic scenario abstraction, new profile or CI job is introduced.
+
+**Verification (2026-10-15):** all four new cases and the existing token lifecycle case passed on
+`core-sqlite-local` (6s) and `core-postgres-local` (5s) against the same application image at
+`develop@c170fce81b68e6ffb517a9084d6cf656661ebd01`. `qualityGate` passed. The guest negative case
+compares the collection before/after the request, preserving the automatically created `None` key.
+No product authorization defect was observed in this scope.
+
+**Status:** implemented and locally validated in `codex/api-token-authorization`; PR/CI pending.
+These were targeted runs, not full-profile reruns. External environments, live expiry, password
+change effects on tokens and the full role/endpoint matrix are not claimed by this block.
 
 ### Completed P1 conditional security block: web-cache safety
 
