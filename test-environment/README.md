@@ -247,6 +247,8 @@ The lifecycle generates a disposable test CA and a server certificate for the Co
 
 To confirm that verification is real, replace `build/test-fixtures/ldap-tls/trust/ca.pem` with a certificate from another CA and restart the `semaphore` service: an LDAP login is then rejected with `401` and the Semaphore log shows `x509: certificate signed by unknown authority`. Remove `build/test-fixtures/ldap-tls` and run `up` again to restore the fixture.
 
+On current `develop` the email-conflict scenario is red because of the product defect BUG-010 (`500` instead of `401`, see [`ldap-local-email-conflict-defect.md`](ldap-local-email-conflict-defect.md)); the other LDAP scenarios pass.
+
 ## TOTP feature profile
 
 ```bash
