@@ -62,7 +62,7 @@ public class AccessKeySteps {
 
   @Step("Find required access key {name} in Semaphore project {projectId}")
   public AccessKey requireByName(long projectId, String name) {
-    List<AccessKey> keys = Calls.body(api.getAccessKeys(projectId), 200, "access keys");
+    List<AccessKey> keys = getKeys(projectId);
     return keys.stream()
         .filter(key -> name.equals(key.name()))
         .findFirst()
@@ -71,6 +71,11 @@ public class AccessKeySteps {
                 new IllegalStateException(
                     "Required access key '%s' was not found in project %d. Available keys: %s"
                         .formatted(name, projectId, keys.stream().map(AccessKey::name).toList())));
+  }
+
+  @Step("Get access keys in Semaphore project {projectId}")
+  public List<AccessKey> getKeys(long projectId) {
+    return Calls.body(api.getAccessKeys(projectId), 200, "access keys");
   }
 
   @Step("Create access key as isolated user in Semaphore project {projectId}")

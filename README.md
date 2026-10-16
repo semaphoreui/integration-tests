@@ -362,6 +362,12 @@ A separate RBAC suite pins the built-in `manager` and `task_runner` contracts. A
 
 The API token suite creates a time-limited token, verifies prefix-only listing, authenticates a separate Retrofit session through the Bearer header and creates a project. After revocation the same token gets `401`; creating an already expired token is rejected with `400`. The full value does not leak into the URL, step parameters or HTTP/Allure attachments: the creation response is deliberately hidden, Authorization is redacted, and delete uses the public eight-character prefix.
 
+Non-admin token authorization is covered separately: an existing bearer token cannot read an
+unassigned project, a guest cannot create access keys (the stored collection remains unchanged),
+and removing membership immediately hides the project while the token still authenticates its
+owner. Revoking one of two tokens leaves the other token and the owner's cookie session usable.
+Each scenario creates a disposable user; token deletion and cleanup use that user's session.
+
 Cross-project task isolation has three focused suites: `TaskReadIsolationApiTest` (details and
 structured/raw output), `TaskMutationIsolationApiTest` (launch and stop without side effects), and
 `ProjectMembershipRevocationApiTest` (access revoked in an already authenticated session). Each

@@ -27,14 +27,29 @@ public class TokenSteps {
 
   @Step("Create Semaphore API token {request.name}")
   public ApiToken create(ApiTokenRequest request) {
-    ApiToken token = Calls.body(api.create(request), 201, "created API token");
-    teardown.push("Delete Semaphore API token " + token.prefix(), () -> deleteIfPresent(token));
+    return createOwnedToken(api, request);
+  }
+
+  @Step("Create Semaphore API token {request.name} through an isolated session")
+  public ApiToken create(SemaphoreSessionApis session, ApiTokenRequest request) {
+    return createOwnedToken(session.tokens(), request);
+  }
+
+  private ApiToken createOwnedToken(SemaphoreTokensApi ownerApi, ApiTokenRequest request) {
+    ApiToken token = Calls.body(ownerApi.create(request), 201, "created API token");
+    teardown.push(
+        "Delete Semaphore API token " + token.prefix(), () -> deleteIfPresent(ownerApi, token));
     return token;
   }
 
   @Step("Get Semaphore API tokens")
   public List<ApiToken> getTokens() {
     return Calls.body(api.getTokens(), 200, "API tokens");
+  }
+
+  @Step("Get Semaphore API tokens through an isolated session")
+  public List<ApiToken> getTokens(SemaphoreSessionApis session) {
+    return Calls.body(session.tokens().getTokens(), 200, "session-owned API tokens");
   }
 
   @Step("Find Semaphore API token {name}")
@@ -61,6 +76,11 @@ public class TokenSteps {
     Calls.expectStatus(api.delete(token.prefix()), 204);
   }
 
+  @Step("Delete Semaphore API token {token.name} through its owner's session")
+  public void delete(SemaphoreSessionApis session, ApiToken token) {
+    Calls.expectStatus(session.tokens().delete(token.prefix()), 204);
+  }
+
   @Step("Verify rejected Semaphore API token request")
   public void verifyRejected(SemaphoreSessionApis session) {
     Calls.expectStatus(session.users().getCurrentUser(), 401);
@@ -71,8 +91,8 @@ public class TokenSteps {
     Calls.expectStatus(api.create(request), 400);
   }
 
-  private void deleteIfPresent(ApiToken token) {
-    var response = Calls.response(api.delete(token.prefix()));
+  private void deleteIfPresent(SemaphoreTokensApi ownerApi, ApiToken token) {
+    var response = Calls.response(ownerApi.delete(token.prefix()));
     if (response.code() != 204 && response.code() != 404) {
       throw new IllegalStateException(
           "API token cleanup expected HTTP 204 or 404 but received " + response.code());

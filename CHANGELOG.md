@@ -27,6 +27,9 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- Non-admin API-token authorization coverage for project isolation, guest mutation denial,
+  membership revocation, and independent revocation of one token without invalidating a sibling
+  token or the owner's cookie session. Token cleanup uses the creating user's session.
 - Task-history pagination coverage for project and template lists, exact next-page headers,
   stable cursors after insertion, template filtering, and legacy limit/count compatibility.
 - Cross-project task isolation coverage for task details, structured/raw output, template launch,
