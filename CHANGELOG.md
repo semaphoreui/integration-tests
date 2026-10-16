@@ -6,6 +6,10 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Changed
 
+- The LDAPS profile now serves a certificate for `ldap` signed by a generated test CA that
+  Semaphore trusts through `SSL_CERT_DIR`, so the profile passes with LDAP certificate
+  verification, which Semaphore `develop` enables by default since `048df995`.
+
 - Promoted the fixed shell-output, remote survey-secret, and enum-default canaries to positive
   regressions on the current application source. The SQLite gate now protects complete task output
   and enum validation; the daily persistent-runner profile protects remote secret delivery.
@@ -27,6 +31,9 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- BUG-010: an LDAP login with a local account's email returns `500` instead of `401` on Semaphore
+  `develop` since `1201b3c1`. The LDAPS email-conflict test keeps its `4xx` assertion and stays red
+  until the fix.
 - Task-history pagination coverage for project and template lists, exact next-page headers,
   stable cursors after insertion, template filtering, and legacy limit/count compatibility.
 - Cross-project task isolation coverage for task details, structured/raw output, template launch,

@@ -16,5 +16,6 @@ execution_mode: local
 execution_executor: local
 auth: password,ldaps
 ldap_image: osixia/openldap:1.5.0
+ldap_tls_fixture: generated
 git_client: cmd_git
 capabilities: ldaps-bind,ldap-user-provisioning,ldap-repeat-login,ldap-logout,ldap-invalid-password,ldap-local-account-conflict

@@ -29,6 +29,7 @@ instead. All reproducers use generated fixtures and do not expose credentials or
 | BUG-007 | Project restore accepts duplicate resource names | Medium | Project backup / restore | Confirmed in Linux CI on `v2.19.12`; off-by-one remains on `develop` |
 | BUG-008 | Survey enum accepts a default outside its allowed values | Medium | Template survey validation | Historical on `v2.19.8`; fixed and covered on `develop` |
 | BUG-009 | Successful short task loses `stdout` or `stderr` | High | Task execution / output collection | Historical on `v2.19.12`; fixed and covered on `develop` |
+| BUG-010 | LDAP login with a local account's email returns 500 | Medium | LDAP login / external identity | Confirmed locally on `develop`; introduced by `1201b3c1` |
 
 ## BUG-001 — Project deletion succeeds while a task is still running
 
@@ -411,6 +412,46 @@ The strict test is now a positive regression against the current application sou
 SQLite pull-request gate and in the focused daily `feature-shell-output` profile. The release-specific
 failure and its evidence remain documented here until a stable release containing both fixes is used
 as an upgrade baseline. Both scenarios passed locally against `develop@e95560fd` on 2026-09-21.
+
+## BUG-010 — LDAP login with a local account's email returns 500
+
+**Description**
+
+An LDAP user whose directory email belongs to a local (password) account gets `500` with an empty
+body from `POST /api/auth/login` instead of `401`. The local account is not taken over; the status
+comes from a failed insert of a duplicate user (`UNIQUE constraint failed: user.email`).
+
+**Impact**
+
+An ordinary rejected login surfaces as a server error and an error-level database failure in the
+log, which also trips `5xx` monitoring.
+
+**Steps to reproduce**
+
+1. Start `feature-ldap-tls`; the directory user `ldap-admin-conflict` has `mail: admin@localhost`.
+2. Sign in as `ldap-admin-conflict` with its directory password, with or without `method: ldap`.
+
+**Expected:** `401`, no new user — the behaviour before `1201b3c1`.
+
+**Actual:** `500`; the log shows a successful LDAP bind followed by the unique-constraint failure.
+
+**Automated reproducer**
+
+```bash
+test-environment/profile up feature-ldap-tls
+test-environment/profile test feature-ldap-tls \
+  --tests 'io.bookwright.tests.semaphore.SemaphoreLdapAuthenticationTest'
+```
+
+The test keeps its `4xx` assertion and stays red until the fix, so the `feature-ldap-tls` matrix job
+is red on `develop` for this reason alone.
+
+**Source evidence:** in `api/login_identity.go`, `matchExternalUserByEmail` returns `ErrNotFound` for
+a local account (takeover protection), and `resolveExternalUser` then provisions a new user with the
+same email. Introduced by `1201b3c1` (2026-07-14); hidden until 2026-10-15 because the LDAPS profile
+failed on certificate verification from 2026-07-19.
+
+**Detailed evidence:** [ldap-local-email-conflict-defect.md](ldap-local-email-conflict-defect.md)
 
 ## Excluded historical and policy findings
 
