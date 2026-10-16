@@ -3,6 +3,61 @@
   "runs": [
     {
       "schemaVersion": 1,
+      "title": "Semaphore CI",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/38889001440",
+      "versions": [
+        "develop"
+      ],
+      "reports": [
+        {
+          "name": "core-sqlite-local",
+          "profile": "core-sqlite-local",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 155,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 112,
+            "skipped": 43,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "quality",
+          "profile": "quality",
+          "version": "",
+          "previousVersion": "",
+          "versionLabel": "",
+          "tests": 159,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 159,
+            "skipped": 0,
+            "unknown": 0
+          }
+        }
+      ],
+      "source": "github",
+      "workflow": "CI",
+      "workflowSlug": "ci",
+      "displayTitle": "Merge pull request #51 from semaphoreui/codex/api-token-authorization",
+      "event": "push",
+      "conclusion": "success",
+      "runId": 38889001440,
+      "runAttempt": 1,
+      "runNumber": 151,
+      "createdAt": "2026-10-16T10:42:31Z",
+      "date": "2026-10-16",
+      "headSha": "a8f6b57734e7a5a148cadf998b3b9156e93c27a0",
+      "shortSha": "a8f6b57",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/a8f6b57734e7a5a148cadf998b3b9156e93c27a0",
+      "path": "reports/2026-10-16/ci/38889001440-1"
+    },
+    {
+      "schemaVersion": 1,
       "title": "Semaphore configuration matrix",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/38859855417",
       "versions": [
