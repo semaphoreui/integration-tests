@@ -4,6 +4,226 @@
     {
       "schemaVersion": 1,
       "title": "Semaphore configuration matrix",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/39103994753",
+      "versions": [
+        "develop"
+      ],
+      "reports": [
+        {
+          "name": "core-mariadb-local",
+          "profile": "core-mariadb-local",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 142,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 99,
+            "skipped": 43,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "core-mysql-local",
+          "profile": "core-mysql-local",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 142,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 99,
+            "skipped": 43,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "core-postgres-local",
+          "profile": "core-postgres-local",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 142,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 99,
+            "skipped": 43,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "feature-encryption-rotation",
+          "profile": "feature-encryption-rotation",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 9,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 3,
+            "skipped": 6,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "feature-git-https",
+          "profile": "feature-git-https",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 4,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 4,
+            "skipped": 0,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "feature-ldap-tls",
+          "profile": "feature-ldap-tls",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 142,
+          "counts": {
+            "failed": 0,
+            "broken": 101,
+            "passed": 2,
+            "skipped": 39,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "feature-oidc-local",
+          "profile": "feature-oidc-local",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 12,
+          "counts": {
+            "failed": 0,
+            "broken": 2,
+            "passed": 2,
+            "skipped": 8,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "feature-proxy-oidc",
+          "profile": "feature-proxy-oidc",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 12,
+          "counts": {
+            "failed": 0,
+            "broken": 2,
+            "passed": 2,
+            "skipped": 8,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "feature-schedule-timezone",
+          "profile": "feature-schedule-timezone",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 3,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 3,
+            "skipped": 0,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "feature-shell-output",
+          "profile": "feature-shell-output",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 2,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 2,
+            "skipped": 0,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "feature-ssh-local",
+          "profile": "feature-ssh-local",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 142,
+          "counts": {
+            "failed": 0,
+            "broken": 1,
+            "passed": 106,
+            "skipped": 35,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "feature-totp-local",
+          "profile": "feature-totp-local",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 8,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 8,
+            "skipped": 0,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "prod-postgres-runner",
+          "profile": "prod-postgres-runner",
+          "version": "develop",
+          "previousVersion": "",
+          "versionLabel": "develop",
+          "tests": 142,
+          "counts": {
+            "failed": 0,
+            "broken": 0,
+            "passed": 103,
+            "skipped": 39,
+            "unknown": 0
+          }
+        }
+      ],
+      "source": "github",
+      "workflow": "Configuration matrix",
+      "workflowSlug": "configuration-matrix",
+      "displayTitle": "Configuration matrix",
+      "event": "schedule",
+      "conclusion": "failure",
+      "runId": 39103994753,
+      "runAttempt": 1,
+      "runNumber": 72,
+      "createdAt": "2026-10-18T06:25:42Z",
+      "date": "2026-10-18",
+      "headSha": "a8f6b57734e7a5a148cadf998b3b9156e93c27a0",
+      "shortSha": "a8f6b57",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/a8f6b57734e7a5a148cadf998b3b9156e93c27a0",
+      "path": "reports/2026-10-18/configuration-matrix/39103994753-1"
+    },
+    {
+      "schemaVersion": 1,
+      "title": "Semaphore configuration matrix",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/39008128547",
       "versions": [
         "develop"
@@ -7450,546 +7670,6 @@
       "shortSha": "c3ffd6f",
       "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/c3ffd6f7e5c1a36d2265fe39065629a19f382dfa",
       "path": "reports/2026-09-18/ci/35364665811-1"
-    },
-    {
-      "schemaVersion": 1,
-      "title": "Semaphore configuration matrix",
-      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35314765500",
-      "versions": [
-        "v2.19.12"
-      ],
-      "reports": [
-        {
-          "name": "core-mariadb-local",
-          "profile": "core-mariadb-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 32,
-            "skipped": 25,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "core-mysql-local",
-          "profile": "core-mysql-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 32,
-            "skipped": 25,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "core-postgres-local",
-          "profile": "core-postgres-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 32,
-            "skipped": 25,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-encryption-rotation",
-          "profile": "feature-encryption-rotation",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 9,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 3,
-            "skipped": 6,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-git-https",
-          "profile": "feature-git-https",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 2,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 2,
-            "skipped": 0,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-ldap-tls",
-          "profile": "feature-ldap-tls",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 36,
-            "skipped": 21,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-oidc-local",
-          "profile": "feature-oidc-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 9,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 4,
-            "skipped": 5,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-proxy-oidc",
-          "profile": "feature-proxy-oidc",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 9,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 4,
-            "skipped": 5,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-ssh-local",
-          "profile": "feature-ssh-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 35,
-            "skipped": 22,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-totp-local",
-          "profile": "feature-totp-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 2,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 2,
-            "skipped": 0,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "prod-postgres-runner",
-          "profile": "prod-postgres-runner",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 34,
-            "skipped": 23,
-            "unknown": 0
-          }
-        }
-      ],
-      "workflow": "Configuration matrix",
-      "workflowSlug": "configuration-matrix",
-      "displayTitle": "Configuration matrix",
-      "event": "schedule",
-      "conclusion": "success",
-      "runId": 35314765500,
-      "runAttempt": 1,
-      "runNumber": 40,
-      "createdAt": "2026-09-18T06:24:48Z",
-      "date": "2026-09-18",
-      "headSha": "59e3fc33994d82e4e51b01ca22141123185de92a",
-      "shortSha": "59e3fc3",
-      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/59e3fc33994d82e4e51b01ca22141123185de92a",
-      "path": "reports/2026-09-18/configuration-matrix/35314765500-1"
-    },
-    {
-      "schemaVersion": 1,
-      "title": "Semaphore CI",
-      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35240256141",
-      "versions": [
-        "v2.19.12"
-      ],
-      "reports": [
-        {
-          "name": "core-sqlite-local",
-          "profile": "core-sqlite-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 66,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 37,
-            "skipped": 29,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "quality",
-          "profile": "quality",
-          "version": "",
-          "previousVersion": "",
-          "versionLabel": "",
-          "tests": 82,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 82,
-            "skipped": 0,
-            "unknown": 0
-          }
-        }
-      ],
-      "workflow": "CI",
-      "workflowSlug": "ci",
-      "displayTitle": "Merge pull request #29 from semaphoreui/codex/variable-group-ui",
-      "event": "push",
-      "conclusion": "success",
-      "runId": 35240256141,
-      "runAttempt": 1,
-      "runNumber": 88,
-      "createdAt": "2026-09-17T15:26:33Z",
-      "date": "2026-09-17",
-      "headSha": "59e3fc33994d82e4e51b01ca22141123185de92a",
-      "shortSha": "59e3fc3",
-      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/59e3fc33994d82e4e51b01ca22141123185de92a",
-      "path": "reports/2026-09-17/ci/35240256141-1"
-    },
-    {
-      "schemaVersion": 1,
-      "title": "Semaphore CI",
-      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35239575526",
-      "versions": [
-        "v2.19.12"
-      ],
-      "reports": [
-        {
-          "name": "core-sqlite-local",
-          "profile": "core-sqlite-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 33,
-            "skipped": 24,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "quality",
-          "profile": "quality",
-          "version": "",
-          "previousVersion": "",
-          "versionLabel": "",
-          "tests": 82,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 82,
-            "skipped": 0,
-            "unknown": 0
-          }
-        }
-      ],
-      "workflow": "CI",
-      "workflowSlug": "ci",
-      "displayTitle": "Merge pull request #28 from semaphoreui/codex/web-cache-safety",
-      "event": "push",
-      "conclusion": "cancelled",
-      "runId": 35239575526,
-      "runAttempt": 1,
-      "runNumber": 87,
-      "createdAt": "2026-09-17T15:20:21Z",
-      "date": "2026-09-17",
-      "headSha": "4e665cbc7139576937ca94c9318268930687a2a5",
-      "shortSha": "4e665cb",
-      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/4e665cbc7139576937ca94c9318268930687a2a5",
-      "path": "reports/2026-09-17/ci/35239575526-1"
-    },
-    {
-      "schemaVersion": 1,
-      "title": "Semaphore CI",
-      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35199131769",
-      "versions": [
-        "v2.19.12"
-      ],
-      "reports": [
-        {
-          "name": "core-sqlite-local",
-          "profile": "core-sqlite-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 65,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 36,
-            "skipped": 29,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "quality",
-          "profile": "quality",
-          "version": "",
-          "previousVersion": "",
-          "versionLabel": "",
-          "tests": 82,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 82,
-            "skipped": 0,
-            "unknown": 0
-          }
-        }
-      ],
-      "workflow": "CI",
-      "workflowSlug": "ci",
-      "displayTitle": "Merge pull request #27 from semaphoreui/feat/external-profile",
-      "event": "push",
-      "conclusion": "success",
-      "runId": 35199131769,
-      "runAttempt": 1,
-      "runNumber": 83,
-      "createdAt": "2026-09-17T08:20:18Z",
-      "date": "2026-09-17",
-      "headSha": "7ff422476e7de220ed23a5d4fbedabe9bba6a6ab",
-      "shortSha": "7ff4224",
-      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/7ff422476e7de220ed23a5d4fbedabe9bba6a6ab",
-      "path": "reports/2026-09-17/ci/35199131769-1"
-    },
-    {
-      "schemaVersion": 1,
-      "title": "Semaphore configuration matrix",
-      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35190090315",
-      "versions": [
-        "v2.19.12"
-      ],
-      "reports": [
-        {
-          "name": "core-mariadb-local",
-          "profile": "core-mariadb-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 32,
-            "skipped": 25,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "core-mysql-local",
-          "profile": "core-mysql-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 32,
-            "skipped": 25,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "core-postgres-local",
-          "profile": "core-postgres-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 32,
-            "skipped": 25,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-encryption-rotation",
-          "profile": "feature-encryption-rotation",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 9,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 3,
-            "skipped": 6,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-git-https",
-          "profile": "feature-git-https",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 2,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 2,
-            "skipped": 0,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-ldap-tls",
-          "profile": "feature-ldap-tls",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 36,
-            "skipped": 21,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-oidc-local",
-          "profile": "feature-oidc-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 8,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 4,
-            "skipped": 4,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-proxy-oidc",
-          "profile": "feature-proxy-oidc",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 8,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 4,
-            "skipped": 4,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-ssh-local",
-          "profile": "feature-ssh-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 35,
-            "skipped": 22,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "feature-totp-local",
-          "profile": "feature-totp-local",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 2,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 2,
-            "skipped": 0,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "prod-postgres-runner",
-          "profile": "prod-postgres-runner",
-          "version": "v2.19.12",
-          "previousVersion": "",
-          "versionLabel": "v2.19.12",
-          "tests": 57,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 34,
-            "skipped": 23,
-            "unknown": 0
-          }
-        }
-      ],
-      "workflow": "Configuration matrix",
-      "workflowSlug": "configuration-matrix",
-      "displayTitle": "Configuration matrix",
-      "event": "schedule",
-      "conclusion": "success",
-      "runId": 35190090315,
-      "runAttempt": 1,
-      "runNumber": 39,
-      "createdAt": "2026-09-17T06:30:01Z",
-      "date": "2026-09-17",
-      "headSha": "da052e8b96b6060776ab410d1823509820b1034f",
-      "shortSha": "da052e8",
-      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/da052e8b96b6060776ab410d1823509820b1034f",
-      "path": "reports/2026-09-17/configuration-matrix/35190090315-1"
     }
   ]
 }
