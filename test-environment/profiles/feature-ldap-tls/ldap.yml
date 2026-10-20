@@ -13,12 +13,17 @@ services:
       SEMAPHORE_LDAP_MAPPING_USERNAME: uid
       SEMAPHORE_LDAP_MAPPING_FULLNAME: cn
       SEMAPHORE_LDAP_MAPPING_EMAIL: mail
+      # Adds the fixture CA to Go's system roots; the image bundle file is still loaded.
+      SSL_CERT_DIR: /run/ldap-ca
+    volumes:
+      - ../build/test-fixtures/ldap-tls/trust:/run/ldap-ca:ro
     depends_on:
       ldap:
         condition: service_healthy
 
   ldap:
     image: osixia/openldap:1.5.0
+    hostname: ldap
     environment:
       LDAP_ORGANISATION: Bookwright
       LDAP_DOMAIN: bookwright.test
@@ -27,15 +32,22 @@ services:
       LDAP_TLS: "true"
       LDAP_TLS_VERIFY_CLIENT: never
       LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
+      # Copied into the image's certificate directory on every container start.
+      LDAP_SEED_INTERNAL_LDAP_TLS_CRT_FILE: /run/ldap-tls/server-cert.pem
+      LDAP_SEED_INTERNAL_LDAP_TLS_KEY_FILE: /run/ldap-tls/server-key.pem
+      LDAP_SEED_INTERNAL_LDAP_TLS_CA_CRT_FILE: /run/ldap-tls/ca.pem
     volumes:
       - ./profiles/feature-ldap-tls/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
+      - ../build/test-fixtures/ldap-tls/server-cert.pem:/run/ldap-tls/server-cert.pem:ro
+      - ../build/test-fixtures/ldap-tls/server-key.pem:/run/ldap-tls/server-key.pem:ro
+      - ../build/test-fixtures/ldap-tls/ca.pem:/run/ldap-tls/ca.pem:ro
       - ldap-data:/var/lib/ldap
       - ldap-config:/etc/ldap/slapd.d
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "LDAPTLS_REQCERT=never ldapsearch -x -H ldaps://127.0.0.1:636 -D 'cn=admin,dc=bookwright,dc=test' -w 'Bookwright-LDAP-Bind-42!' -b 'dc=bookwright,dc=test' -s base >/dev/null",
+          "LDAPTLS_CACERT=/run/ldap-tls/ca.pem ldapsearch -x -H ldaps://ldap:636 -D 'cn=admin,dc=bookwright,dc=test' -w 'Bookwright-LDAP-Bind-42!' -b 'dc=bookwright,dc=test' -s base >/dev/null",
         ]
       interval: 2s
       timeout: 3s

@@ -169,7 +169,7 @@ test-environment/profile encryption-rotation-test feature-encryption-rotation
 
 The scenario switches the primary without a restart, confirms simultaneous reading of the old and writing of the new ciphertext, runs `vault check`/`vault rekey`, removes the retired key and re-runs the saved template. Test-only key material is generated in the ignored `build/test-fixtures/encryption-rotation`.
 
-The LDAPS feature profile brings up a pinned OpenLDAP, performs a service search and user bind over TLS, and then verifies external user provisioning/reuse, logout, a wrong password and protection of the local account:
+The LDAPS feature profile brings up a pinned OpenLDAP with a certificate from a generated test CA that Semaphore verifies, performs a service search and user bind over TLS, and then verifies external user provisioning/reuse, logout, a wrong password and protection of the local account:
 
 ```bash
 test-environment/profile down feature-oidc-local
