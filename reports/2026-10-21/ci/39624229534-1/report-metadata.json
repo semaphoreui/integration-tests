@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "title": "Semaphore CI",
-  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35581727416",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/39624229534",
   "versions": [
     "develop"
   ],
@@ -12,12 +12,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 71,
+      "tests": 155,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 42,
-        "skipped": 29,
+        "passed": 112,
+        "skipped": 43,
         "unknown": 0
       }
     },
@@ -27,11 +27,11 @@
       "version": "",
       "previousVersion": "",
       "versionLabel": "",
-      "tests": 82,
+      "tests": 159,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 82,
+        "passed": 159,
         "skipped": 0,
         "unknown": 0
       }

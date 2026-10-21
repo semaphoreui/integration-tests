@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "title": "Semaphore CI",
-  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35587859628",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/39624229534",
   "versions": [
     "develop"
   ],
@@ -12,12 +12,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 71,
+      "tests": 155,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 42,
-        "skipped": 29,
+        "passed": 112,
+        "skipped": 43,
         "unknown": 0
       }
     },
@@ -27,27 +27,28 @@
       "version": "",
       "previousVersion": "",
       "versionLabel": "",
-      "tests": 82,
+      "tests": 159,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 82,
+        "passed": 159,
         "skipped": 0,
         "unknown": 0
       }
     }
   ],
+  "source": "github",
   "workflow": "CI",
   "workflowSlug": "ci",
-  "displayTitle": "Merge pull request #35 from semaphoreui/codex/config-contract-checks",
+  "displayTitle": "fix: update error code from 401 to 403",
   "event": "push",
   "conclusion": "success",
-  "runId": 35587859628,
+  "runId": 39624229534,
   "runAttempt": 1,
-  "runNumber": 102,
-  "createdAt": "2026-09-21T10:16:23Z",
-  "date": "2026-09-21",
-  "headSha": "7e760c9c12cea110bd5fa07def56815e063fdd3e",
-  "shortSha": "7e760c9",
-  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/7e760c9c12cea110bd5fa07def56815e063fdd3e"
+  "runNumber": 154,
+  "createdAt": "2026-10-21T15:17:09Z",
+  "date": "2026-10-21",
+  "headSha": "58e93694ed0b16debe7dad66169757522245d226",
+  "shortSha": "58e9369",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/58e93694ed0b16debe7dad66169757522245d226"
 }
