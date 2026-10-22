@@ -1,0 +1,132 @@
+services:
+  semaphore:
+    environment:
+      GIT_SSL_CAINFO: /run/host-config-git/server-cert.pem
+      SEMAPHORE_FORWARDED_ENV_VARS: '["GIT_SSL_CAINFO"]'
+    volumes:
+      - ../build/test-fixtures/host-config-git/server-cert.pem:/run/host-config-git/server-cert.pem:ro
+    depends_on:
+      host-config-git:
+        condition: service_healthy
+      host-config-git-ssh:
+        condition: service_healthy
+      host-config-target:
+        condition: service_healthy
+
+  # Builds every repository offline: the submodules of submodules.git are recorded as gitlinks
+  # with the commit of each published submodule, so no server has to be up yet.
+  host-config-git-init:
+    image: semaphoreui/semaphore:v2.19.12
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    environment:
+      PRIVATE_SUBMODULE_URL: https://host-config-git/private/private-submodule.git
+      HTTP_SUBMODULE_URL: http://host-config-git/public/http-submodule.git
+      SSH_SUBMODULE_URL: ssh://fixture@host-config-git-ssh/srv/git/ssh/ssh-submodule.git
+    command:
+      - |
+        set -eu
+        export HOME=/tmp/host-config-home
+        mkdir -p "$$HOME"
+        git config --global user.name "Semaphore Test Fixture"
+        git config --global user.email "fixture@localhost"
+        work=/tmp/host-config-work
+        rm -rf "$$work" /srv/git/public /srv/git/private /srv/git/ssh
+        mkdir -p "$$work" /srv/git/public /srv/git/private /srv/git/ssh
+
+        prepare() {
+          mkdir -p "$$work/$$1"
+          cp -R "/source/$$1/." "$$work/$$1/"
+          git -C "$$work/$$1" init -q -b main
+          git -C "$$work/$$1" add .
+        }
+        # Commits the index as staged: gitlinks have no work tree, and "git add ." would drop them.
+        publish() {
+          git -C "$$work/$$1" commit -q -m "Prepare $$1 fixture"
+          git clone -q --bare "$$work/$$1" "/srv/git/$$2"
+          git --git-dir="/srv/git/$$2" update-server-info
+        }
+        submodule() {
+          git -C "$$work/submodules" config -f .gitmodules "submodule.modules/$$1.path" "modules/$$1"
+          git -C "$$work/submodules" config -f .gitmodules "submodule.modules/$$1.url" "$$2"
+          git -C "$$work/submodules" update-index --add \
+            --cacheinfo "160000,$$(git -C "$$work/$$3" rev-parse HEAD),modules/$$1"
+          git -C "$$work/submodules" add .gitmodules
+        }
+
+        for source in private-submodule:private/private-submodule.git \
+          private-content:private/content.git \
+          private-role:private/role.git \
+          http-submodule:public/http-submodule.git \
+          ssh-submodule:ssh/ssh-submodule.git \
+          ansible:public/ansible.git \
+          galaxy:public/galaxy.git; do
+          prepare "$${source%%:*}"
+          publish "$${source%%:*}" "$${source#*:}"
+        done
+
+        prepare submodules
+        submodule private "$$PRIVATE_SUBMODULE_URL" private-submodule
+        submodule http "$$HTTP_SUBMODULE_URL" http-submodule
+        submodule ssh "$$SSH_SUBMODULE_URL" ssh-submodule
+        publish submodules public/submodules.git
+
+        # The SSH server serves Git as uid 1001, and Git refuses repositories owned by another user.
+        chown -R 1001:0 /srv/git
+        chmod -R a+rX /srv/git
+    volumes:
+      - ./fixtures/host-config:/source:ro
+      - host-config-git-repository:/srv/git
+
+  host-config-git:
+    image: nginx:1.27.5-alpine
+    restart: unless-stopped
+    depends_on:
+      host-config-git-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep -q ok"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - host-config-git-repository:/srv/git:ro
+      - ./profiles/feature-host-config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./profiles/feature-host-config/.htpasswd:/etc/nginx/.htpasswd:ro
+      - ../build/test-fixtures/host-config-git/server-cert.pem:/run/host-config-git/server-cert.pem:ro
+      - ../build/test-fixtures/host-config-git/server-key.pem:/run/host-config-git/server-key.pem:ro
+
+  # Git over SSH as user fixture; nginx does not serve ssh/, so this is its only way in.
+  host-config-git-ssh:
+    build:
+      context: fixtures/ssh
+    image: semaphore-test/ssh-fixture:alpine-3.22.1
+    restart: unless-stopped
+    depends_on:
+      host-config-git-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 22"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    volumes:
+      - host-config-git-repository:/srv/git:ro
+      - ../build/test-fixtures/ssh/id_ed25519.pub:/home/fixture/.ssh/authorized_keys:ro
+
+  host-config-target:
+    build:
+      context: fixtures/ansible-target
+    image: semaphore-test/ansible-target:alpine-3.22.1
+    hostname: host-config-target
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 22"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    volumes:
+      - ../build/test-fixtures/ssh/id_ed25519.pub:/home/fixture/.ssh/authorized_keys:ro
+
+volumes:
+  host-config-git-repository:

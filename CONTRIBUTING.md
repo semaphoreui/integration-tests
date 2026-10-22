@@ -38,7 +38,7 @@ Docker image; this repository never contains application source code.
 | `curl` | readiness checks in `test-environment/profile` | `curl --version` |
 | Network access to GitHub | resolving/building the application image | |
 | `ssh-keygen` | `feature-ssh-local` | |
-| `openssl`, `keytool` | `feature-git-https`, `feature-proxy-oidc`, `feature-encryption-rotation` | |
+| `openssl`, `keytool` | `feature-git-https`, `feature-host-config`, `feature-proxy-oidc`, `feature-encryption-rotation` | |
 | Playwright Chromium | `uiTest`, `totpTest`, OIDC profiles | `./gradlew playwrightInstallChromium` |
 | Python 3.10+ | script unit tests, configuration contract check | `python3 --version` |
 | `gh` CLI (optional) | testing an application pull request locally | `gh auth status` |
@@ -141,6 +141,7 @@ Use `clean --yes` when you need a truly fresh database.
 | `prod-postgres-runner` | PostgreSQL 14.3 | server → DB → persistent remote runner | `up` + `test` |
 | `feature-ssh-local` | SQLite | Git over SSH, Ansible SSH target, key rotation, SSH credential mappings (`host_configs`) | `up` + `test` |
 | `feature-git-https` | SQLite | private Git over HTTPS with Basic Auth and self-signed CA, URL credential mapping | `up` + `test` |
+| `feature-host-config` | SQLite | credential mappings for submodules over HTTPS/HTTP/SSH, Ansible target container, Ansible git module, Galaxy requirements | `up` + `test` |
 | `feature-parallel-tasks-cmd-git` | SQLite | parallel task isolation, command-line Git client | `up` + `test` |
 | `feature-parallel-tasks-go-git` | SQLite | parallel task isolation, Go Git client | `up` + `test` |
 | `feature-oidc-local` | SQLite | browser OIDC login through Dex | `up` + `test` (runs `uiTest`) |
@@ -396,7 +397,8 @@ CONFIG_CONTRACT_IMAGE=semaphoreui/semaphore:v2.19.14 python3 test-environment/co
 
 `run.sh` runs `test-environment/profile` inside a prebuilt runner container
 (`lowswoo/semaphore-test-container`, built from the root `Dockerfile`: JDK 21, Docker CLI with
-Compose and Buildx, `git`, `openssl`, `ssh-keygen`, `socat`). Only Docker is needed on the host. It
+Compose and Buildx, `git`, `openssl`, `ssh-keygen`, `socat`, `python3`; `RUNNER_IMAGE` replaces it,
+for example with your own build). Only Docker is needed on the host. It
 takes exactly the same arguments as `test-environment/profile`:
 
 ```bash
@@ -416,11 +418,10 @@ How it works:
 - `scripts/runner-entrypoint.sh` forwards the runner's `localhost` ports `3000`, `3003`, `3443`,
   `5556` and `FIXTURE_GIT_PORT` (default `3080`) to the host, so manifests and tests keep
   addressing the stand as `localhost`;
-- only these host variables are forwarded, by name, so values never appear in the command line:
-  `API_BASE_URL`, `API_USERNAME`, `API_PASSWORD`, `UI_BASE_URL`, `TEST_REPOSITORY`,
-  `FIXTURE_GIT_PORT`, `APP_IMAGE`, `APP_SOURCE`, `APP_BRANCH`, `APP_REPOSITORY`, `APP_PR`,
-  `APP_SHA`, `GH_TOKEN`, `GITHUB_TOKEN`. Anything else (for example `TEST_BRANCH`) has to be passed
-  as a Gradle `-D` argument to `test`.
+- the host environment is forwarded by name, so values never appear in the command line, except
+  the variables that describe the host: `PATH`, `HOME`, user, locale, `TMP*`, `JAVA_HOME`,
+  `GRADLE_USER_HOME`, `DOCKER_*`, `SSH_*`, `XDG_*`. Gradle system properties such as `TEST_BRANCH`
+  still have to be passed as `-D` arguments to `test`.
 
 Limitations:
 
@@ -429,6 +430,39 @@ Limitations:
 - every call runs `docker pull` for the runner image, so it needs registry access;
 - the Gradle cache lives in the throwaway container, so each call starts Gradle cold;
 - the path is not used by CI. Prefer the native run when you have Java 21 installed.
+
+#### Pipeline of several tasks (Semaphore)
+
+Each Semaphore template clones the repository into its own directory, so separate `up`, `test`,
+cleanup and publication tasks would each see a different `build/`: the test task would regenerate
+fixture keys the stand does not use, and the publication task finds no `build/allure-results`.
+`run.sh` therefore also keeps one runner container for the whole pipeline. It mounts the checkout
+of the task that started it, and later tasks only run commands in it:
+
+| Task | Command |
+| --- | --- |
+| 1. Start the stand | `./run.sh start up core-sqlite-local` |
+| 2. Run the tests | `./run.sh exec test core-sqlite-local` |
+| 3. Clean up, whatever the outcome | `./run.sh exec down core-sqlite-local` |
+| 4. Publish and stop the runner | `./run.sh publish core-sqlite-local=build/allure-results` |
+
+- the container is named `semaphore-tests-$SEMAPHORE_WORKFLOW_RUN_ID` when the tasks run in a
+  Semaphore workflow and `semaphore-tests` otherwise (`RUNNER_CONTAINER` overrides it); `start`
+  removes a runner left by an earlier pipeline and the Allure results and
+  outcome of earlier runs in that checkout;
+- `exec test` (and `upgrade-test`, `encryption-rotation-test`) records `success` or `failure` in
+  `build/run-conclusion`, which `publish` uses as `RUN_CONCLUSION`; `RUN_URL` defaults to
+  `SEMAPHORE_WORKFLOW_URL`, then to the task link `SEMAPHORE_TASK_DETAILS_URL`; Semaphore sets them
+  only when it knows its `web_host` (`SEMAPHORE_WEB_ROOT`);
+- `publish` stops the runner even when publication fails; `./run.sh stop` stops it by hand and gives
+  `build/` and `.gradle/` back to the checkout owner;
+- Semaphore passes variable-type secrets and extra variables as `NAME=value` arguments, secrets
+  before the template arguments; `run.sh` turns them into environment variables, so `GH_TOKEN`
+  works as either secret type;
+- each task's whole environment (environment variables, secrets, `SEMAPHORE_*`) reaches the
+  runner container on every call, except the host variables listed above;
+- every task must run on the same Docker host, and the runner image must contain `python3`
+  (rebuild it from the current `Dockerfile`).
 
 The root `docker-compose.yml` is a leftover of the previous wrapper and is not used by `run.sh`.
 

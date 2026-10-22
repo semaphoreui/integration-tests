@@ -1,0 +1,12 @@
+---
+- name: Semaphore submodule fixture
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Report the marker of every checked out submodule
+      ansible.builtin.debug:
+        msg: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/modules/' ~ item ~ '/marker.txt') }}"
+      loop:
+        - private
+        - http
+        - ssh
