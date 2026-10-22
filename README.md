@@ -12,6 +12,22 @@ on 2026-09-04, and the `v2.19.8 → v2.19.12` upgrade separately passed on SQLit
 Equivalent MySQL 8.4 and MariaDB 10.11 upgrade profiles are implemented and awaiting their first
 Linux CI confirmation after passing locally on 2026-09-09.
 
+## Quick start
+
+If you have Semaphore UI started locally, use following snippet to run tests:
+
+```
+export API_BASE_URL=http://localhost:3000/api/
+export API_USERNAME=admin
+export API_PASSWORD=admin
+export TEST_REPOSITORY=http://host.docker.internal:3080/fixtures.git
+
+./run.sh up external
+./run.sh test external
+./run.sh down external
+./run.sh clean external
+```
+
 ## Stack
 
 - Java 21;
