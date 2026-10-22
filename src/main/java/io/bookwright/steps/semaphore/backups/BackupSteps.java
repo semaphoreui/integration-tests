@@ -57,7 +57,7 @@ public class BackupSteps {
   @Step("Verify non-admin user cannot restore Semaphore project backup")
   public void verifyCannotRestore(
       SemaphoreSessionApis session, JsonNode backup, String projectName) {
-    Calls.expectStatus(session.backups().restoreProject(withProjectName(backup, projectName)), 401);
+    Calls.expectStatus(session.backups().restoreProject(withProjectName(backup, projectName)), 403);
   }
 
   @Step("Verify restore rejects a template referencing missing repository {repositoryName}")

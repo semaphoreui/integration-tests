@@ -6,6 +6,15 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Changed
 
+- Waits for Semaphore tasks, their output and their stop check the task at once and then every
+  250 ms instead of first after 3 s and then every 3 s, so a test no longer spends at least 3 s on
+  each task it runs. Reading the output of a finished task waits until Semaphore has stored all of
+  it, since the application writes task output to the database every 500 ms after the status.
+
+- The LDAPS profile now serves a certificate for `ldap` signed by a generated test CA that
+  Semaphore trusts through `SSL_CERT_DIR`, so the profile passes with LDAP certificate
+  verification, which Semaphore `develop` enables by default since `048df995`.
+
 - Promoted the fixed shell-output, remote survey-secret, and enum-default canaries to positive
   regressions on the current application source. The SQLite gate now protects complete task output
   and enum validation; the daily persistent-runner profile protects remote secret delivery.
@@ -34,6 +43,12 @@ All notable changes to the Semaphore UI test automation project are documented i
   container reached through a Host mapping. `git_https_fixture_dir` gives each HTTPS fixture its
   own generated certificate. The profile runs in the daily configuration matrix.
 - `run.sh start` / `exec` / `publish` / `stop` keep one runner container for a pipeline of separate Semaphore tasks (up, test, cleanup, publication), so they share one checkout's `build/` instead of each template's own; `exec test` records the outcome in `build/run-conclusion`, which `publish-external-results.sh` uses as the default `RUN_CONCLUSION`, and `RUN_URL` defaults to `SEMAPHORE_WORKFLOW_URL`, then to the task link `SEMAPHORE_TASK_DETAILS_URL`. The runner image now includes `python3`.
+- BUG-010: an LDAP login with a local account's email returns `500` instead of `401` on Semaphore
+  `develop` since `1201b3c1`. The LDAPS email-conflict test keeps its `4xx` assertion and stays red
+  until the fix.
+- Non-admin API-token authorization coverage for project isolation, guest mutation denial,
+  membership revocation, and independent revocation of one token without invalidating a sibling
+  token or the owner's cookie session. Token cleanup uses the creating user's session.
 - Task-history pagination coverage for project and template lists, exact next-page headers,
   stable cursors after insertion, template filtering, and legacy limit/count compatibility.
 - Cross-project task isolation coverage for task details, structured/raw output, template launch,

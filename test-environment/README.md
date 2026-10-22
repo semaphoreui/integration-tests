@@ -267,7 +267,13 @@ test-environment/profile up feature-ldap-tls
 test-environment/profile test feature-ldap-tls
 ```
 
-The profile starts a pinned OpenLDAP `1.5.0` with self-signed TLS and three directory users. Semaphore connects over LDAPS on `636`, performs a service bind, a search by `uid`, a user bind, and maps `uid`/`cn`/`mail`. Four scenarios verify provisioning of an external user, reuse of the same ID after logout, rejection of a wrong password without provisioning, and protection of the local admin on an email match.
+The profile starts a pinned OpenLDAP `1.5.0` with three directory users. Semaphore connects over LDAPS on `636` with certificate verification enabled (the default since Semaphore `048df995`), performs a service bind, a search by `uid`, a user bind, and maps `uid`/`cn`/`mail`. Four scenarios verify provisioning of an external user, reuse of the same ID after logout, rejection of a wrong password without provisioning, and protection of the local admin on an email match.
+
+The lifecycle generates a disposable test CA and a server certificate for the Compose name `ldap` in `build/test-fixtures/ldap-tls` (keys with mode `600`, never committed). OpenLDAP copies the certificate in through `LDAP_SEED_INTERNAL_LDAP_TLS_*_FILE` on every container start, so a regenerated certificate takes effect after `down` + `up` without removing the `ldap-config` volume. Semaphore trusts only `trust/ca.pem`, mounted as `SSL_CERT_DIR`; Go adds it to the image CA bundle instead of replacing it. The OpenLDAP healthcheck verifies the same chain and name, so a wrong certificate stops the stand before the tests start. `SEMAPHORE_LDAP_TLS_SKIP_VERIFY` is deliberately not set.
+
+To confirm that verification is real, replace `build/test-fixtures/ldap-tls/trust/ca.pem` with a certificate from another CA and restart the `semaphore` service: an LDAP login is then rejected with `401` and the Semaphore log shows `x509: certificate signed by unknown authority`. Remove `build/test-fixtures/ldap-tls` and run `up` again to restore the fixture.
+
+On current `develop` the email-conflict scenario is red because of the product defect BUG-010 (`500` instead of `401`, see [`ldap-local-email-conflict-defect.md`](ldap-local-email-conflict-defect.md)); the other LDAP scenarios pass.
 
 ## TOTP feature profile
 

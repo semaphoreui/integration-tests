@@ -17,8 +17,16 @@ public record SemaphoreTokenFixtures(String tokenName, String projectName) {
   }
 
   public ApiTokenRequest validRequest() {
+    return validRequest(tokenName);
+  }
+
+  public ApiTokenRequest secondValidRequest() {
+    return validRequest(tokenName + "-second");
+  }
+
+  private ApiTokenRequest validRequest(String name) {
     return new ApiTokenRequest(
-        tokenName, Instant.now().plus(Duration.ofMinutes(15)).truncatedTo(ChronoUnit.SECONDS));
+        name, Instant.now().plus(Duration.ofMinutes(15)).truncatedTo(ChronoUnit.SECONDS));
   }
 
   public ApiTokenRequest expiredRequest() {
