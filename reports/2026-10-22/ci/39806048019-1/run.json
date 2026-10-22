@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/39806048019",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 161,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 112,
+        "skipped": 49,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 160,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 160,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "source": "github",
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #50 from semaphoreui/feat/host-config",
+  "event": "push",
+  "conclusion": "success",
+  "runId": 39806048019,
+  "runAttempt": 1,
+  "runNumber": 158,
+  "createdAt": "2026-10-22T15:34:05Z",
+  "date": "2026-10-22",
+  "headSha": "666a05757b8f46a4c3e246bc8d3d1df9f707db5a",
+  "shortSha": "666a057",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/666a05757b8f46a4c3e246bc8d3d1df9f707db5a"
+}
