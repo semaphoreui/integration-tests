@@ -6,6 +6,11 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Changed
 
+- Waits for Semaphore tasks, their output and their stop check the task at once and then every
+  250 ms instead of first after 3 s and then every 3 s, so a test no longer spends at least 3 s on
+  each task it runs. Reading the output of a finished task waits until Semaphore has stored all of
+  it, since the application writes task output to the database every 500 ms after the status.
+
 - The LDAPS profile now serves a certificate for `ldap` signed by a generated test CA that
   Semaphore trusts through `SSL_CERT_DIR`, so the profile passes with LDAP certificate
   verification, which Semaphore `develop` enables by default since `048df995`.
