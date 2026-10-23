@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "title": "Semaphore configuration matrix",
-  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/35826747405",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/39911007765",
   "versions": [
     "develop"
   ],
@@ -12,12 +12,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 68,
+      "tests": 148,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 38,
-        "skipped": 30,
+        "passed": 99,
+        "skipped": 49,
         "unknown": 0
       }
     },
@@ -27,12 +27,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 68,
+      "tests": 148,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 38,
-        "skipped": 30,
+        "passed": 99,
+        "skipped": 49,
         "unknown": 0
       }
     },
@@ -42,12 +42,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 68,
+      "tests": 148,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 38,
-        "skipped": 30,
+        "passed": 99,
+        "skipped": 49,
         "unknown": 0
       }
     },
@@ -72,11 +72,26 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 2,
+      "tests": 4,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 2,
+        "passed": 4,
+        "skipped": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "feature-host-config",
+      "profile": "feature-host-config",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 6,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 6,
         "skipped": 0,
         "unknown": 0
       }
@@ -87,12 +102,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 68,
+      "tests": 148,
       "counts": {
         "failed": 0,
-        "broken": 41,
-        "passed": 1,
-        "skipped": 26,
+        "broken": 1,
+        "passed": 102,
+        "skipped": 45,
         "unknown": 0
       }
     },
@@ -102,12 +117,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 9,
+      "tests": 12,
       "counts": {
         "failed": 0,
         "broken": 2,
         "passed": 2,
-        "skipped": 5,
+        "skipped": 8,
         "unknown": 0
       }
     },
@@ -117,33 +132,33 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 9,
+      "tests": 12,
       "counts": {
         "failed": 0,
         "broken": 2,
         "passed": 2,
-        "skipped": 5,
+        "skipped": 8,
         "unknown": 0
       }
     },
     {
-      "name": "feature-ssh-local",
-      "profile": "feature-ssh-local",
+      "name": "feature-schedule-timezone",
+      "profile": "feature-schedule-timezone",
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 68,
+      "tests": 3,
       "counts": {
         "failed": 0,
-        "broken": 2,
-        "passed": 39,
-        "skipped": 27,
+        "broken": 0,
+        "passed": 3,
+        "skipped": 0,
         "unknown": 0
       }
     },
     {
-      "name": "feature-totp-local",
-      "profile": "feature-totp-local",
+      "name": "feature-shell-output",
+      "profile": "feature-shell-output",
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
@@ -157,17 +172,47 @@
       }
     },
     {
+      "name": "feature-ssh-local",
+      "profile": "feature-ssh-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 148,
+      "counts": {
+        "failed": 0,
+        "broken": 1,
+        "passed": 106,
+        "skipped": 41,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "feature-totp-local",
+      "profile": "feature-totp-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 8,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 8,
+        "skipped": 0,
+        "unknown": 0
+      }
+    },
+    {
       "name": "prod-postgres-runner",
       "profile": "prod-postgres-runner",
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 68,
+      "tests": 148,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 40,
-        "skipped": 28,
+        "passed": 103,
+        "skipped": 45,
         "unknown": 0
       }
     }
