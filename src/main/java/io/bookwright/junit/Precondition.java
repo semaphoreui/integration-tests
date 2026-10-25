@@ -12,6 +12,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreProjectIsolationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTaskHistoryFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreTokenFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreTotpFixtures;
 import io.bookwright.steps.ApiSteps;
 import io.bookwright.util.TestData;
@@ -138,6 +139,18 @@ public enum Precondition implements IPrecondition {
         api.semaphore().users().addToProject(project.id(), user.id(), fixtures.role());
       }),
 
+  SEMAPHORE_TOKEN_OWNERS_EXIST(
+      "Create two disposable non-admin API-token owners",
+      (api, store) -> {
+        var fixtures = SemaphoreTokenFixtures.from(store.testData());
+        var owner = api.semaphore().users().createDisposable(fixtures.ownerRequest());
+        store.putSemaphoreTokenOwner(
+            new SemaphoreTestUser(owner, fixtures.ownerRequest().password()));
+        var other = api.semaphore().users().createDisposable(fixtures.otherOwnerRequest());
+        store.putSemaphoreOtherTokenOwner(
+            new SemaphoreTestUser(other, fixtures.otherOwnerRequest().password()));
+      }),
+
   SEMAPHORE_RBAC_USER_EXISTS(
       "Ensure the Semaphore RBAC fixture user exists",
       (api, store) -> {
@@ -181,6 +194,8 @@ public enum Precondition implements IPrecondition {
   static final String SEMAPHORE_TOTP_USER_KEY = "semaphoreTotpUser";
   static final String SEMAPHORE_RBAC_USER_KEY = "semaphoreRbacUser";
   static final String SEMAPHORE_AUTH_LIFECYCLE_USERS_KEY = "semaphoreAuthLifecycleUsers";
+  static final String SEMAPHORE_TOKEN_OWNER_KEY = "semaphoreTokenOwner";
+  static final String SEMAPHORE_OTHER_TOKEN_OWNER_KEY = "semaphoreOtherTokenOwner";
 
   private final String title;
   private final BiConsumer<ApiSteps, TestStore> action;

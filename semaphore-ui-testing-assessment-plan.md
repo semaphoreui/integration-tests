@@ -448,9 +448,38 @@ of the bearer client. No generic scenario abstraction, new profile or CI job is 
 compares the collection before/after the request, preserving the automatically created `None` key.
 No product authorization defect was observed in this scope.
 
-**Status:** implemented and locally validated in `codex/api-token-authorization`; PR/CI pending.
+**Status:** merged in PR #51 on 2026-10-16; its PR CI passed, including core SQLite API/UI.
 These were targeted runs, not full-profile reruns. External environments, live expiry, password
 change effects on tokens and the full role/endpoint matrix are not claimed by this block.
+
+### P1 standalone block: API-token owner isolation
+
+**Risk:** a non-admin user lists another account's tokens or revokes another account's credential
+by substituting its public prefix. A listing regression could also publish full bearer secrets
+in test failure reports.
+
+**Scope:** four independent invocations in `ApiTokenOwnerIsolationTest`: owner-only token lists
+and foreign revocation, each through cookie and Bearer authentication. Every invocation creates
+two disposable, seed-scoped non-admin users through a precondition. Tokens are cleaned up using
+their creating sessions before user deletion; no projects or executable tasks are needed.
+
+**Contract:** DELETE of a foreign prefix currently returns idempotent `204`, not `403`/`404`.
+The test therefore checks that both lists and bearer identities remain intact, then proves the
+rightful owner can revoke the same token. List assertions require the expected public prefix,
+owner ID and name. They never print a full token; HTTP reporting suppresses token-list bodies
+even if the application incorrectly returns a bearer secret, including behind a subpath.
+
+**Verification (2026-10-25):** all nine token cases (four new and five existing) passed on
+`core-sqlite-local` and `core-postgres-local` using the same locally built application image at
+`develop@11bb5955a5995570f4b4b03106c847942a311108`. The framework `qualityGate` passed,
+including the new fixture-isolation self-test and two report-safety cases. The typed TestStore
+architecture contract was updated for the two new user accessors. No owner-isolation defect was
+observed in this scope; these were targeted runs, not full-profile reruns.
+No new CI job, external stand or release dependency is required. This is not a full token
+security audit: live expiry, password-change effects, prefix collisions and admin impersonation
+remain outside this block.
+
+**Status:** implemented and locally validated in `codex/api-token-owner-isolation`; PR review and CI pending.
 
 ### Completed P1 conditional security block: web-cache safety
 

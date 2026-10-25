@@ -64,6 +64,22 @@ public class TestStore {
         Precondition.SEMAPHORE_AUTH_LIFECYCLE_USERS_KEY, SemaphoreAuthLifecycleUsers.class);
   }
 
+  public SemaphoreTestUser semaphoreTokenOwner() {
+    return getRequired(Precondition.SEMAPHORE_TOKEN_OWNER_KEY, SemaphoreTestUser.class);
+  }
+
+  public SemaphoreTestUser semaphoreOtherTokenOwner() {
+    return getRequired(Precondition.SEMAPHORE_OTHER_TOKEN_OWNER_KEY, SemaphoreTestUser.class);
+  }
+
+  void putSemaphoreTokenOwner(SemaphoreTestUser user) {
+    put(Precondition.SEMAPHORE_TOKEN_OWNER_KEY, user);
+  }
+
+  void putSemaphoreOtherTokenOwner(SemaphoreTestUser user) {
+    put(Precondition.SEMAPHORE_OTHER_TOKEN_OWNER_KEY, user);
+  }
+
   public Project semaphoreProject() {
     return getRequired(Precondition.SEMAPHORE_PROJECT_KEY, Project.class);
   }
