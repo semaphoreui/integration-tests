@@ -36,7 +36,8 @@ jobs:
   profile:
     name: ${{ matrix.profile }}
     needs: app-image
-    runs-on: ubuntu-latest
+    # OIDC and TOTP run Playwright 1.53.1; ubuntu-latest may select unsupported Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: read

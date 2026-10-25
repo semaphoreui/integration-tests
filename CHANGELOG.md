@@ -6,6 +6,9 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Changed
 
+- Pinned the framework quality gate, core API/UI job and configuration matrix to Ubuntu 24.04.
+  Playwright 1.53.1 cannot install Chromium on Ubuntu 26.04 selected by `ubuntu-latest`.
+
 - Waits for Semaphore tasks, their output and their stop check the task at once and then every
   250 ms instead of first after 3 s and then every 3 s, so a test no longer spends at least 3 s on
   each task it runs. Reading the output of a finished task waits until Semaphore has stored all of
