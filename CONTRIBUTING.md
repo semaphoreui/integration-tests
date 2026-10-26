@@ -38,7 +38,8 @@ Docker image; this repository never contains application source code.
 | `curl` | readiness checks in `test-environment/profile` | `curl --version` |
 | Network access to GitHub | resolving/building the application image | |
 | `ssh-keygen` | `feature-ssh-local` | |
-| `openssl`, `keytool` | `feature-git-https`, `feature-host-config`, `feature-proxy-oidc`, `feature-encryption-rotation` | |
+| `openssl` | `feature-git-https`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-encryption-rotation` | |
+| `keytool` | `feature-proxy-oidc` (truststore) | |
 | Playwright Chromium | `uiTest`, `totpTest`, OIDC profiles | `./gradlew playwrightInstallChromium` |
 | Python 3.10+ | script unit tests, configuration contract check | `python3 --version` |
 | `gh` CLI (optional) | testing an application pull request locally | `gh auth status` |
@@ -53,8 +54,10 @@ Notes:
 - On macOS, `test-environment/profile` falls back to `/opt/homebrew/opt/openjdk@21` if
   `JAVA_HOME` is not set. For direct Gradle calls set it yourself, for example
   `export JAVA_HOME=/opt/homebrew/opt/openjdk@21`.
-- Every profile publishes Semaphore on `localhost:3000` (`feature-proxy-oidc` additionally on
-  `3443`). Keep these ports free; only one profile can run at a time.
+- Every profile except `external` publishes Semaphore on `localhost:3000`. Some also publish helper
+  ports: `3443` (`feature-proxy-oidc`), `5556` (Dex in the OIDC profiles), `3003`
+  (`feature-dynamic-runner`), `3080` (the cache of `feature-web-cache-safety`, and `fixture-git` of
+  `external`). Keep these ports free; only one profile can run at a time.
 - The first run of a profile builds the Semaphore image from the application `develop` branch.
   This takes several minutes once per application commit; later runs reuse the image.
 
@@ -157,9 +160,8 @@ Use `clean --yes` when you need a truly fresh database.
 | `external` | user-managed | full suite against an existing Semaphore | see [section 9](#9-testing-an-existing-semaphore-instance) |
 
 "Known red reproducer" profiles are expected to fail until the upstream defect is fixed; they are
-not part of any green CI gate. Details on each defect are in
-[`test-environment/known-defects.md`](test-environment/known-defects.md) and the
-`test-environment/*-defect.md` reports.
+not part of any green CI gate. Details on each defect are in the defect register
+(urb-research `RESEARCH@cdebef66fd`).
 
 More detail on every profile: [`test-environment/README.md`](test-environment/README.md).
 
@@ -193,7 +195,7 @@ Useful switches:
 | `-Dverbose` | print test stdout/stderr to the console |
 | `-Dtest.seed=<n>` | replay a run with identical generated data; the exact command is attached to every Allure test as "Reproduce test data" |
 | `-DincludeTags=smoke` / `-DexcludeTags=ui` | tag filter; honoured only by the generic `test` task |
-| `-Dapi.base.url=…`, `-Dui.base.url=…`, `-Dapi.username=…` | override any `api.*` / `ui.*` / `teardown.*` config key |
+| `-Dapi.base.url=…`, `-Dui.base.url=…`, `-Dapi.username=…` | override any `api.*` / `ui.*` / `db.*` / `ssh.*` / `runner.*` / `cache.*` / `teardown.*` config key |
 
 Direct Gradle runs execute test classes in parallel unless you pass
 `-Djunit.jupiter.execution.parallel.enabled=false`; the profile script always passes it.
@@ -306,7 +308,7 @@ Build knobs for `scripts/app-source.sh`: `APP_BRANCH` (default `develop`), `APP_
 force a platform), `APP_DOCKERFILE` (default `deployment/docker/server/Dockerfile`),
 `APP_BUILD_PUSH` (default `false` outside GitHub Actions), `APP_IMAGE_REPOSITORY`,
 `APP_IMAGE_TAG_PREFIX`. Full reference:
-[Testing Pull Requests of the Application Repository](docs/application-pr-testing.md).
+[Testing Pull Requests of the Application Repository](README.md#testing-pull-requests-of-the-application-repository).
 
 ### 8. Test fixtures (playbooks, scripts)
 
@@ -344,10 +346,10 @@ Credentials are passed through the environment, never as arguments:
 export API_BASE_URL=https://semaphore.example.test/api/   # must end with /api/
 export API_USERNAME=qa-reader
 export API_PASSWORD='set-from-secret-storage'
-scripts/run-external-tests.sh
+./gradlew externalTest
 ```
 
-Extra Gradle arguments go after the script name. For a self-signed certificate add
+For a self-signed certificate add
 `-Dbookwright.test.ssl.trustStore=<path> -Dbookwright.test.ssl.trustStorePassword=<password>`.
 
 **Full suite against a disposable instance (destructive).** The `external` profile starts only
@@ -502,7 +504,7 @@ it and open `index.html`. Runs of `main` are also published to
 | `exec format error` when the stand starts | the image was built for another architecture: `profile clean <profile> --yes`, then `up` again so a native image is resolved; with `APP_IMAGE`, pick a tag published for your platform |
 | `run.sh` fails to pull or start the runner | the runner image is arm64-only; on x86_64 use `test-environment/profile` directly |
 | Tests silently skipped | profile gating via `SEMAPHORE_PROFILE`; see [section 4](#4-running-a-subset-of-tests) |
-| Unexpected failure on current `develop` | the suite tracks a moving target; check `test-environment/known-defects.md`, then reproduce with `APP_IMAGE=<last release>` to tell a test bug from a product regression |
+| Unexpected failure on current `develop` | the suite tracks a moving target; check the defect register (urb-research `RESEARCH@cdebef66fd`), then reproduce with `APP_IMAGE=<last release>` to tell a test bug from a product regression |
 
 Inspect the product directly:
 
@@ -552,14 +554,16 @@ profile to `configuration-matrix.yml` only once it is green, and document it in 
 - New JVM inputs must be forwarded in `configureBookwrightTestRuntime` (`build.gradle.kts`), or the
   test JVM will not see them.
 - Application-source logic belongs in `scripts/app-source.sh`; keep
-  `docs/application-pr-testing.md` and `scripts/tests/test_app_source.py` in sync.
+  the README section "Testing Pull Requests of the Application Repository" and
+  `scripts/tests/test_app_source.py` in sync.
 
 ### Found a product defect?
 
 Keep the assertion honest — do not bend a test to pass. Either keep a canary that explicitly
 asserts the current (defective) behaviour inside a green suite, or isolate a failing reproducer in
-its own profile outside the green gates. Add a `test-environment/<topic>-defect.md` report and
-register it in `test-environment/known-defects.md` with the upstream fix condition.
+its own profile outside the green gates. Record it as a note in the defect register
+(urb-research `RESEARCH@cdebef66fd`) with the reproduction, the canary test, the profile and the
+upstream fix condition; do not add defect reports as markdown files to this repository.
 
 ## Before you open a pull request
 
@@ -593,7 +597,7 @@ If you touched a specific profile, run that profile too. Also:
 
   CI then builds or reuses an image of that PR. Remove the line once the application PR is merged.
   PR mode requires the test branch to live in this repository, not a fork. Details:
-  [`docs/application-pr-testing.md`](docs/application-pr-testing.md).
+  [README, "Testing Pull Requests of the Application Repository"](README.md#testing-pull-requests-of-the-application-repository).
 - Never edit the `gh-pages` branch by hand; it is generated.
 
 ## Security rules
@@ -603,5 +607,5 @@ If you touched a specific profile, run that profile too. Also:
 - Pass secrets through environment variables or CI secrets, never as command-line arguments.
 - Tests must not leak secrets into API responses, task output, Allure or JUnit artifacts; existing
   suites assert this — follow the same pattern.
-- Only `externalTest` / `scripts/run-external-tests.sh` is safe against a real environment.
-  Everything else creates and deletes data.
+- Only `externalTest` is safe against a real environment. Everything else creates and deletes
+  data.

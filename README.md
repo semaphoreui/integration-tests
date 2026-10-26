@@ -5,7 +5,7 @@ Test project for [Semaphore UI](https://github.com/semaphoreui/semaphore), built
 Every profile is tested on the current state of the application: the image is built from the HEAD
 commit of the `develop` branch of `semaphoreui/semaphore`, locally and in CI alike. A test pull
 request can still pin a single run to an application pull request instead; see
-[Testing Pull Requests of the Application Repository](docs/application-pr-testing.md).
+[Testing Pull Requests of the Application Repository](#testing-pull-requests-of-the-application-repository).
 
 The last fully confirmed release matrix is `v2.19.12`: 11 configuration profiles passed in Linux CI
 on 2026-09-04, and the `v2.19.8 → v2.19.12` upgrade separately passed on SQLite and PostgreSQL.
@@ -50,7 +50,7 @@ The core suite also guards the project deletion lifecycle: after a task is stopp
 its dependent resources are deleted correctly. A known-defect canary for `v2.19.8` shows that deletion
 while `running` incorrectly returns `204`, leaves the executor running and ends with FK errors.
 The reproduction and source boundary are described in
-`test-environment/project-deletion-running-task-defect.md`.
+the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-001).
 
 Static inventory is verified in both standard formats — INI `static` and YAML `static-yaml`.
 For each format the scenario saves two groups with different host aliases and runs a template with a
@@ -60,14 +60,14 @@ INI and YAML are independent parameterized cases, each with its own project and 
 The password-login security test compares responses for an existing and an unknown account, verifies
 the absence of a session cookie and the correct rejection of an empty password. On `v2.19.8` five consecutive
 failures remain without throttling or an audit warning; this security gap is described in
-`test-environment/password-login-brute-force-protection-gap.md`.
+the defect register (urb-research `RESEARCH@cdebef66fd`, brute-force gap).
 
 The authentication lifecycle suite additionally verifies login metadata, server-side logout and
 idempotent repeated logout, self-service password changes with the current password, rejection of an
 incorrect current password, cross-user authorization, and administrator password reset. The old
 password stops creating sessions and the new password works. A safe canary records that an already
 issued second session remains authenticated after the change; the account-recovery risk and source
-boundary are described in `test-environment/password-change-session-revocation-gap.md`.
+boundary are described in the defect register (urb-research `RESEARCH@cdebef66fd`, session revocation gap).
 
 The same core profile runs plan-only scenarios on the Terraform 1.11.3 and OpenTofu 1.11.0 bundled in
 the release image. The minimal local module does not download providers; workspace inventories of types
@@ -109,7 +109,7 @@ test-environment/profile test prod-postgres-runner
 
 The runner registers automatically, stores a long-lived token in a separate volume and is assigned as the default runner through the admin API. The API tests confirm `active`, `registered`, `is_default`, `online`, heartbeat, exact tag routing by the persisted `used_runner_id` and capacity `1`: the second task stays in `waiting` while the first one occupies the runner.
 
-When no suitable active runner is available, the behaviour differs from the capacity case: `v2.19.8` moves the task to `error: no runners available` instead of keeping it in the queue. This was reproduced for a temporarily disabled matching runner and for a non-existent tag; details are in `test-environment/runner-unavailable-routing-defect.md`.
+When no suitable active runner is available, the behaviour differs from the capacity case: `v2.19.8` moves the task to `error: no runners available` instead of keeping it in the queue. This was reproduced for a temporarily disabled matching runner and for a non-existent tag; details are in the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-005).
 
 Capacity/queue admission, disabled-runner recovery, and unmatched-tag dispatch have independent
 tests and projects. The class remains isolated from other tests while it changes the shared runner;
@@ -119,7 +119,7 @@ Older releases lose secret survey variables before remote dispatch. The current-
 the server and persistent runner from the same resolved application image and positively verifies
 successful secret delivery without exposing plaintext. Historical evidence for `v2.19.12` and the
 two-sided compatibility boundary are described in
-`test-environment/remote-runner-survey-secrets-defect.md`.
+the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-004).
 
 The SSH feature profile verifies an encrypted access key on two client boundaries at once: Git clone over SSH and an Ansible connection to a remote target:
 
@@ -205,7 +205,7 @@ test-environment/profile up feature-dynamic-runner
 test-environment/profile test feature-dynamic-runner
 ```
 
-On `v2.19.8` the task finishes successfully, but the one-off runner does not exit after the terminal progress. The profile is kept as a manual red reproducer and is not part of the stable CI matrix. The analysis and probable cause are in `test-environment/dynamic-runner-one-off-exit-defect.md`.
+On `v2.19.8` the task finishes successfully, but the one-off runner does not exit after the terminal progress. The profile is kept as a manual red reproducer and is not part of the stable CI matrix. The analysis and probable cause are in the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-006).
 
 Short Bash commands and a background child are verified by a separate shell-output profile:
 
@@ -218,7 +218,7 @@ test-environment/profile test feature-shell-output
 `v2.19.12` may report `success` while losing the whole `stdout` or `stderr` stream. The fixes are
 present on `develop`, so the strict contract now runs in the regular SQLite PR gate and the focused
 profile runs in the daily matrix. The historical failure, CI evidence, and upstream fixes remain in
-`test-environment/shell-output-loss-defect.md`.
+the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-009).
 
 The web-cache safety profile checks the deployment boundary created when a customer enables a
 shared HTTP cache in front of Semaphore:
@@ -234,7 +234,7 @@ two-user scenario confirms that a generic shared NGINX cache can return user A's
 user B as a cache `HIT`, including after priming through unkeyed forwarding headers and a different
 query. Public versioned assets and `/swagger/api-docs.yml` remain intentionally cacheable. The
 profile is a manual red reproducer; evidence and the safe proxy configuration are in
-`test-environment/web-cache-authenticated-response-leak-defect.md`.
+the defect register (urb-research `RESEARCH@cdebef66fd`, web cache leak).
 
 The schedule profile verifies real cron/`run_at` execution in a non-UTC timezone:
 
@@ -247,7 +247,7 @@ test-environment/profile test feature-schedule-timezone
 The suite covers recurring cron execution, one-shot deactivation, and `delete_after_run` cleanup.
 The original apparent no-task defect was an invalid test payload: Ansible `limit` was sent as a
 string instead of an array. Corrected scenarios pass on `v2.19.12` and current `develop`; the
-investigation record is in `test-environment/schedule-execution-defect.md`. The profile now runs in
+investigation record is in the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-003). The profile now runs in
 the daily configuration matrix.
 
 Verification of upgrading the published images on a preserved database is launched by a separate command:
@@ -270,8 +270,8 @@ gate: it verifies migration of the preserved state, not just a clean installatio
 MySQL 8.4 and MariaDB 10.11 now use the same lifecycle and persisted fixture; they are considered
 locally confirmed as of 2026-09-09, but not fully confirmed until their first successful Linux
 workflow run.
-The diagnostics are recorded in `test-environment/v2.19.8-regression-report.md`; the historical
-schema defect of the `v2.19.6 → v2.19.7` pair is in `test-environment/upgrade-report.md`.
+The diagnostics and the historical schema defect of the `v2.19.6 → v2.19.7` pair are kept in
+urb-research `RESEARCH@f4d090b633` (upgrade and regression reports).
 
 ## Task history regression
 
@@ -298,8 +298,8 @@ covered by this block.
 
 GitHub Actions are split by cost and purpose:
 
-- `CI` runs for every pull request and push to `main`: it first runs the framework quality gate, then the core API suite and a short Chromium UI smoke on `core-sqlite-local`;
-- `Configuration matrix` runs daily at `01:30 UTC` and manually, and verifies PostgreSQL, MySQL, MariaDB, production-like PostgreSQL with a persistent runner, SSH, private HTTPS Git, direct and HTTPS/subpath OIDC, LDAPS, TOTP and database encryption keyring rotation;
+- `CI` runs for every pull request and push to `main`: it first runs the framework quality gate (the configuration contract check runs alongside it), then the core API suite and a short Chromium UI smoke on `core-sqlite-local`;
+- `Configuration matrix` runs daily at `01:30 UTC` and manually, and verifies PostgreSQL, MySQL, MariaDB, production-like PostgreSQL with a persistent runner, SSH, private HTTPS Git, direct and HTTPS/subpath OIDC, LDAPS, TOTP, database encryption keyring rotation, short shell output and schedule execution in a non-UTC timezone;
 - `Release upgrade` runs weekly on Sundays at `03:30 UTC` and manually, and verifies the `v2.19.8 → develop` upgrade on SQLite, PostgreSQL, MySQL and MariaDB;
 - `Application PR trigger` accepts `repository_dispatch` from the main repository and launches CI for test PRs explicitly linked to the changed application PR;
 - `Cleanup temporary application images` runs daily at `04:00 UTC` and removes temporary images of closed and merged application PRs, as well as superseded branch images.
@@ -334,7 +334,8 @@ CI determines the HEAD SHA of that PR, reuses the already published
 `ghcr.io/semaphoreui/integration-tests/semaphore-ci:ci-pr-123-<sha>` and builds the application only
 when an image for that commit does not exist yet. A change to the tests alone does not trigger a
 rebuild. The full description, including branch mode, auto-triggering, authorization and cleanup of
-temporary images, is in [`docs/application-pr-testing.md`](docs/application-pr-testing.md).
+temporary images, is in the section
+[Testing Pull Requests of the Application Repository](#testing-pull-requests-of-the-application-repository) below.
 
 The fixed `feature-shell-output` and corrected `feature-schedule-timezone` profiles are regular
 daily entries. Manual runs use the same green matrix and can optionally select another application
@@ -425,13 +426,15 @@ cron validation only creates a project. Rejected creation also checks that no sc
 The webhook integration suite creates a token-authenticated searchable integration, a project alias, a header matcher and extractors from the JSON body/header. Requests with a wrong token or event do not launch a task, while a valid webhook returns task identifiers, saves the link through `integration_id` and really passes the extracted values to the Ansible playbook. The token is stored in a `login_password` access key and is redacted in API/Allure diagnostics.
 
 Integration settings, project aliases, integration aliases, matchers, extractors, invalid tokens,
-unmatched events, and successful execution are eight independent cases with isolated projects.
+unmatched events, successful execution, GitHub and Bitbucket SHA-256 signatures, generic
+HMAC-SHA256/HMAC-SHA512 signatures, and Basic authentication are thirteen independent cases with
+isolated projects.
 Negative cases check both the dispatch response and the absence of persisted tasks. If a rejected
 webhook unexpectedly returns a task ID, cleanup is registered before reporting the failure.
 
 The project backup/restore suite exports the configuration with access keys, repository, inventory, template and schedule after a real task execution. The backup contains no plaintext authentication secret and no task history; the restored project gets new IDs with correctly relinked resources, after which its template runs successfully again. Workflows and external Secret Storage management are not imitated on the Community image: both capabilities are disabled by feature flags and require a Pro test subscription for an honest e2e.
 
-Negative restore checks confirm that the operation is forbidden for a non-admin and that a missing repository reference is rejected. On `v2.19.8` a general off-by-one defect of duplicate validation was found: a document with two identical repository names is accepted and creates both resources; the canary and source boundary are described in `test-environment/project-backup-restore-validation-defect.md`.
+Negative restore checks confirm that the operation is forbidden for a non-admin and that a missing repository reference is rejected. On `v2.19.8` a general off-by-one defect of duplicate validation was found: a document with two identical repository names is accepted and creates both resources; the canary and source boundary are described in the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-007).
 
 Successful restore, non-admin rejection, missing-repository validation, and the duplicate-repository
 canary are four independent tests with their own source projects. A failed negative check or canary
@@ -441,11 +444,11 @@ The concurrency suite creates a template with `allow_parallel_tasks=true` so as 
 
 The Git suite verifies task execution from an explicitly selected branch, a diagnosable failure for a missing branch and for an unreachable HTTPS remote. For an authenticated clone it additionally verifies that the login/password do not leak into the structured and raw task output.
 
-The SSH suite uses a separate typed fixture and verifies a successful Git clone over SSH, playbook execution on an SSH target, a safe failure with a wrong key and secret rotation without replacing the key ID. Two encrypted test key pairs are generated in the ignored `build/test-fixtures/ssh`; private keys are included neither in Git nor in the Docker build context. Strict `known_hosts` checking is not tested on the pinned `v2.19.8`, because the corresponding configuration is present only in the newer upstream `develop`.
+The SSH suite uses a separate typed fixture and verifies a successful Git clone over SSH, playbook execution on an SSH target, a safe failure with a wrong key and secret rotation without replacing the key ID. Two encrypted test key pairs are generated in the ignored `build/test-fixtures/ssh`; private keys are included neither in Git nor in the Docker build context. Strict `known_hosts` checking is not tested: the SSH inventories disable host-key checking (`StrictHostKeyChecking=no`).
 
 The task lifecycle suite launches a safe long-running playbook, waits for the marker of actual execution and verifies a regular stop and a force-stop. In both cases the task moves to `stopped`, and the step after the pause is not executed.
 
-Ansible code is taken only from the trusted `test-environment/fixtures/ansible`, packaged by Compose into a local Git volume with the `main` and `bookwright-fixture-ref` branches and served read-only inside the Compose network by the `fixture-git` HTTP service. No external code is executed on an API-triggered run.
+Ansible playbooks, Bash scripts and the Terraform module are taken only from the trusted `test-environment/fixtures`, packaged by Compose into a local Git volume with the `main` and `bookwright-fixture-ref` branches and served read-only inside the Compose network by the `fixture-git` HTTP service. No external code is executed on an API-triggered run.
 
 The full set of Bookwright infrastructure self-tests and Semaphore product tests:
 
@@ -456,20 +459,17 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
 
 ## Research materials
 
-- `semaphore-ui-testing-assessment-plan.md` — overall plan;
-- `semaphore-testing-component-map.md` — component map;
-- `outputs/issues-assessment/` — full issue registry;
-- `test-environment/api-map.md` — API map and automation priorities;
-- `test-environment/legacy-qa-review.md` — review of the legacy UI tests and manual scenarios;
-- `test-environment/configuration-testing-overview.md` — matrix of client configurations and reference profiles;
-- `test-environment/smoke-report.md` — environment verification results.
-- `test-environment/known-defects.md` — summary of current defects with priorities and reproduction steps.
-- `test-environment/schedule-execution-defect.md` — resolved schedule investigation and corrected regression coverage.
-- `test-environment/dynamic-runner-one-off-exit-defect.md` — reproducible one-off runner exit defect.
-- `test-environment/runner-unavailable-routing-defect.md` — fail-fast instead of a recoverable queue when no matching runner is available.
-- `test-environment/remote-runner-survey-secrets-defect.md` — loss of secret survey variables on remote dispatch.
-- `test-environment/survey-default-validation-defect.md` — missing enum default validation in `v2.19.8`.
-- `test-environment/integration-child-mutation-false-success-defect.md` — historical matcher/extracted-value false-success defect and its positive regression coverage on current Semaphore.
+Research notes, reports and the defect register are kept outside this repository, in the team's
+`urb-research` knowledge base (group "Проект: интеграционные тесты semaphore", in Russian):
+
+- `RESEARCH@cdebef66fd` — defect register: BUG-001…BUG-010 and gaps outside the register, with
+  canary tests, profiles and upstream status; rules for recording a new defect;
+- `RESEARCH@b0e0e81afc` — Semaphore issue register and component map for classifying defects;
+- `RESEARCH@2d0854a73a` — configuration testing strategy, profiles vs. CI, API map and coverage;
+- `RESEARCH@8bf7ff2ac4` — application image selection and testing application pull requests;
+- `RESEARCH@f4d090b633` — testing development plan and its status, legacy QA review, historical
+  smoke, upgrade and `v2.19.8` regression reports;
+- `outputs/issues-assessment/` — full issue registry (spreadsheet, in this repository).
 
 The Semaphore source code is stored locally in `/semaphore/` and is excluded from this repository.
 
@@ -480,25 +480,25 @@ system info and the list of available projects. It does not create projects, use
 does not depend on local Git/SSH/runner fixtures.
 
 The address and credentials are set explicitly through the environment, so that the full local
-suite is not accidentally pointed at a user environment and the password is not passed as a launcher script argument:
+suite is not accidentally pointed at a user environment and the password is not passed as a Gradle argument:
 
 ```bash
 export API_BASE_URL=https://semaphore.example.test/api/
 export API_USERNAME=qa-reader
 export API_PASSWORD='set-from-secret-storage'
-scripts/run-external-tests.sh
+./gradlew externalTest
 ```
 
-Additional Gradle arguments are passed after the script name. For self-signed TLS the existing
-`-Dbookwright.test.ssl.trustStore=...` and
-`-Dbookwright.test.ssl.trustStorePassword=...` can be passed. The regular `apiTest` remains the local full suite and
-is never invoked by the external environment launcher.
+`externalTest` fails before running anything when a variable is missing or the URL does not end
+with `/api/`. For self-signed TLS add `-Dbookwright.test.ssl.trustStore=...` and
+`-Dbookwright.test.ssl.trustStorePassword=...`. The regular `apiTest` remains the local full suite
+and is never invoked by `externalTest`.
 
 To run the full `core-sqlite-local` suite (which creates and deletes data) against a disposable
 user-managed instance, use the `external` profile instead; it starts only the fixture services. See
 `test-environment/README.md`, section "External Semaphore instance".
 
-## [Testing Pull Requests of the Application Repository](docs/application-pr-testing.md)
+## Testing Pull Requests of the Application Repository
 
 ## Three modes
 
@@ -631,7 +631,7 @@ Before building, the pipeline checks whether an image for the computed SHA exist
 
 ### When the application PR changes
 
-The [`application-pr.yml`](../.github/workflows/application-pr.yml) workflow accepts the
+The [`application-pr.yml`](.github/workflows/application-pr.yml) workflow accepts the
 `repository_dispatch` event of type `application-pr-updated`, reads the descriptions of all open test PRs and
 finds **those that explicitly declared a link to this application PR**, then starts CI for them. Test PRs without a link or linked to
 a different application PR are not started, and a change to an arbitrary branch of the application repository
@@ -685,7 +685,7 @@ PR mode, the test PR branch must be kept in the test repository itself.
 
 ### When the test PR changes
 
-The regular `pull_request` event of the [`ci.yml`](../.github/workflows/ci.yml) workflow. It passes the
+The regular `pull_request` event of the [`ci.yml`](.github/workflows/ci.yml) workflow. It passes the
 PR description to the `Application source` job, which resolves the link, reuses the existing image and starts the tests. If
 the application SHA has not changed, no build is performed.
 
@@ -704,10 +704,11 @@ line nor in the repository.
 
 ## Cleanup of temporary images
 
-The [`cleanup-pr-images.yml`](../.github/workflows/cleanup-pr-images.yml) workflow runs
+The [`cleanup-pr-images.yml`](.github/workflows/cleanup-pr-images.yml) workflow runs
 daily and deletes the versions of the `semaphore-ci` package whose tag corresponds to a closed or
-merged application PR, after a grace period (`RETENTION_HOURS`, 24 hours by default).
-Only tags of the form `ci-pr-<number>-<sha>` in the test repository's namespace are processed —
+merged application PR, after a grace period (`RETENTION_HOURS`, 24 hours by default), and branch
+images `ci-<branch>-<sha>` older than `BRANCH_RETENTION_DAYS` (7 days); the newest image of each
+branch is always kept. Only these tags in the test repository's namespace are processed —
 release images are not touched. Without the `GHCR_CLEANUP_TOKEN` secret the workflow runs in
 dry-run mode and only reports deletion candidates.
 
