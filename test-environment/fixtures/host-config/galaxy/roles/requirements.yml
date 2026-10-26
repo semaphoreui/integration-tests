@@ -1,0 +1,5 @@
+---
+- name: bookwright_private_role
+  src: https://host-config-git/private/role.git
+  scm: git
+  version: main
