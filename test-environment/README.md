@@ -4,7 +4,7 @@ The `core-sqlite-local` profile: a minimal Semaphore UI stand with SQLite, local
 
 The profile manifest lives in `profiles/<profile>/profile.yaml`. It pins the Semaphore version, installation method, DBMS, execution mode, and capabilities. The lifecycle command reads the manifest, uses a stable Compose project name, and records the actual configuration and image digests in `build/allure-results/environment.properties`.
 
-Five baseline profiles and thirteen feature profiles are available:
+Five baseline profiles, thirteen feature profiles and the `external` profile are available; the four upgrade profiles are described in [N-1 → current upgrade](#n-1--current-upgrade):
 
 | Profile | DBMS | Purpose |
 |---|---|---|
@@ -132,7 +132,7 @@ The API suite additionally verifies that the runner is active, registered, assig
 The profile runs the server and persistent runner from the same resolved application image. Its
 positive survey regression proves that a secret value reaches the remote executor, produces only a
 safe hash marker, and remains absent from API, structured, raw, and Allure diagnostics. Older
-release evidence is preserved in `remote-runner-survey-secrets-defect.md`.
+release evidence is preserved in the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-004).
 
 ## SSH feature profile
 
@@ -142,9 +142,9 @@ test-environment/profile up feature-ssh-local
 test-environment/profile test feature-ssh-local
 ```
 
-The profile builds a minimal Alpine SSH fixture and mounts the local Git repository into it read-only. A single encrypted Semaphore access key is used both to clone `ssh://fixture@ssh-fixture:22/repositories/ansible` and for Ansible to connect to `ssh-fixture`. A separate negative scenario verifies an invalid key and a clone failure. Create/get/list responses, structured output, and raw output are checked for the absence of the private key and passphrase.
+The profile builds a minimal Alpine SSH fixture and runs it as two servers, `ssh-fixture` and `ssh-fixture-rotated`, each with the local Git repository mounted read-only and its own authorized key. A single encrypted Semaphore access key is used both to clone `ssh://fixture@ssh-fixture:22/repositories/ansible` and for Ansible to connect to `ssh-fixture`. A separate negative scenario verifies an invalid key and a clone failure, and a rotation scenario updates the secret of the same access key so that it is accepted by `ssh-fixture-rotated`. Create/get/list responses, structured output, and raw output are checked for the absence of the private key and passphrase.
 
-The key pair is generated during `profile up` in the Git-ignored directory `build/test-fixtures/ssh`. Only the public key is mounted into the container, while the private key stays outside the Docker build context and is used by the Java test only for the local API. The fixture image version is recorded in the Allure environment.
+Two encrypted key pairs (`id_ed25519`, `id_ed25519_rotated`) are generated during `profile up` in the Git-ignored directory `build/test-fixtures/ssh`. Only the public keys are mounted into the containers, while the private key stays outside the Docker build context and is used by the Java test only for the local API. The fixture image version is recorded in the Allure environment.
 
 The profile also runs the credential-mapping scenarios: key-less repositories and inventories reach `ssh-fixture` and `ssh-fixture-rotated` only through `host_configs` entries, including a URL mapping which rewrites `https://ssh-fixture/repositories/` into an SSH clone. Inventory hosts disable host-key checking through `ansible_ssh_extra_args`, because an inventory-level `ansible_ssh_common_args` would replace the `--ssh-common-args` option through which the generated ssh configuration reaches Ansible.
 
@@ -176,7 +176,7 @@ successful task. Every task executes the trusted Ansible fixture with the stored
 
 The original no-task report was a false positive caused by sending Ansible `limit` as a string
 instead of an array. The corrected scenarios pass on `v2.19.12` and current `develop`; the profile is
-part of the daily matrix. The audit trail is in `schedule-execution-defect.md`.
+part of the daily matrix. The audit trail is in the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-003).
 
 ## Shell output feature profile
 
@@ -190,7 +190,7 @@ Release `v2.19.12` may retain only one process stream for a short successful Bas
 current `develop` application source, the focused profile is a green regression: it requires both
 `stdout` and `stderr`, and verifies that an inherited pipe from a background child does not delay
 completion indefinitely. The same contract runs in `core-sqlite-local` on pull requests. Historical
-evidence for the release defect is preserved in `shell-output-loss-defect.md`.
+evidence for the release defect is preserved in the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-009).
 
 ## Web-cache safety feature profile
 
@@ -200,7 +200,7 @@ test-environment/profile up feature-web-cache-safety
 test-environment/profile test feature-web-cache-safety
 ```
 
-The profile places SQLite Semaphore `v2.19.12` behind an intentionally shared NGINX cache and runs
+The profile places SQLite Semaphore (the resolved application image, `develop` by default) behind an intentionally shared NGINX cache on `http://localhost:3080` and runs
 five focused contracts with two disposable users. It confirms that `GET /api/user` has no explicit
 private/no-store policy and can be served from user A to user B as a cache `HIT`. Priming through
 unkeyed forwarding headers and a distinct query reproduces the same boundary violation. Host
@@ -209,7 +209,7 @@ behavior.
 
 This is a manual red security reproducer, not a production proxy example and not part of stable CI.
 The scope, evidence, and safe NGINX boundary are documented in
-`web-cache-authenticated-response-leak-defect.md`.
+the defect register (urb-research `RESEARCH@cdebef66fd`, web cache leak).
 
 ## OIDC feature profile
 
@@ -247,7 +247,7 @@ The lifecycle generates a disposable test CA and a server certificate for the Co
 
 To confirm that verification is real, replace `build/test-fixtures/ldap-tls/trust/ca.pem` with a certificate from another CA and restart the `semaphore` service: an LDAP login is then rejected with `401` and the Semaphore log shows `x509: certificate signed by unknown authority`. Remove `build/test-fixtures/ldap-tls` and run `up` again to restore the fixture.
 
-On current `develop` the email-conflict scenario is red because of the product defect BUG-010 (`500` instead of `401`, see [`ldap-local-email-conflict-defect.md`](ldap-local-email-conflict-defect.md)); the other LDAP scenarios pass.
+On current `develop` the email-conflict scenario is red because of the product defect BUG-010 (`500` instead of `401`, see the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-010)); the other LDAP scenarios pass.
 
 ## TOTP feature profile
 
@@ -273,7 +273,7 @@ test-environment/profile test feature-dynamic-runner
 
 The profile registers a global runner with a webhook, assigns it as default, and on `start` launches a separate `semaphore runner start --no-config` with `SEMAPHORE_RUNNER_ONE_OFF=true`. The launcher records the `webhook_start`, `runner_started`, and `webhook_finish` events and the actual exit code of the process, but does not stop the process itself.
 
-On `v2.19.8` the task completes successfully and the server calls `finish`, yet the runner stays alive. The test is intentionally red because it expects `runner_exited` with code `0`. The profile is not part of the regular CI matrix; the full reproduction and source code analysis are in `dynamic-runner-one-off-exit-defect.md`.
+On `v2.19.8` the task completes successfully and the server calls `finish`, yet the runner stays alive. The test is intentionally red because it expects `runner_exited` with code `0`. The profile is not part of the regular CI matrix; the full reproduction and source code analysis are in the defect register (urb-research `RESEARCH@cdebef66fd`, BUG-006).
 
 ## DB encryption key rotation
 
@@ -309,8 +309,8 @@ The previous pair `v2.19.7` → `v2.19.8` also read the persisted
 project/access key/repository/inventory/template/schedule/task and re-executed the template on
 both DBMSs on 2026-08-19. The upgrade workflow remains a separate observed gate because it verifies
 the migration of persisted state between release images.
-Details are in `v2.19.8-regression-report.md`; the historical schema defect
-`v2.19.6` → `v2.19.7` is preserved in `upgrade-report.md`.
+Details and the historical schema defect `v2.19.6` → `v2.19.7` are kept in urb-research
+`RESEARCH@f4d090b633` (upgrade and regression reports).
 
 ## External Semaphore instance
 
@@ -341,7 +341,7 @@ test-environment/profile down external
 
 `up` and `test` refuse to run without the required variables and with `APP_IMAGE`; `show`, `ps`, `logs`, `down` and `clean` do not need them. `up` waits for a healthy `fixture-git`, checks it on `localhost:${FIXTURE_GIT_PORT}` and then waits for `pong` from `${API_BASE_URL}ping`. Whether the instance itself reaches `TEST_REPOSITORY` is only proven by the first task that clones it.
 
-Requirements for the instance: an admin account; local task execution with `ansible`, `terraform`/`tofu` and `bash` as in the release image; network access to `TEST_REPOSITORY`. The suite creates and deletes projects, users, keys and tasks, and the RBAC user `bookwright-rbac-guest` stays behind by design, so never point it at a production instance. For read-only checks of a real environment use `scripts/run-external-tests.sh`. The Allure environment records `application.source=external` and the API URL instead of image digests. The profile is not part of any CI workflow.
+Requirements for the instance: an admin account; local task execution with `ansible`, `terraform`/`tofu` and `bash` as in the release image; network access to `TEST_REPOSITORY`. The suite creates and deletes projects, users, keys and tasks, and the RBAC user `bookwright-rbac-guest` stays behind by design, so never point it at a production instance. For read-only checks of a real environment use `./gradlew externalTest`. The Allure environment records `application.source=external` and the API URL instead of image digests. The profile is not part of any CI workflow.
 
 ## CI profiles
 
@@ -349,7 +349,7 @@ The profiles are wired into three GitHub Actions workflows:
 
 | Workflow | Trigger | Profiles |
 |---|---|---|
-| `CI` | pull request and push to `main` | API suite and Chromium UI smoke on `core-sqlite-local` after the framework quality gate |
+| `CI` | pull request, push to `main`, manually | API suite and Chromium UI smoke on `core-sqlite-local` after the framework quality gate; the configuration contract check runs alongside |
 | `Configuration matrix` | daily at `01:30 UTC`, manually | `core-postgres-local`, `core-mysql-local`, `core-mariadb-local`, `prod-postgres-runner`, `feature-ssh-local`, `feature-git-https`, `feature-oidc-local`, `feature-proxy-oidc`, `feature-ldap-tls`, `feature-totp-local`, `feature-encryption-rotation`, `feature-shell-output`, `feature-schedule-timezone` |
 | `Release upgrade` | Sunday at `03:30 UTC`, manually | `upgrade-sqlite-local`, `upgrade-postgres-local`, `upgrade-mysql-local`, `upgrade-mariadb-local` |
 
@@ -366,7 +366,7 @@ application branch.
 
 The raw Allure results of each job are uploaded as a separate artifact. The final reusable workflow downloads them, generates an independent HTML report for each profile, and uploads the combined site as a downloadable artifact. The build runs even after a test failure, including on pull requests, so the diagnostics of a red run can be opened without GitHub Pages. Successful trusted `main` runs are also published to the public [GitHub Pages history](https://semaphoreui.github.io/integration-tests/); pull-request and external-environment runs remain artifact-only.
 
-The `fixture-init` Compose service creates a separate Git repository from `fixtures/ansible` with the `main` and `bookwright-fixture-ref` branches. Initialization is safely repeatable for an existing volume and fails with an error when a Git command fails. The repository is mounted into Semaphore read-only and is used to verify the task lifecycle, branch selection, and a missing ref. `long-running.yml` contains a start marker, a controlled pause, and a completion marker for deterministic stop/force-stop verification.
+The `fixture-init` Compose service commits the whole `test-environment/fixtures` folder into a local Git repository with the `main` and `bookwright-fixture-ref` branches, and `fixture-git-init` publishes a bare clone of it through the `fixture-git` HTTP service as `http://fixture-git/fixtures.git`. Initialization is safely repeatable for an existing volume and fails with an error when a Git command fails. Semaphore and the runners clone the repository over HTTP inside the Compose network; it is used to verify the task lifecycle, branch selection, and a missing ref. `long-running.yml` contains a start marker, a controlled pause, and a completion marker for deterministic stop/force-stop verification.
 
 ## Quick check
 

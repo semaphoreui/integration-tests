@@ -3,10 +3,11 @@ name: Application PR trigger
 # Runs the integration tests of every test pull request whose description declares an
 # "Application-PR:" trailer pointing at the application pull request named in the event payload.
 #
-# The application repository sends the event; see docs/application-pr-testing.md for the
-# workflow snippet it needs. Only test pull requests whose description declares this exact
-# application pull request are started: a change of an arbitrary branch of the application
-# repository starts nothing, and the link is never inferred from branch names.
+# The application repository sends the event; see the README section "Testing Pull Requests of
+# the Application Repository" for the workflow snippet it needs. Only test pull requests whose
+# description declares this exact application pull request are started: a change of an arbitrary
+# branch of the application repository starts nothing, and the link is never inferred from
+# branch names.
 
 on:
   repository_dispatch:
