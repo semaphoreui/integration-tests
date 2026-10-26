@@ -2,6 +2,7 @@ package io.bookwright.fixtures.semaphore;
 
 import io.bookwright.api.model.semaphore.ApiTokenRequest;
 import io.bookwright.api.model.semaphore.ProjectRequest;
+import io.bookwright.api.model.semaphore.UserRequest;
 import io.bookwright.util.TestData;
 import java.time.Duration;
 import java.time.Instant;
@@ -22,6 +23,30 @@ public record SemaphoreTokenFixtures(String tokenName, String projectName) {
 
   public ApiTokenRequest secondValidRequest() {
     return validRequest(tokenName + "-second");
+  }
+
+  public UserRequest ownerRequest() {
+    return userRequest(tokenName + "-owner");
+  }
+
+  public UserRequest otherOwnerRequest() {
+    return userRequest(tokenName + "-other");
+  }
+
+  private UserRequest userRequest(String username) {
+    return new UserRequest(
+        username,
+        username,
+        username + "@localhost",
+        "Bookwright-token-owner-42!",
+        false,
+        false,
+        false);
+  }
+
+  public enum Authentication {
+    COOKIE,
+    BEARER
   }
 
   private ApiTokenRequest validRequest(String name) {

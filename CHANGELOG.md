@@ -36,6 +36,9 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Added
 
+- API-token owner isolation through cookie and Bearer authentication: owner-only prefix lists,
+  harmless foreign revocation, and successful revocation by the rightful owner. Disposable
+  per-test accounts and secret-safe listing reports keep the checks isolated and safe on failure.
 - `feature-host-config` profile with credential-mapping scenarios on containers only: a parent
   repository over HTTP whose submodules come over HTTPS (Basic Auth from a URL mapping), plain HTTP
   and SSH (key from a Host mapping), a failed clone without either mapping, the Ansible `git` module

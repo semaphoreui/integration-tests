@@ -76,7 +76,7 @@ public class TokenSteps {
     Calls.expectStatus(api.delete(token.prefix()), 204);
   }
 
-  @Step("Delete Semaphore API token {token.name} through its owner's session")
+  @Step("Delete Semaphore API token {token.name} through an isolated session")
   public void delete(SemaphoreSessionApis session, ApiToken token) {
     Calls.expectStatus(session.tokens().delete(token.prefix()), 204);
   }

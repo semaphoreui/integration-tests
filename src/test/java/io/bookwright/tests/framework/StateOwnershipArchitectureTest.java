@@ -31,6 +31,8 @@ class StateOwnershipArchitectureTest {
             "booking",
             "semaphoreRbacUser",
             "semaphoreAuthLifecycleUsers",
+            "semaphoreTokenOwner",
+            "semaphoreOtherTokenOwner",
             "semaphoreProject",
             "semaphoreTaskHistory",
             "semaphoreAccessibleProject",

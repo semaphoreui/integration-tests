@@ -13,8 +13,25 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class SafeHttpReportingInterceptorTest {
+
+  @ParameterizedTest
+  @ValueSource(strings = {"/api/user/tokens", "/semaphore/api/user/tokens"})
+  void omitsTokenListingEvenWhenTheApplicationLeaksFullCredentials(String path) throws IOException {
+    String leakedBody = "[{\"id\":\"unexpected-full-bearer-secret\",\"name\":\"owner-token\"}]";
+    server.enqueue(
+        new MockResponse().setHeader("Content-Type", "application/json").setBody(leakedBody));
+    try (Response response =
+        new OkHttpClient().newCall(new Request.Builder().url(server.url(path)).build()).execute()) {
+      assertThat(SafeHttpReportingInterceptor.responseReport(response, 1))
+          .contains(SecretSanitizer.OMITTED_BODY)
+          .doesNotContain("unexpected-full-bearer-secret");
+      assertThat(response.body().string()).isEqualTo(leakedBody);
+    }
+  }
 
   private MockWebServer server;
 

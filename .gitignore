@@ -1,3 +1,6 @@
+# Local research archive and working notes (not published with the test suite)
+/local-research/
+
 # Upstream Semaphore UI source clone (maintained as a separate repository)
 /semaphore/
 

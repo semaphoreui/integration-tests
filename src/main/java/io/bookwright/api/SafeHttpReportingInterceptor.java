@@ -93,9 +93,9 @@ public final class SafeHttpReportingInterceptor implements Interceptor {
   }
 
   private static String responseBody(Response response, ResponseBody body) throws IOException {
-    // Semaphore returns the newly generated bearer secret in a generic `id` field. Generic JSON
-    // key redaction cannot recognize it safely, so omit this one sensitive response body.
-    if (response.request().method().equals("POST")
+    // Token creation returns a bearer secret in a generic `id` field. A listing regression could
+    // expose it too: omit both bodies so a failing security assertion cannot publish credentials.
+    if ((response.request().method().equals("POST") || response.request().method().equals("GET"))
         && response.request().url().encodedPath().endsWith("/user/tokens")) {
       return SecretSanitizer.OMITTED_BODY;
     }

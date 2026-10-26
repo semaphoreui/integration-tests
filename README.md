@@ -376,6 +376,11 @@ Non-admin token authorization is covered separately: an existing bearer token ca
 unassigned project, a guest cannot create access keys (the stored collection remains unchanged),
 and removing membership immediately hides the project while the token still authenticates its
 owner. Revoking one of two tokens leaves the other token and the owner's cookie session usable.
+Owner-isolation cases use two disposable non-admin accounts and exercise both cookie and Bearer
+authentication. Each account lists only its own token's public prefix. Deleting another account's
+prefix returns the current idempotent `204` but leaves both tokens listed and usable; the rightful
+owner can still revoke that token. Token-list HTTP response bodies are omitted from reports too,
+so a regression returning a full token cannot leak it into attachments.
 Each scenario creates a disposable user; token deletion and cleanup use that user's session.
 
 Cross-project task isolation has three focused suites: `TaskReadIsolationApiTest` (details and
