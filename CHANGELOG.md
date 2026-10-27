@@ -6,6 +6,10 @@ All notable changes to the Semaphore UI test automation project are documented i
 
 ### Changed
 
+- Updated Playwright Java from 1.53.0 to 1.64.0 and refreshed the verified dependency
+  checksums. Chromium installation continues to use the same resolved Playwright version as
+  the tests; this release also supports Ubuntu 26.04 runners.
+
 - Waits for Semaphore tasks, their output and their stop check the task at once and then every
   250 ms instead of first after 3 s and then every 3 s, so a test no longer spends at least 3 s on
   each task it runs. Reading the output of a finished task waits until Semaphore has stored all of
