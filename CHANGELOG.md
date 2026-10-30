@@ -27,6 +27,10 @@ All notable changes to the Semaphore UI test automation project are documented i
 - Centralized test-parameter fixture construction in a type-safe `FixtureCatalog`, replacing the
   growing fixture-specific condition chain in `StepsParameterResolver` without reflection or marker
   interfaces.
+- Redacted OAuth/OIDC and SAML query parameters, URL credentials and fragments from URL
+  diagnostics, including URLs embedded in browser console errors, page errors and request
+  failures. Browser entries are sanitized before truncation; ordinary JSON state/code fields
+  and actual request URLs remain unchanged.
 - Fixture paths are relative to `test-environment/fixtures`: `fixture-init` places the folder contents at the root of the fixtures Git repository, so records use `ansible/smoke.yml` instead of `test-environment/fixtures/ansible/smoke.yml`.
 - Branch-isolation fixture branches are created inline by the `parallel-tasks` Compose overlay in the shared `fixture-repository` volume before `fixture-git-init` publishes it, replacing the mounted `setup.sh` and its separate local repository.
 - Fixtures are served by a local `fixture-git` HTTP service inside the Compose network instead of being cloned from GitHub; the default `git.fixtures.repository` is `http://fixture-git/fixtures.git`, CI no longer sets `TEST_REPOSITORY`/`TEST_BRANCH`, and the server/runner fixture volume mounts are removed.
