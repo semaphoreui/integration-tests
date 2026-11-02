@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "title": "Semaphore configuration matrix",
-  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/37104624328",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/41409938101",
   "versions": [
     "develop"
   ],
@@ -12,12 +12,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 88,
+      "tests": 148,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 50,
-        "skipped": 38,
+        "passed": 99,
+        "skipped": 49,
         "unknown": 0
       }
     },
@@ -27,12 +27,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 88,
+      "tests": 148,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 50,
-        "skipped": 38,
+        "passed": 99,
+        "skipped": 49,
         "unknown": 0
       }
     },
@@ -42,12 +42,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 88,
+      "tests": 148,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 50,
-        "skipped": 38,
+        "passed": 99,
+        "skipped": 49,
         "unknown": 0
       }
     },
@@ -75,8 +75,23 @@
       "tests": 4,
       "counts": {
         "failed": 0,
-        "broken": 0,
-        "passed": 4,
+        "broken": 2,
+        "passed": 2,
+        "skipped": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "feature-host-config",
+      "profile": "feature-host-config",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 6,
+      "counts": {
+        "failed": 0,
+        "broken": 1,
+        "passed": 5,
         "skipped": 0,
         "unknown": 0
       }
@@ -87,42 +102,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 88,
+      "tests": 148,
       "counts": {
         "failed": 0,
-        "broken": 53,
-        "passed": 1,
-        "skipped": 34,
-        "unknown": 0
-      }
-    },
-    {
-      "name": "feature-oidc-local",
-      "profile": "feature-oidc-local",
-      "version": "develop",
-      "previousVersion": "",
-      "versionLabel": "develop",
-      "tests": 9,
-      "counts": {
-        "failed": 0,
-        "broken": 2,
-        "passed": 2,
-        "skipped": 5,
-        "unknown": 0
-      }
-    },
-    {
-      "name": "feature-proxy-oidc",
-      "profile": "feature-proxy-oidc",
-      "version": "develop",
-      "previousVersion": "",
-      "versionLabel": "develop",
-      "tests": 9,
-      "counts": {
-        "failed": 0,
-        "broken": 2,
-        "passed": 2,
-        "skipped": 5,
+        "broken": 1,
+        "passed": 102,
+        "skipped": 45,
         "unknown": 0
       }
     },
@@ -162,27 +147,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 88,
+      "tests": 148,
       "counts": {
         "failed": 0,
         "broken": 1,
-        "passed": 57,
-        "skipped": 30,
-        "unknown": 0
-      }
-    },
-    {
-      "name": "feature-totp-local",
-      "profile": "feature-totp-local",
-      "version": "develop",
-      "previousVersion": "",
-      "versionLabel": "develop",
-      "tests": 2,
-      "counts": {
-        "failed": 0,
-        "broken": 0,
-        "passed": 2,
-        "skipped": 0,
+        "passed": 106,
+        "skipped": 41,
         "unknown": 0
       }
     },
@@ -192,12 +162,12 @@
       "version": "develop",
       "previousVersion": "",
       "versionLabel": "develop",
-      "tests": 88,
+      "tests": 148,
       "counts": {
         "failed": 0,
         "broken": 0,
-        "passed": 52,
-        "skipped": 36,
+        "passed": 103,
+        "skipped": 45,
         "unknown": 0
       }
     }
