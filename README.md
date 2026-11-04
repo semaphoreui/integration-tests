@@ -22,6 +22,8 @@ export API_USERNAME=admin
 export API_PASSWORD=admin
 export TEST_REPOSITORY=http://host.docker.internal:3080/fixtures.git
 
+# export TEST_REPOSITORY=http://localhost:3080/fixtures.git
+
 ./run.sh up external
 ./run.sh test external
 ./run.sh down external
