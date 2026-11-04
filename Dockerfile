@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   openssl \
   socat \
   coreutils \
+  python3 \
   vim \
   nano \
   less \

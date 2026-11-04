@@ -34,4 +34,16 @@ public class Waits {
         .pollInterval(Duration.ofSeconds(3))
         .ignoreException(ApiCallException.class);
   }
+
+  /**
+   * Application task preset: 90s / 250ms, first check immediately. Tasks usually finish in well
+   * under a second, so a slow poll would dominate the test duration.
+   */
+  public ConditionFactory awaitTask(String alias) {
+    return Awaitility.await(alias)
+        .atMost(Duration.ofSeconds(90))
+        .pollDelay(Duration.ZERO)
+        .pollInterval(Duration.ofMillis(250))
+        .ignoreException(ApiCallException.class);
+  }
 }

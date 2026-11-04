@@ -8,13 +8,17 @@
 #
 # Usage: scripts/publish-external-results.sh <profile>=<allure results dir> [<profile>=<dir>...]
 #
+# <profile> must be a folder of test-environment/profiles; other arguments are skipped, because
+# Semaphore appends the environment's extra variables as NAME=value arguments.
+#
 # Environment:
 #   GH_TOKEN          token with Contents and Actions read/write on the repository (required)
-#   RUN_ID            numeric run id on the external server (required)
-#   RUN_URL           link to the run on the external server (required)
-#   RUN_CONCLUSION    success, failure, cancelled, timed_out, neutral or skipped (required)
+#   RUN_ID            numeric run id (default: generated from the current time)
+#   RUN_URL           link to the run (default: SEMAPHORE_WORKFLOW_URL, then SEMAPHORE_TASK_DETAILS_URL)
+#   RUN_CONCLUSION    success, failure, cancelled, timed_out, neutral or skipped (default: the
+#                     outcome run.sh exec recorded in build/run-conclusion)
 #   RUN_WORKFLOW      workflow name on the Pages site (default: Orbantix)
-#   RUN_TITLE         run card title (default: Orbantix run <RUN_ID>)
+#   RUN_TITLE         run card title (default: Orbantix run <UTC start time>)
 #   GITHUB_REPOSITORY owner/name (default: semaphoreui/integration-tests)
 #   HEAD_SHA          tested commit (default: HEAD of this checkout)
 
@@ -22,6 +26,28 @@ set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+
+echo "SEMAPHORE_PROJECT_ID=${SEMAPHORE_PROJECT_ID:-}"
+echo "SEMAPHORE_TASK_ID=${SEMAPHORE_TASK_ID:-}"
+echo "SEMAPHORE_WORKFLOW_ID=${SEMAPHORE_WORKFLOW_ID:-}"
+echo "SEMAPHORE_WORKFLOW_RUN_ID=${SEMAPHORE_WORKFLOW_RUN_ID:-}"
+echo "SEMAPHORE_WORKFLOW_URL=${SEMAPHORE_WORKFLOW_URL:-}"
+echo "SEMAPHORE_TASK_DETAILS_URL=${SEMAPHORE_TASK_DETAILS_URL:-}"
+echo "PATH:=$(pwd)"
+
+# Semaphore sets the links only when its web_host (SEMAPHORE_WEB_ROOT) is known: the workflow run
+# for a task of a workflow, and the task itself for a shell task, shell-quoted when it contains
+# characters such as '?'.
+semaphore_task_url=${SEMAPHORE_TASK_DETAILS_URL:-}
+case "$semaphore_task_url" in
+\'*\') semaphore_task_url=${semaphore_task_url#\'} semaphore_task_url=${semaphore_task_url%\'} ;;
+esac
+RUN_URL=${RUN_URL:-${SEMAPHORE_WORKFLOW_URL:-$semaphore_task_url}}
+# run.sh exec records the outcome of the test actions of a multi-task pipeline here.
+conclusion_file="$repository_dir/build/run-conclusion"
+if [ -z "${RUN_CONCLUSION:-}" ] && [ -s "$conclusion_file" ]; then
+  RUN_CONCLUSION=$(cat "$conclusion_file")
+fi
 
 fail() {
   printf 'publish-external-results: %s\n' "$1" >&2
@@ -31,44 +57,60 @@ fail() {
 [ "$#" -gt 0 ] || fail "usage: $0 <profile>=<allure results dir> [<profile>=<dir>...]"
 
 : "${GH_TOKEN:?Set GH_TOKEN to a token with Contents and Actions read/write on the repository}"
-: "${RUN_ID:?Set RUN_ID to the numeric run id on the external server}"
-: "${RUN_URL:?Set RUN_URL to the link of the run on the external server}"
+: "${RUN_URL:?Set RUN_URL to the link of the run, or web_host (SEMAPHORE_WEB_ROOT) in the Semaphore config}"
 : "${RUN_CONCLUSION:?Set RUN_CONCLUSION to the final status of the run}"
 repository=${GITHUB_REPOSITORY:-semaphoreui/integration-tests}
 workflow_name=${RUN_WORKFLOW:-Orbantix}
-display_title=${RUN_TITLE:-"Orbantix run $RUN_ID"}
-head_sha=${HEAD_SHA:-$(git -C "$repository_dir" rev-parse HEAD)}
+# The runner container works as root in a checkout owned by another user, which git refuses
+# without safe.directory.
+head_sha=${HEAD_SHA:-$(git -c safe.directory="$repository_dir" -C "$repository_dir" rev-parse HEAD)}
 created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+display_title=${RUN_TITLE:-"Orbantix run $(date -u '+%Y-%m-%d %H:%M UTC')"}
+# Epoch seconds plus three random digits: numeric as the Pages history requires, and unique
+# enough that two servers publishing in the same second do not share a results branch.
+if [ -z "${RUN_ID:-}" ]; then
+  RUN_ID=$(date -u '+%s')$(printf '%03d' "$(($(od -An -N2 -tu2 /dev/urandom | tr -d ' ') % 1000))")
+  printf 'Generated RUN_ID=%s\n' "$RUN_ID"
+fi
 results_ref="orbantix-results/$RUN_ID"
 
 case "$RUN_ID" in
-  ''|*[!0-9]*) fail "RUN_ID must be numeric: $RUN_ID" ;;
+'' | *[!0-9]*) fail "RUN_ID must be numeric: $RUN_ID" ;;
 esac
 case "$RUN_CONCLUSION" in
-  success|failure|cancelled|timed_out|neutral|skipped) ;;
-  *) fail "unsupported RUN_CONCLUSION: $RUN_CONCLUSION" ;;
+success | failure | cancelled | timed_out | neutral | skipped) ;;
+*) fail "unsupported RUN_CONCLUSION: $RUN_CONCLUSION" ;;
 esac
 case "$RUN_URL" in
-  http://*|https://*) ;;
-  *) fail "RUN_URL must use http(s): $RUN_URL" ;;
+http://* | https://*) ;;
+*) fail "RUN_URL must use http(s): $RUN_URL" ;;
 esac
 printf '%s' "$head_sha" | grep -Eq '^[0-9a-f]{40}$' || fail "HEAD_SHA must be a full commit SHA: $head_sha"
 
 work_dir=$(mktemp -d)
 trap 'rm -rf "$work_dir"' EXIT
 
+# Semaphore passes extra variables, survey variables and variable-type secrets of the environment
+# as NAME=value arguments too, so only arguments named after a profile are results; the rest are
+# skipped by name, never printing the value, which may be a secret.
+published=0
 for pair in "$@"; do
   profile=${pair%%=*}
   results_dir=${pair#*=}
-  [ "$profile" != "$pair" ] || fail "expected <profile>=<dir>: $pair"
   case "$profile" in
-    ''|*[!A-Za-z0-9._-]*) fail "unsafe profile name: $profile" ;;
+  '' | *[!A-Za-z0-9._-]*) profile= ;;
   esac
-  [ -d "$results_dir" ] || fail "results directory does not exist: $results_dir"
-  find "$results_dir" -maxdepth 1 -type f -name '*-result.json' | grep -q . \
-    || fail "no *-result.json files in $results_dir"
+  if [ "$profile" = "$pair" ] || [ -z "$profile" ] || [ ! -f "$repository_dir/test-environment/profiles/$profile/profile.yaml" ]; then
+    printf 'Skipping argument %s: not <profile>=<dir> with a profile from test-environment/profiles\n' "${pair%%=*}"
+    continue
+  fi
+  [ -d "$results_dir" ] || fail "results directory does not exist: $results_dir (working directory: $(pwd))"
+  find "$results_dir" -maxdepth 1 -type f -name '*-result.json' | grep -q . ||
+    fail "no *-result.json files in $results_dir"
   cp -R "$results_dir" "$work_dir/allure-results-$profile"
+  published=$((published + 1))
 done
+[ "$published" -gt 0 ] || fail "no <profile>=<allure results dir> argument names a profile from test-environment/profiles"
 
 # The token goes through a header, never the remote URL, so it does not reach git output or logs.
 auth_header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"

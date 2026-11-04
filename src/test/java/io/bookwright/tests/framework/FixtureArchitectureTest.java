@@ -9,6 +9,7 @@ import io.bookwright.fixtures.saucedemo.SauceDemoFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreAuthLifecycleFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHostConfigFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreHostConfigGitFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHttpsGitFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLdapFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreLoginSecurityFixtures;
@@ -99,7 +100,15 @@ class FixtureArchitectureTest {
           "https://git-https-fixture/",
           "ansible_ssh_extra_args",
           "a host mapping needs an SSH key",
-          "the credential is used by the mapping for");
+          "the credential is used by the mapping for",
+          "http://host-config-git/public/",
+          "https://host-config-git/private/",
+          "Bookwright-host-config-token-42!",
+          "Permission denied (publickey)",
+          "submodule-ok",
+          "semaphore-bookwright-ansible-target-ok",
+          "semaphore-bookwright-git-module-ok",
+          "semaphore-bookwright-galaxy-role-ok");
 
   @Test
   void stepsAndProductTestsDoNotOwnScenarioFixtures() throws Exception {
@@ -123,6 +132,8 @@ class FixtureArchitectureTest {
     SemaphoreAuthLifecycleFixtures authLifecycle = SemaphoreAuthLifecycleFixtures.standard();
     SemaphoreHostConfigFixtures hostConfig =
         SemaphoreHostConfigFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
+    SemaphoreHostConfigGitFixtures hostConfigGit =
+        SemaphoreHostConfigGitFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreHttpsGitFixtures httpsGit =
         SemaphoreHttpsGitFixtures.from(new TestData(1L, 2L, "fixture-redaction"));
     SemaphoreLdapFixtures ldap = SemaphoreLdapFixtures.standard();
@@ -183,6 +194,14 @@ class FixtureArchitectureTest {
         "Semaphore host config retype request diagnostics",
         hostConfig.retypeToLoginPassword(1, 2).toString(),
         hostConfig.loginPasswordKey());
+    SecretAssertions.absent(
+        "Semaphore host config Git fixture diagnostics",
+        hostConfigGit.toString(),
+        hostConfigGit.privateCredentials());
+    SecretAssertions.absent(
+        "Semaphore host config Git request diagnostics",
+        hostConfigGit.privateCredentials().request(1).toString(),
+        hostConfigGit.privateCredentials());
     SecretAssertions.absent(
         "Semaphore HTTPS Git fixture diagnostics",
         httpsGit.toString(),

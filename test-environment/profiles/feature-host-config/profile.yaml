@@ -1,0 +1,25 @@
+id: feature-host-config
+description: SQLite with credential mappings for Git submodules over https/http/ssh and Ansible on a target container
+compose_file: compose.yml
+compose_project: semaphore-test-feature-host-config
+readiness_url: http://localhost:3000/api/ping
+stand: semaphore
+test_class: io.bookwright.tests.semaphore.HostConfigSubmoduleGitTest,io.bookwright.tests.semaphore.HostConfigAnsibleTest
+semaphore_version: develop
+semaphore_image: branch:develop
+edition: community
+installation: docker-compose
+architecture: native
+database_type: sqlite
+database_image: embedded
+execution_mode: local
+execution_executor: local
+auth: password
+git_client: cmd_git
+git_https_fixture: generated
+git_https_fixture_dir: host-config-git
+git_fixture_image: nginx:1.27.5-alpine
+ssh_fixture_image: semaphore-test/ssh-fixture:alpine-3.22.1
+ssh_fixture_key: generated
+ansible_target_image: semaphore-test/ansible-target:alpine-3.22.1
+capabilities: host-config-url-login,git-submodules,git-ssh,git-http,git-https,ansible-ssh-target,host-config-ssh,ansible-git-module,ansible-galaxy-requirements

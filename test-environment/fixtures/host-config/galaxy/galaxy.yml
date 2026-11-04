@@ -1,0 +1,6 @@
+---
+- name: Semaphore Galaxy requirements fixture
+  hosts: all
+  gather_facts: false
+  roles:
+    - bookwright_private_role

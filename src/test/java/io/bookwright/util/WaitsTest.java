@@ -50,6 +50,15 @@ class WaitsTest {
   }
 
   @Test
+  void taskPresetChecksTheConditionImmediately() {
+    long started = System.nanoTime();
+
+    Waits.awaitTask("already finished task").until(() -> true);
+
+    assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(200));
+  }
+
+  @Test
   void timeoutDiagnosticsContainMandatoryAlias() {
     assertThatThrownBy(
             () ->

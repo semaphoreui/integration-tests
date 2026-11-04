@@ -1,0 +1,24 @@
+---
+- name: Semaphore Ansible target container
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Write a probe file on the target
+      ansible.builtin.copy:
+        dest: /tmp/semaphore-bookwright-target-probe
+        content: "semaphore-bookwright-ansible-target-ok\n"
+        mode: "0600"
+
+    - name: Read the probe back on the target
+      ansible.builtin.command: cat /tmp/semaphore-bookwright-target-probe
+      register: target_probe
+      changed_when: false
+
+    - name: Report the probe together with the host that answered
+      ansible.builtin.debug:
+        msg: "{{ target_probe.stdout }} on {{ ansible_facts['hostname'] }}"
+
+    - name: Remove the probe file
+      ansible.builtin.file:
+        path: /tmp/semaphore-bookwright-target-probe
+        state: absent

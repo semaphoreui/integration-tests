@@ -31,9 +31,8 @@ public final class SemaphoreTaskCleanup {
   private static void delete(SemaphoreTasksApi api, long projectId, long taskId) {
     // All stop requests run before any wait/delete, so queued tasks cannot block their runner.
     // Accept natural completion racing with cancellation as well as an explicit stopped status.
-    Waits.awaitSlow(
+    Waits.awaitTask(
             "Semaphore task %d in project %d finishes before cleanup".formatted(taskId, projectId))
-        .pollDelay(Duration.ZERO)
         .until(() -> getTask(api, projectId, taskId), SemaphoreTaskCleanup::isTerminal);
 
     // Final status can be persisted before pool removal. Retry only the empty DELETE/400

@@ -15,6 +15,7 @@ import io.bookwright.fixtures.semaphore.SemaphoreEncryptionRotationFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFileInventoryFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHostConfigFixtures;
+import io.bookwright.fixtures.semaphore.SemaphoreHostConfigGitFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHostConfigHttpsGitFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHostConfigSshFixtures;
 import io.bookwright.fixtures.semaphore.SemaphoreHttpsGitFixtures;
@@ -88,6 +89,9 @@ final class FixtureCatalog {
           fixture(
               SemaphoreHostConfigFixtures.class,
               context -> SemaphoreHostConfigFixtures.from(context.testData())),
+          fixture(
+              SemaphoreHostConfigGitFixtures.class,
+              context -> SemaphoreHostConfigGitFixtures.from(context.testData())),
           fixture(
               SemaphoreHostConfigHttpsGitFixtures.class,
               context -> SemaphoreHostConfigHttpsGitFixtures.from(context.testData())),

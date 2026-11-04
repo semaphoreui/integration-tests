@@ -1,0 +1,4 @@
+---
+- name: Prove the private role was installed and runs
+  ansible.builtin.debug:
+    msg: semaphore-bookwright-galaxy-role-ok

@@ -19,6 +19,15 @@ import org.awaitility.core.ConditionTimeoutException;
 
 public class TaskSteps {
 
+  private static final List<String> TERMINAL_STATUSES = List.of("success", "error", "stopped");
+
+  /**
+   * Semaphore persists a task status at once but buffers its output and inserts it every 500 ms
+   * ({@code TaskPool.TaskOutputInsertIntervalMs}), so a finished task can still miss its last
+   * lines.
+   */
+  private static final Duration OUTPUT_SETTLE_PERIOD = Duration.ofSeconds(1);
+
   private final SemaphoreTasksApi api;
   private final TeardownStorage teardown;
 
@@ -132,10 +141,10 @@ public class TaskSteps {
     teardown.push(
         "Wait for finite Semaphore task " + taskId,
         () ->
-            Waits.awaitSlow("Finite task %d completes before cleanup".formatted(taskId))
+            Waits.awaitTask("Finite task %d completes before cleanup".formatted(taskId))
                 .until(
                     () -> getTask(projectId, taskId),
-                    task -> List.of("success", "error", "stopped").contains(task.status())));
+                    task -> TERMINAL_STATUSES.contains(task.status())));
   }
 
   @Step("Start Semaphore task from template {templateId} and wait for failure")
@@ -151,7 +160,7 @@ public class TaskSteps {
 
   @Step("Wait for Semaphore task {taskId} to succeed")
   public Task waitUntilTaskSucceeds(long projectId, long taskId) {
-    return Waits.awaitSlow("Semaphore task %d reaches terminal status".formatted(taskId))
+    return Waits.awaitTask("Semaphore task %d reaches terminal status".formatted(taskId))
         .until(
             () -> Calls.body(api.getTask(projectId, taskId), 200, "task status"),
             task -> isSuccessfulOrThrow(projectId, task));
@@ -159,7 +168,7 @@ public class TaskSteps {
 
   @Step("Wait for Semaphore task {taskId} to fail")
   public Task waitUntilTaskFails(long projectId, long taskId) {
-    return Waits.awaitSlow("Semaphore task %d fails".formatted(taskId))
+    return Waits.awaitTask("Semaphore task %d fails".formatted(taskId))
         .until(
             () -> Calls.body(api.getTask(projectId, taskId), 200, "task status"),
             task -> isFailedOrThrow(task));
@@ -170,7 +179,7 @@ public class TaskSteps {
     List<Task> tasks;
     try {
       tasks =
-          Waits.awaitSlow("Semaphore schedule %d creates a task".formatted(scheduleId))
+          Waits.awaitTask("Semaphore schedule %d creates a task".formatted(scheduleId))
               .until(
                   () -> Calls.body(api.getTasks(projectId), 200, "scheduled tasks"),
                   candidates ->
@@ -211,7 +220,7 @@ public class TaskSteps {
     List<Task> tasks;
     try {
       tasks =
-          Waits.awaitSlow("Semaphore template %d creates a task".formatted(templateId))
+          Waits.awaitTask("Semaphore template %d creates a task".formatted(templateId))
               .until(
                   () -> Calls.body(api.getTasks(projectId), 200, "template tasks"),
                   candidates ->
@@ -260,8 +269,10 @@ public class TaskSteps {
 
   @Step("Wait for Semaphore task {taskId} output marker")
   public String waitUntilTaskOutputContains(long projectId, long taskId, String marker) {
-    return Waits.awaitSlow("Semaphore task %d emits expected output".formatted(taskId))
-        .until(() -> getTaskOutputText(projectId, taskId), output -> output.contains(marker));
+    return Waits.awaitTask("Semaphore task %d emits expected output".formatted(taskId))
+        .until(
+            () -> outputText(fetchTaskOutput(projectId, taskId)),
+            output -> output.contains(marker));
   }
 
   @Step("Stop Semaphore task {taskId} and wait for terminal status")
@@ -272,7 +283,7 @@ public class TaskSteps {
 
   @Step("Wait for Semaphore task {taskId} to stop")
   public Task waitUntilTaskStops(long projectId, long taskId) {
-    return Waits.awaitSlow("Semaphore task %d stops".formatted(taskId))
+    return Waits.awaitTask("Semaphore task %d stops".formatted(taskId))
         .until(
             () -> Calls.body(api.getTask(projectId, taskId), 200, "task status"),
             task -> isStoppedOrThrow(task));
@@ -318,7 +329,7 @@ public class TaskSteps {
 
   @Step("Wait for Semaphore task {taskId} to reach status {status}")
   public Task waitUntilStatus(long projectId, long taskId, String status) {
-    return Waits.awaitSlow("Semaphore task %d reaches status %s".formatted(taskId, status))
+    return Waits.awaitTask("Semaphore task %d reaches status %s".formatted(taskId, status))
         .until(() -> getTask(projectId, taskId), task -> status.equals(task.status()));
   }
 
@@ -364,19 +375,18 @@ public class TaskSteps {
 
   @Step("Get output of Semaphore task {taskId}")
   public List<TaskOutput> getTaskOutput(long projectId, long taskId) {
-    return Calls.body(api.getTaskOutput(projectId, taskId), 200, "task output");
+    awaitPersistedOutput(projectId, taskId);
+    return fetchTaskOutput(projectId, taskId);
   }
 
   @Step("Get structured output text of Semaphore task {taskId}")
   public String getTaskOutputText(long projectId, long taskId) {
-    return getTaskOutput(projectId, taskId).stream()
-        .map(TaskOutput::output)
-        .reduce((left, right) -> left + System.lineSeparator() + right)
-        .orElse("");
+    return outputText(getTaskOutput(projectId, taskId));
   }
 
   @Step("Get raw output of Semaphore task {taskId}")
   public String getTaskRawOutput(long projectId, long taskId) {
+    awaitPersistedOutput(projectId, taskId);
     var response = Calls.expectStatus(api.getTaskRawOutput(projectId, taskId), 200);
     try (var body = response.body()) {
       if (body == null) {
@@ -386,5 +396,41 @@ public class TaskSteps {
     } catch (IOException error) {
       throw new IllegalStateException("Could not read raw task output", error);
     }
+  }
+
+  /**
+   * A finished task is read once its persisted output has not grown for longer than Semaphore's
+   * insert interval; a running task is read as a snapshot.
+   */
+  private void awaitPersistedOutput(long projectId, long taskId) {
+    Task task = Calls.body(api.getTask(projectId, taskId), 200, "task status");
+    if (!TERMINAL_STATUSES.contains(task.status())) {
+      return;
+    }
+    long[] lastSize = {-1};
+    long[] changedAt = {0};
+    Waits.awaitTask("Semaphore task %d output is persisted".formatted(taskId))
+        .until(
+            () -> {
+              int size = fetchTaskOutput(projectId, taskId).size();
+              long now = System.nanoTime();
+              if (size != lastSize[0]) {
+                lastSize[0] = size;
+                changedAt[0] = now;
+                return false;
+              }
+              return now - changedAt[0] >= OUTPUT_SETTLE_PERIOD.toNanos();
+            });
+  }
+
+  private List<TaskOutput> fetchTaskOutput(long projectId, long taskId) {
+    return Calls.body(api.getTaskOutput(projectId, taskId), 200, "task output");
+  }
+
+  private static String outputText(List<TaskOutput> output) {
+    return output.stream()
+        .map(TaskOutput::output)
+        .reduce((left, right) -> left + System.lineSeparator() + right)
+        .orElse("");
   }
 }
