@@ -63,7 +63,8 @@ jobs:
 
   quality:
     name: Framework quality gate
-    runs-on: ubuntu-latest
+    # BrowserContextIsolationTest uses Playwright 1.53.1, which does not support Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -121,7 +122,8 @@ jobs:
     needs:
       - quality
       - app-image
-    runs-on: ubuntu-latest
+    # Keep the browser runner compatible with the pinned Playwright version.
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     permissions:
       contents: read
