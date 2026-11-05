@@ -26,11 +26,12 @@ main.sh
 2. It waits for `semaphore-resistant-stop-ready`.
 3. It calls the stop API with `force=false`.
 4. The main and child processes print their `SIGTERM` markers but remain running.
-5. Semaphore waits for the 15-second grace period, then sends `SIGKILL`.
+5. Semaphore waits for its grace period, then sends `SIGKILL`; the test expects the stop to take
+   between 12 and 30 seconds.
 6. The task reaches `stopped` and the verifier reports
    `semaphore-resistant-stop-processes-gone`.
 
 The main and verifier tasks run in the same local Semaphore container. The main
-task stores process IDs and signal markers under
+task stores process IDs under
 `/tmp/bookwright-process-cleanup/<task-id>`, and the Java test passes that task
 ID to the verifier task.

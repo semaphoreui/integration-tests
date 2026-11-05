@@ -26,7 +26,8 @@ main.sh
 2. It waits for `semaphore-process-cleanup-term-ready`.
 3. It calls the stop API with `force=false`.
 4. The main and child processes handle `SIGTERM` and exit.
-5. The task must reach `stopped` before the 15-second grace period expires.
+5. The task must reach `stopped` within 12 seconds, before Semaphore's grace period would
+   escalate to `SIGKILL`.
 6. The test confirms both signal markers, and the verifier reports
    `semaphore-graceful-stop-descendants-gone`.
 
