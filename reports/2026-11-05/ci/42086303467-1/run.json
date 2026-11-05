@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "title": "Semaphore CI",
+  "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/42086303467",
+  "versions": [
+    "develop"
+  ],
+  "reports": [
+    {
+      "name": "core-sqlite-local",
+      "profile": "core-sqlite-local",
+      "version": "develop",
+      "previousVersion": "",
+      "versionLabel": "develop",
+      "tests": 149,
+      "counts": {
+        "failed": 4,
+        "broken": 4,
+        "passed": 100,
+        "skipped": 41,
+        "unknown": 0
+      }
+    },
+    {
+      "name": "quality",
+      "profile": "quality",
+      "version": "",
+      "previousVersion": "",
+      "versionLabel": "",
+      "tests": 160,
+      "counts": {
+        "failed": 0,
+        "broken": 0,
+        "passed": 160,
+        "skipped": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "source": "github",
+  "workflow": "CI",
+  "workflowSlug": "ci",
+  "displayTitle": "Merge pull request #55 from semaphoreui/codex/ci-ubuntu-24",
+  "event": "push",
+  "conclusion": "failure",
+  "runId": 42086303467,
+  "runAttempt": 1,
+  "runNumber": 169,
+  "createdAt": "2026-11-05T18:39:15Z",
+  "date": "2026-11-05",
+  "headSha": "7d238d45f66b0a5fd61ffceef11888a4edb20731",
+  "shortSha": "7d238d4",
+  "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/7d238d45f66b0a5fd61ffceef11888a4edb20731"
+}
