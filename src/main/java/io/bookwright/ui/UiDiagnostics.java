@@ -3,12 +3,16 @@ package io.bookwright.ui;
 import io.bookwright.api.SecretSanitizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Collects bounded, per-test browser diagnostics for failure reporting. */
 final class UiDiagnostics {
 
   private static final int MAX_ENTRIES_PER_CATEGORY = 100;
   private static final int MAX_ENTRY_LENGTH = 2_000;
+  private static final Pattern HTTP_URL =
+      Pattern.compile("https?://\\S+", Pattern.CASE_INSENSITIVE);
 
   private final List<String> consoleErrors = new ArrayList<>();
   private final List<String> pageErrors = new ArrayList<>();
@@ -60,6 +64,12 @@ final class UiDiagnostics {
       return;
     }
     String safeValue = value == null || value.isBlank() ? "<no details>" : value;
+    // Console locations, exception stacks and failure text may repeat callback URLs. Redact
+    // before truncating so a partially retained URL cannot bypass parsing or expose a secret.
+    safeValue =
+        HTTP_URL
+            .matcher(safeValue)
+            .replaceAll(match -> Matcher.quoteReplacement(SecretSanitizer.url(match.group())));
     entries.add(safeValue.substring(0, Math.min(safeValue.length(), MAX_ENTRY_LENGTH)));
   }
 

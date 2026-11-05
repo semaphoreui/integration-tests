@@ -39,17 +39,41 @@ public final class SecretSanitizer {
 
   private static final ObjectMapper JSON = new ObjectMapper();
 
+  // URL-only names: ordinary JSON fields such as task state or an error code are not secrets.
+  private static final Set<String> AUTH_QUERY_PARAMETERS =
+      Set.of(
+          "code",
+          "state",
+          "nonce",
+          "session_state",
+          "code_verifier",
+          "code_challenge",
+          "client_assertion",
+          "samlrequest",
+          "samlresponse",
+          "relaystate");
+
   private SecretSanitizer() {}
 
   public static String url(HttpUrl url) {
-    HttpUrl.Builder safe = url.newBuilder();
-    url.queryParameterNames().stream()
-        .filter(SecretSanitizer::isSensitive)
-        .forEach(name -> safe.setQueryParameter(name, REDACTED));
+    // User info can hold Basic Auth credentials; fragments can carry OAuth response material.
+    HttpUrl.Builder safe = url.newBuilder().username("").password("").fragment(null).query(null);
+    // Rebuild from decoded names: replacing a literal name can leave encoded aliases such as
+    // %63ode untouched. Iterate each occurrence so duplicate parameters are all sanitized.
+    for (int index = 0; index < url.querySize(); index++) {
+      String name = url.queryParameterName(index);
+      boolean sensitive =
+          isSensitive(name)
+              || AUTH_QUERY_PARAMETERS.contains(name.toLowerCase(Locale.ROOT).replace('-', '_'));
+      safe.addQueryParameter(name, sensitive ? REDACTED : url.queryParameterValue(index));
+    }
     return safe.build().toString();
   }
 
   public static String url(String url) {
+    if (url == null) {
+      return "[URL OMITTED]";
+    }
     try {
       return url(HttpUrl.get(url));
     } catch (IllegalArgumentException e) {
