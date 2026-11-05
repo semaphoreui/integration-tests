@@ -30,6 +30,9 @@ All notable changes to the Semaphore UI test automation project are documented i
 - Fixture paths are relative to `test-environment/fixtures`: `fixture-init` places the folder contents at the root of the fixtures Git repository, so records use `ansible/smoke.yml` instead of `test-environment/fixtures/ansible/smoke.yml`.
 - Branch-isolation fixture branches are created inline by the `parallel-tasks` Compose overlay in the shared `fixture-repository` volume before `fixture-git-init` publishes it, replacing the mounted `setup.sh` and its separate local repository.
 - Fixtures are served by a local `fixture-git` HTTP service inside the Compose network instead of being cloned from GitHub; the default `git.fixtures.repository` is `http://fixture-git/fixtures.git`, CI no longer sets `TEST_REPOSITORY`/`TEST_BRANCH`, and the server/runner fixture volume mounts are removed.
+- Updated Playwright Java from 1.53.0 to 1.64.0 and refreshed the verified dependency
+  checksums. Chromium installation continues to use the same resolved Playwright version as
+  the tests; this release also supports Ubuntu 26.04 runners.
 - Updated release profiles from Semaphore `v2.19.8` to `v2.19.12` and the SQLite/PostgreSQL upgrade path from `v2.19.7 → v2.19.8` to `v2.19.8 → v2.19.12`.
 - Profile suites run test classes sequentially while `v2.19.12` has a concurrent task-output collector race; task concurrency remains covered inside its dedicated scenario.
 - The final post-upgrade API regression suite now follows the same sequential execution rule, preventing the known output collector race from masking migration results.
