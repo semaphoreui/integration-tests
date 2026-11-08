@@ -3,6 +3,91 @@
   "runs": [
     {
       "schemaVersion": 1,
+      "title": "Semaphore release upgrade",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/42472208388",
+      "versions": [
+        "v2.19.8 → develop"
+      ],
+      "reports": [
+        {
+          "name": "upgrade-mariadb-local",
+          "profile": "upgrade-mariadb-local",
+          "version": "develop",
+          "previousVersion": "v2.19.8",
+          "versionLabel": "v2.19.8 → develop",
+          "tests": 152,
+          "counts": {
+            "failed": 4,
+            "broken": 4,
+            "passed": 93,
+            "skipped": 51,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "upgrade-mysql-local",
+          "profile": "upgrade-mysql-local",
+          "version": "develop",
+          "previousVersion": "v2.19.8",
+          "versionLabel": "v2.19.8 → develop",
+          "tests": 152,
+          "counts": {
+            "failed": 4,
+            "broken": 4,
+            "passed": 93,
+            "skipped": 51,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "upgrade-postgres-local",
+          "profile": "upgrade-postgres-local",
+          "version": "develop",
+          "previousVersion": "v2.19.8",
+          "versionLabel": "v2.19.8 → develop",
+          "tests": 152,
+          "counts": {
+            "failed": 4,
+            "broken": 4,
+            "passed": 93,
+            "skipped": 51,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "upgrade-sqlite-local",
+          "profile": "upgrade-sqlite-local",
+          "version": "develop",
+          "previousVersion": "v2.19.8",
+          "versionLabel": "v2.19.8 → develop",
+          "tests": 152,
+          "counts": {
+            "failed": 4,
+            "broken": 4,
+            "passed": 93,
+            "skipped": 51,
+            "unknown": 0
+          }
+        }
+      ],
+      "source": "github",
+      "workflow": "Release upgrade",
+      "workflowSlug": "release-upgrade",
+      "displayTitle": "Release upgrade",
+      "event": "schedule",
+      "conclusion": "failure",
+      "runId": 42472208388,
+      "runAttempt": 1,
+      "runNumber": 15,
+      "createdAt": "2026-11-08T10:37:24Z",
+      "date": "2026-11-08",
+      "headSha": "7d238d45f66b0a5fd61ffceef11888a4edb20731",
+      "shortSha": "7d238d4",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/7d238d45f66b0a5fd61ffceef11888a4edb20731",
+      "path": "reports/2026-11-08/release-upgrade/42472208388-1"
+    },
+    {
+      "schemaVersion": 1,
       "title": "Semaphore configuration matrix",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/42460221594",
       "versions": [
