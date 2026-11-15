@@ -3,6 +3,91 @@
   "runs": [
     {
       "schemaVersion": 1,
+      "title": "Semaphore release upgrade",
+      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/43708214138",
+      "versions": [
+        "v2.19.8 → develop"
+      ],
+      "reports": [
+        {
+          "name": "upgrade-mariadb-local",
+          "profile": "upgrade-mariadb-local",
+          "version": "develop",
+          "previousVersion": "v2.19.8",
+          "versionLabel": "v2.19.8 → develop",
+          "tests": 152,
+          "counts": {
+            "failed": 4,
+            "broken": 4,
+            "passed": 93,
+            "skipped": 51,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "upgrade-mysql-local",
+          "profile": "upgrade-mysql-local",
+          "version": "develop",
+          "previousVersion": "v2.19.8",
+          "versionLabel": "v2.19.8 → develop",
+          "tests": 152,
+          "counts": {
+            "failed": 4,
+            "broken": 4,
+            "passed": 93,
+            "skipped": 51,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "upgrade-postgres-local",
+          "profile": "upgrade-postgres-local",
+          "version": "develop",
+          "previousVersion": "v2.19.8",
+          "versionLabel": "v2.19.8 → develop",
+          "tests": 152,
+          "counts": {
+            "failed": 4,
+            "broken": 4,
+            "passed": 93,
+            "skipped": 51,
+            "unknown": 0
+          }
+        },
+        {
+          "name": "upgrade-sqlite-local",
+          "profile": "upgrade-sqlite-local",
+          "version": "develop",
+          "previousVersion": "v2.19.8",
+          "versionLabel": "v2.19.8 → develop",
+          "tests": 152,
+          "counts": {
+            "failed": 4,
+            "broken": 4,
+            "passed": 93,
+            "skipped": 51,
+            "unknown": 0
+          }
+        }
+      ],
+      "source": "github",
+      "workflow": "Release upgrade",
+      "workflowSlug": "release-upgrade",
+      "displayTitle": "Release upgrade",
+      "event": "schedule",
+      "conclusion": "failure",
+      "runId": 43708214138,
+      "runAttempt": 1,
+      "runNumber": 16,
+      "createdAt": "2026-11-15T11:17:36Z",
+      "date": "2026-11-15",
+      "headSha": "7d238d45f66b0a5fd61ffceef11888a4edb20731",
+      "shortSha": "7d238d4",
+      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/7d238d45f66b0a5fd61ffceef11888a4edb20731",
+      "path": "reports/2026-11-15/release-upgrade/43708214138-1"
+    },
+    {
+      "schemaVersion": 1,
       "title": "Semaphore configuration matrix",
       "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/43693676913",
       "versions": [
@@ -6880,61 +6965,6 @@
       "shortSha": "a8f6b57",
       "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/a8f6b57734e7a5a148cadf998b3b9156e93c27a0",
       "path": "reports/2026-10-17/configuration-matrix/39008128547-1"
-    },
-    {
-      "schemaVersion": 1,
-      "title": "Semaphore CI",
-      "runUrl": "https://github.com/semaphoreui/integration-tests/actions/runs/38889001440",
-      "versions": [
-        "develop"
-      ],
-      "reports": [
-        {
-          "name": "core-sqlite-local",
-          "profile": "core-sqlite-local",
-          "version": "develop",
-          "previousVersion": "",
-          "versionLabel": "develop",
-          "tests": 155,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 112,
-            "skipped": 43,
-            "unknown": 0
-          }
-        },
-        {
-          "name": "quality",
-          "profile": "quality",
-          "version": "",
-          "previousVersion": "",
-          "versionLabel": "",
-          "tests": 159,
-          "counts": {
-            "failed": 0,
-            "broken": 0,
-            "passed": 159,
-            "skipped": 0,
-            "unknown": 0
-          }
-        }
-      ],
-      "source": "github",
-      "workflow": "CI",
-      "workflowSlug": "ci",
-      "displayTitle": "Merge pull request #51 from semaphoreui/codex/api-token-authorization",
-      "event": "push",
-      "conclusion": "success",
-      "runId": 38889001440,
-      "runAttempt": 1,
-      "runNumber": 151,
-      "createdAt": "2026-10-16T10:42:31Z",
-      "date": "2026-10-16",
-      "headSha": "a8f6b57734e7a5a148cadf998b3b9156e93c27a0",
-      "shortSha": "a8f6b57",
-      "commitUrl": "https://github.com/semaphoreui/integration-tests/commit/a8f6b57734e7a5a148cadf998b3b9156e93c27a0",
-      "path": "reports/2026-10-16/ci/38889001440-1"
     }
   ]
 }
